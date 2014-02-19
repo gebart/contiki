@@ -14,7 +14,7 @@ CONTIKI_CPU=$(PLATFORM_DIR)/mk60
 
 CONTIKI_CPU_DIRS = . $(CONTIKI)/../minimal common drivers
 
-CONTIKI_TARGET_SOURCEFILES += startcode.S uart.c uprintf.c
+CONTIKI_TARGET_SOURCEFILES += startcode.S uart.c uprintf.c clock.c
 #$(SYSAPPS) syscalls.c _startup.c uart0.c uart1.c \
                               #adc.c pflash.c watchdog.c
 

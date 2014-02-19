@@ -22,6 +22,4 @@ typedef int32_t  s32_t;
 #include PROJECT_CONF_H
 #endif
 
-#define printf(...)
-
 #endif /* __CONTIKI_CONF_H__ */
