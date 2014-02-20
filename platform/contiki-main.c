@@ -8,12 +8,20 @@
 #include "udelay.h"
 #include "init-net.h"
 
+void printf_putc(void* dum, char c)
+{
+        uart_putchar(c);
+}
+
 /* C entry point (after startup code has executed) */
 int main(void)
 {
   uart_init();
   udelay_init();
+#ifndef WITH_SLIP
+  init_printf(0, &printf_putc);
   printf("Booted\n");
+#endif
   /*
    * Initialize Contiki and our processes.
    */

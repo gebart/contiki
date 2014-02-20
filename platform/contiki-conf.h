@@ -24,8 +24,6 @@ typedef int32_t  s32_t;
 
 #define BAUD2UBR(b) b
 
-
-
 #if WITH_UIP6
 #define NETSTACK_CONF_NETWORK       sicslowpan_driver
 #define NETSTACK_CONF_MAC           csma_driver
@@ -104,7 +102,7 @@ typedef int32_t  s32_t;
 #define UIP_CONF_LOGGING            0
 
 #define UIP_CONF_TCP_SPLIT          1
-#define UIP_CONF_TCP                1
+#define UIP_CONF_TCP                0
 
 #endif /* WITH_UIP6 */
 
