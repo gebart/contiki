@@ -6,7 +6,8 @@ CONTIKI_TARGET_DIRS = .
 CONTIKI_CORE=contiki-main
 CONTIKI_TARGET_MAIN = ${CONTIKI_CORE}.o
 
-CONTIKI_TARGET_SOURCEFILES += contiki-main.c udelay.c init-net.c watchdog.c
+CONTIKI_TARGET_SOURCEFILES += contiki-main.c udelay.c init-net.c watchdog.c \
+                              slip_arch_uart.c slip.c
 
 ifdef UIP_CONF_IPV6
 CFLAGS += -DWITH_UIP6=1

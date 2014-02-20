@@ -3,7 +3,7 @@
 #include "MK60N512VMD100.h"
 #include "uart.h"
 
-static void (*rx_callback)(char) = NULL;
+static int (*rx_callback)(unsigned char) = NULL;
 /*
  * Initialize UART1 to baud 115200
  */
@@ -53,7 +53,7 @@ void uart_enable_rx_interrupt()
   NVICISER1  |= (1<<15); // Enable Uart1 status interrupt
 }
 
-void uart_set_rx_callback(void (*callback)(char))
+void uart_set_rx_callback(int (*callback)(unsigned char))
 {
   rx_callback = callback;
 }

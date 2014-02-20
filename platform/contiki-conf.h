@@ -22,6 +22,8 @@ typedef int32_t  s32_t;
 #include PROJECT_CONF_H
 #endif
 
+#define BAUD2UBR(b) b
+
 
 
 #if WITH_UIP6
@@ -44,9 +46,9 @@ typedef int32_t  s32_t;
 #define QUEUEBUF_CONF_NUM           16
 #endif
 
-//#ifndef UIP_CONF_ROUTER
-#define UIP_CONF_ROUTER                 0
-//#endif
+#ifndef UIP_CONF_ROUTER
+#define UIP_CONF_ROUTER                 1
+#endif
 #ifndef UIP_CONF_IPV6_RPL
 #define UIP_CONF_IPV6_RPL               1
 #endif /* UIP_CONF_IPV6_RPL */
