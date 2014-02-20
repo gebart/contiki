@@ -11,5 +11,6 @@
 void uart_init(void);
 void uart_putchar(char ch);
 void uart_putstring(char *str);
+void uart_enable_rx_interrupt();
 
 #endif
