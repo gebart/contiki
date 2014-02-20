@@ -5,10 +5,14 @@
 #include "stdio.h"
 #include "uart.h"
 
+#include "udelay.h"
+
 /* C entry point (after startup code has executed) */
 int main(void)
 {
   uart_init();
+  udelay_init();
+  printf("Booted\n");
   /*
    * Initialize Contiki and our processes.
    */

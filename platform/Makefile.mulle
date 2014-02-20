@@ -6,7 +6,10 @@ CONTIKI_TARGET_DIRS = .
 CONTIKI_CORE=contiki-main
 CONTIKI_TARGET_MAIN = ${CONTIKI_CORE}.o
 
-CONTIKI_TARGET_SOURCEFILES += contiki-main.c
+CONTIKI_TARGET_SOURCEFILES += contiki-main.c udelay.c
+
+include $(PLATFORM_DIR)/radio/rf230bb/Makefile.rf230bb
+CFLAGS += -DRF230BB
 
 include $(PLATFORM_DIR)/mk60/Makefile.mk60
 contiki-$(TARGET).a: ${addprefix $(OBJECTDIR)/,symbols.o}
