@@ -600,9 +600,9 @@ HAL_RF230_ISR()
     uint8_t interrupt_source; /* used after HAL_SPI_TRANSFER_OPEN/CLOSE block */
     
 	/* Clear Interrupt Status Flag */
-    PORTE_PCR4 |= 0x01000000;  /* Clear interrupt */
-    NVICICPR2 = (1<<27);
-    NVICISER2  |= (1<<27);
+    PORTB_PCR9 |= 0x01000000;  /* Clear interrupt */
+    NVICICPR2 = (1<<24);
+    NVICISER2  |= (1<<24);
     
     INTERRUPTDEBUG(1);
 

@@ -148,14 +148,14 @@ struct timestamp {
 #endif
 
 /* RS232 delays will cause 6lowpan fragment overruns! Use DEBUGFLOW instead. */
-#define DEBUG 1
-#if DEBUG
-#define PRINTF(...) printf(__VA_ARGS__)
-#define PRINTSHORT(...) printf(__VA_ARGS)
-#else
-//#define PRINTF(...)
-#define PRINTSHORT(...)
-#endif
+//#define DEBUG 0
+//#if DEBUG
+//#define PRINTF(...) printf(__VA_ARGS__)
+//#define PRINTSHORT(...) printf(__VA_ARGS)
+//#else
+////#define PRINTF(...)
+//#define PRINTSHORT(...)
+//#endif
 #if DEBUG>1
 /* Output format is suitable for text2pcap to convert to wireshark pcap file.
  * Use $text2pcap -e 0x809a (these_outputs) capture.pcap

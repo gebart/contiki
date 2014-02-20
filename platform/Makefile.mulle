@@ -6,7 +6,11 @@ CONTIKI_TARGET_DIRS = .
 CONTIKI_CORE=contiki-main
 CONTIKI_TARGET_MAIN = ${CONTIKI_CORE}.o
 
-CONTIKI_TARGET_SOURCEFILES += contiki-main.c udelay.c
+CONTIKI_TARGET_SOURCEFILES += contiki-main.c udelay.c init-net.c watchdog.c
+
+ifdef UIP_CONF_IPV6
+CFLAGS += -DWITH_UIP6=1
+endif
 
 include $(PLATFORM_DIR)/radio/rf230bb/Makefile.rf230bb
 CFLAGS += -DRF230BB

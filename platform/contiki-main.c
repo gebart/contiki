@@ -1,11 +1,12 @@
+#include "stdio.h"
+
 #include "contiki.h"
 #include "sys/autostart.h"
 
 #include "MK60N512VMD100.h"
-#include "stdio.h"
 #include "uart.h"
-
 #include "udelay.h"
+#include "init-net.h"
 
 /* C entry point (after startup code has executed) */
 int main(void)
@@ -22,6 +23,7 @@ int main(void)
   ctimer_init();
 
   clock_init();
+  init_net();
 
   autostart_start(autostart_processes);
 
