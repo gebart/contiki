@@ -37,7 +37,7 @@ res_get_handler(void* request, void* response, uint8_t *buffer, uint16_t preferr
   if (*offset == 0)
   {
     // New request build message.
-    sprintf(buf, message, clock_seconds(),  counter++);
+    sprintf((char*)buf, (char*)message, clock_seconds(),  counter++);
     printf("New message\n%sn", buf);
   }
   size = strlen(buf);

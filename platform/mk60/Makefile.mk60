@@ -7,8 +7,13 @@ endif
 
 #### Debug settings
 DEBUG=-g #-gdwarf-2 -gstrict-dwarf
+ifndef GDB_PORT
+GDB_PORT=3333
+endif
+
 ### Define the CPU directory
 CONTIKI_CPU=$(PLATFORM_DIR)/mk60
+
 
 ### Define the source files
 
@@ -79,7 +84,9 @@ bytes:
 
 ### Upload image
 %.u: %.$(TARGET)
-	$(GCCBIN)/arm-none-eabi-gdb -x $(CONTIKI)/../gdb/mulle-arch.gdb $<
+	cp $(CONTIKI)/../gdb/mulle-arch.gdb /tmp/mulle-arch.gdb
+	sed -i 's/target remote :3333/target remote :$(GDB_PORT)/' /tmp/mulle-arch.gdb
+	$(GCCBIN)/arm-none-eabi-gdb -x /tmp/mulle-arch.gdb $<
 	
 symbols.c:
 	cp ${CONTIKI}/tools/empty-symbols.c symbols.c
