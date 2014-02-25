@@ -18,6 +18,8 @@ int main(void)
 {
   uart_init();
   udelay_init();
+  udelay(0xFFFF);
+  udelay(0xFFFF);
 #ifndef WITH_SLIP
   init_printf(0, &printf_putc);
   printf("Booted\n");

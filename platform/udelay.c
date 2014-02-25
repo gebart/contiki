@@ -16,7 +16,7 @@ void udelay_init(void)
 
 void udelay(uint16_t us)
 {
-	PIT_LDVAL0  = 23 * us - 1;
+	PIT_LDVAL0  = 23 * (uint32_t)us - 1;
 	PIT_TFLG0  |= 0x01;
 	PIT_TCTRL0  = 0x01;
 	while (!PIT_TFLG0);
