@@ -4,6 +4,7 @@
 #include "contiki.h"
 #include "contiki-net.h"
 #include "rest-engine.h"
+#include "ntpd.h"
 
 #define DEBUG   DEBUG_PRINT
 #include "net/uip-debug.h"
@@ -15,7 +16,7 @@
 extern resource_t res_wheel_loader;
 
 PROCESS(wheel_loader, "Wheel Loader");
-AUTOSTART_PROCESSES(&wheel_loader);
+AUTOSTART_PROCESSES(&wheel_loader, &ntpd_process);
 
 PROCESS_THREAD(wheel_loader, ev, data)
 {

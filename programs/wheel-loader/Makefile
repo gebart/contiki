@@ -2,7 +2,7 @@ CONTIKI_PROJECT=wheel-loader
 all: $(CONTIKI_PROJECT) 
 # use target "er-plugtest-server" explicitly when requried 
 
-CONTIKI=../../contiki
+CONTIKI=../..
 
 # Contiki IPv6 configuration
 WITH_UIP6=1
@@ -23,8 +23,9 @@ PROJECT_SOURCEFILES += $(REST_RESOURCES_FILES)
 SMALL=1
 
 # REST Engine shall use Erbium CoAP implementation
-MULLEAPPS += er-coap
-MULLEAPPS += rest-engine
+APPS += er-coap
+APPS += rest-engine
+APPS += ntpd
 
 include $(CONTIKI)/Makefile.include
 

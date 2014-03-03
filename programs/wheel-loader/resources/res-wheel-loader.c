@@ -3,6 +3,7 @@
 #include "rest-engine.h"
 #include "er-coap.h"
 #include "er-coap-observe.h"
+#include "ntpd.h"
 
 static void res_get_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset);
 static void res_periodic_handler(void);
@@ -37,7 +38,7 @@ res_get_handler(void* request, void* response, uint8_t *buffer, uint16_t preferr
   if (*offset == 0)
   {
     // New request build message.
-    sprintf((char*)buf, (char*)message, clock_seconds(),  counter++);
+    sprintf((char*)buf, (char*)message, getCurrTime(),  counter++);
     printf("New message\n%sn", buf);
   }
   size = strlen(buf);
