@@ -9,7 +9,7 @@
 #include "contiki-conf.h"
 #include "sys/clock.h"
 #include "sys/etimer.h"
-#include "MK60N512VMD100.h"
+#include "K60.h"
 
 static volatile clock_time_t current_tick;
 static volatile unsigned long current_seconds = 0;
@@ -52,14 +52,14 @@ void clock_delay(unsigned int delay)
 /*
  * Delay the CPU for a number of clock ticks.
  */
-void clock_wait(clock_time_t delay) 
+void clock_wait(clock_time_t delay)
 {
 
 }
 
 /*
  * Initialize the clock module.
- * 
+ *
  * Generates interrupt at 1kHz.
  */
 void clock_init(void)
@@ -80,7 +80,7 @@ void clock_init(void)
 /*
  * LPTMR ISR
  */
-void __attribute__((interrupt( irq ))) _isr_low_power_timer(void)
+void __attribute__((interrupt)) _isr_lpt(void)
     {
 
   LPTMR0_CSR |= 0x80;

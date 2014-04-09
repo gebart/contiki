@@ -10,16 +10,23 @@ DEBUG=-g #-gdwarf-2 -gstrict-dwarf
 
 GDB_PORT ?= 3333
 
+### CPU part number (must have a specific linker script for each part)
+CPU_PART ?= K60DN256VLL10
+
+### Code common for all ARM CPUs
+
+CONTIKI_CPU_ARM=$(CONTIKI)/cpu/arm
+CONTIKI_CPU_ARM_COMMON=$(CONTIKI_CPU_ARM)/common
 
 ### Define the CPU directory
-CONTIKI_CPU=$(PLATFORM_DIR)/mk60
+CONTIKI_CPU=$(CONTIKI_CPU_ARM)/k60
 
 
 ### Define the source files
 
 CONTIKI_CPU_DIRS = . drivers
 
-CONTIKI_TARGET_SOURCEFILES += startcode.S uart.c clock.c
+CONTIKI_TARGET_SOURCEFILES += uart.c clock.c core-clocks.c
 
 CONTIKI_SOURCEFILES += $(CONTIKI_TARGET_SOURCEFILES)
 
@@ -49,9 +56,10 @@ CFLAGSNO = -I$(CONTIKI_CPU) \
            ${addprefix -I,$(APPDIRS)} \
            -I. -I$(CONTIKI)/core \
            -Wall -mcpu=cortex-m4
+LINKERSCRIPT = $(CONTIKI_CPU)/$(CPU_PART).ld
 #AROPTS   = rv
 CFLAGS   += $(CFLAGSNO)  $(DEBUG) -O$(OPTI) $(OPTFLAGS) -Wall -fno-strict-aliasing -mcpu=cortex-m4 -mthumb -nostartfiles
-LDFLAGS  += $(CFLAGS) -T $(CONTIKI_CPU)/mulle.ld
+LDFLAGS  += $(CFLAGS) -T $(LINKERSCRIPT) -Wl,-Map=$@.map
 
 ### Setup directory search path for source files
 
@@ -60,6 +68,9 @@ LDFLAGS  += $(CFLAGS) -T $(CONTIKI_CPU)/mulle.ld
 #
 #vpath %.c $(PROJECTDIRS) $(CONTIKI_CPU) \
 #	  $(CONTIKIDIRS) $(APPDIRS) $(CONTIKI_TARGET_DIRS_CONCAT)
+
+CPU_STARTC = startup-k60.c interrupt-vector-k60.c
+CPU_STARTOBJ=${addprefix $(OBJECTDIR)/,$(CPU_STARTC:.c=.o)}
 
 PROJECT_OBJECTFILES += ${addprefix $(OBJECTDIR)/,$(CONTIKI_TARGET_MAIN:.c=.o)}
 
@@ -87,7 +98,7 @@ bytes:
 %.co: %.c
 	$(CC) $(CFLAGS) -DAUTOSTART_ENABLE -c $< -o $@
 
-%.$(TARGET): %.co $(PROJECT_OBJECTFILES) $(PROJECT_LIBRARIES) contiki-$(TARGET).a $(OBJECTDIR)/startcode.o
+%.$(TARGET): %.co $(PROJECT_OBJECTFILES) $(PROJECT_LIBRARIES) contiki-$(TARGET).a $(CPU_STARTOBJ)
 	$(LD) $(LDFLAGS) $(TARGET_STARTFILES) ${filter-out %.a,$^} ${filter %.a,$^} $(TARGET_LIBFILES) -o $@
 
 #.SECONDARY:

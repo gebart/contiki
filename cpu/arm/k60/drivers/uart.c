@@ -1,6 +1,8 @@
 #include <stddef.h>
 
-#include "MK60N512VMD100.h"
+#include "K60.h"
+#include "config-board.h"
+#include "config-clocks.h"
 #include "uart.h"
 
 static int (*rx_callback)(unsigned char) = NULL;
@@ -10,19 +12,20 @@ static int (*rx_callback)(unsigned char) = NULL;
 void uart_init(void)
 {
   SIM_SCGC5  |= SIM_SCGC5_PORTC_MASK;
-  /* PORTE_PCR25: ISF=0,MUX=3 */
-  PORTC_PCR3 = ((PORTC_PCR25 & ~0x01000400) | 0x00000300);
+  /* Choose UART1 RX for the pin mux and disable PORT interrupts on the pin */
+  PORTC_PCR3 = PORT_PCR_MUX(3);
 
-  /* PORTE_PCR24: ISF=0,MUX=3 */
-  PORTC_PCR4 = ((PORTC_PCR24 & ~0x01000400) | 0x00000300);
+  /* Choose UART1 TX for the pin mux and disable PORT interrupts on the pin */
+  PORTC_PCR4 = PORT_PCR_MUX(3);
 
   /* SIM_SCGC4 */
   SIM_SCGC4 |= SIM_SCGC4_UART1_MASK;
 
-  UART1_BDH    = 0;
-  UART1_BDL    = 11;
-  UART1_C4     = 24;
-  UART1_C2     = 0x2C;
+  UART1_BDH    = UART_BDH_SBR(UART_SBR(F_SYS, K60_DEBUG_BAUD) / 256);
+  UART1_BDL    = UART_BDL_SBR(UART_SBR(F_SYS, K60_DEBUG_BAUD) % 256);
+  UART1_C4     = UART_C4_BRFA(UART_BRFA(F_SYS, K60_DEBUG_BAUD));
+  /* Enable transmitter and receiver and enable receive interrupt */
+  UART1_C2     = UART_C2_TE_MASK | UART_C2_RE_MASK | UART_C2_RIE_MASK;
 }
 
 /*
