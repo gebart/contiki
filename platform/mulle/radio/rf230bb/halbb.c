@@ -257,7 +257,7 @@ inline uint8_t hal_spi_receive(int cont)
 }
 
 
-#define HAL_RF230_ISR() void _isr_gpio_b(void)
+#define HAL_RF230_ISR() void __attribute__((interrupt))  _isr_gpio_b(void)
 
 /** \brief  This function initializes the Hardware Abstraction Layer.
  */
@@ -602,7 +602,6 @@ HAL_RF230_ISR()
 	/* Clear Interrupt Status Flag */
     PORTB_PCR9 |= 0x01000000;  /* Clear interrupt */
     NVICICPR2 = (1<<24);
-    NVICISER2  |= (1<<24);
 
     INTERRUPTDEBUG(1);
 
@@ -639,6 +638,7 @@ HAL_RF230_ISR()
         if (rf230_last_rssi >= RF230_MIN_RX_POWER) {
 #endif
          hal_frame_read(&rxframe[rxframe_tail]);
+         rxframe[rxframe_tail].rssi = rf230_last_rssi;
          rxframe_tail++;if (rxframe_tail >= RF230_CONF_RX_BUFFERS) rxframe_tail=0;
          rf230_interrupt();
 #ifdef RF230_MIN_RX_POWER

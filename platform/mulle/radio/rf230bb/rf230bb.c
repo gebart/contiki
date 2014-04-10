@@ -1314,6 +1314,14 @@ PROCESS_THREAD(rf230_process, ev, data)
     HAL_LEAVE_CRITICAL_REGION();
     PRINTF("rf230_read: %u bytes lqi %u\r\n",len,rf230_last_correlation);
 
+    // TODO(henrik) Sometimes the radio stops working properly and signals 0
+    //              read bytes. It may be due to multiple devices with same id
+    //              (border routers).
+    if (len == 0)
+    {
+      rf230_init();
+    }
+
     RF230PROCESSFLAG(1);
     if(len > 0) {
       packetbuf_set_datalen(len);
@@ -1440,6 +1448,7 @@ if (!RF230_receive_on) {
   framep=&(rxframe[rxframe_head].data[0]);
   memcpy(buf,framep,len-AUX_LEN+CHECKSUM_LEN);
   rf230_last_correlation = rxframe[rxframe_head].lqi;
+  rf230_last_rssi = rxframe[rxframe_head].rssi;
 
   /* Clear the length field to allow buffering of the next packet */
   rxframe[rxframe_head].length=0;
