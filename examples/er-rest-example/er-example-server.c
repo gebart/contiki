@@ -78,6 +78,9 @@ extern resource_t res_leds, res_toggle;
 #if PLATFORM_HAS_LIGHT
 extern resource_t res_light;
 #endif
+#if PLATFORM_HAS_RADIO
+extern resource_t res_radio;
+#endif
 
 PROCESS(er_example_server, "Erbium Example Server");
 AUTOSTART_PROCESSES(&er_example_server);
@@ -124,6 +127,9 @@ PROCESS_THREAD(er_example_server, ev, data)
 #endif
 #if PLATFORM_HAS_LIGHT
 /*  rest_activate_resource(&res_light, "sensors/light"); */
+#endif
+#if PLATFORM_HAS_RADIO
+  rest_activate_resource(&res_radio, "sensors/radio");
 #endif
 
   /* Define application-specific events here. */
