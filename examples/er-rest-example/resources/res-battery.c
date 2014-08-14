@@ -46,8 +46,8 @@
 
 static void res_get_handler(void *request, void *response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset);
 
-/* A simple getter example. Returns the reading from light sensor with a simple etag */
-RESOURCE(battery,
+/* A simple getter example. Returns the battery voltage */
+RESOURCE(res_battery,
          "title=\"Battery status\";rt=\"Battery\"",
          res_get_handler,
          NULL,

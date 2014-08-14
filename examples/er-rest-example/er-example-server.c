@@ -81,6 +81,9 @@ extern resource_t res_light;
 #if PLATFORM_HAS_RADIO
 extern resource_t res_radio;
 #endif
+#if PLATFORM_HAS_BATTERY
+extern resource_t res_battery;
+#endif
 
 PROCESS(er_example_server, "Erbium Example Server");
 AUTOSTART_PROCESSES(&er_example_server);
@@ -130,6 +133,9 @@ PROCESS_THREAD(er_example_server, ev, data)
 #endif
 #if PLATFORM_HAS_RADIO
   rest_activate_resource(&res_radio, "sensors/radio");
+#endif
+#if PLATFORM_HAS_BATTERY
+  rest_activate_resource(&res_battery, "sensors/battery");
 #endif
 
   /* Define application-specific events here. */
