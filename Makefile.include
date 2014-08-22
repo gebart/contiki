@@ -214,6 +214,13 @@ $(OBJECTDIR)/%.o: %.c | $(OBJECTDIR)
 	@$(FINALIZE_DEPENDENCY)
 endif
 
+ifndef CUSTOM_RULE_CPP_TO_OBJECTDIR_O
+$(OBJECTDIR)/%.o: %.cpp | $(OBJECTDIR)
+	$(TRACE_CXX)
+	$(Q)$(CXX) $(CXXFLAGS) -MMD -c $< -o $@
+	@$(FINALIZE_DEPENDENCY)
+endif
+
 ifndef CUSTOM_RULE_S_TO_OBJECTDIR_O
 $(OBJECTDIR)/%.o: %.S | $(OBJECTDIR)
 	$(TRACE_AS)
@@ -226,11 +233,22 @@ ifndef CUSTOM_RULE_C_TO_O
 	$(Q)$(CC) $(CFLAGS) -c $< -o $@
 endif
 
+ifndef CUSTOM_RULE_CPP_TO_O
+%.o: %.cpp
+	$(TRACE_CXX)
+	$(Q)$(CXX) $(CXXFLAGS) -c $< -o $@
+endif
 
 ifndef CUSTOM_RULE_C_TO_CO
 %.co: %.c
 	$(TRACE_CC)
 	$(Q)$(CC) $(CFLAGS) -DAUTOSTART_ENABLE -c $< -o $@
+endif
+
+ifndef CUSTOM_RULE_CPP_TO_CO
+%.co: %.cpp
+	$(TRACE_CXX)
+	$(Q)$(CXX) $(CXXFLAGS) -DAUTOSTART_ENABLE -c $< -o $@
 endif
 
 ifndef AROPTS
