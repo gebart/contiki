@@ -72,7 +72,7 @@ CONTIKI_SOURCEFILES += $(CONTIKIFILES)
 CONTIKIDIRS += ${addprefix $(CONTIKI)/core/,dev lib net net/llsec net/mac net/rime \
                  net/rpl sys cfs ctk lib/ctk loader . }
 
-oname = ${patsubst %.c,%.o,${patsubst %.S,%.o,$(1)}}
+oname = ${patsubst %.c,%.o,${patsubst %.S,%.o,${patsubst %.cpp,%.o,$(1)}}}
 
 CONTIKI_OBJECTFILES = ${addprefix $(OBJECTDIR)/,${call oname, $(CONTIKI_SOURCEFILES)}}
 
@@ -125,12 +125,14 @@ endif
 
 ifeq ($(V),1)
   TRACE_CC =
+  TRACE_CXX =
   TRACE_LD =
   TRACE_AR =
   TRACE_AS =
   Q=
 else
   TRACE_CC = @echo "  CC       " $<
+  TRACE_CXX = @echo "  CXX      " $<
   TRACE_LD = @echo "  LD       " $@
   TRACE_AR = @echo "  AR       " $@
   TRACE_AS = @echo "  AS       " $<
@@ -154,6 +156,7 @@ SOURCEDIRS = . $(PROJECTDIRS) $(CONTIKI_TARGET_DIRS_CONCAT) \
 
 vpath %.c $(SOURCEDIRS)
 vpath %.S $(SOURCEDIRS)
+vpath %.cpp $(SOURCEDIRS)
 
 CFLAGS += ${addprefix -I,$(SOURCEDIRS) $(CONTIKI)}
 
@@ -170,8 +173,9 @@ endif
 ### Automatic dependency generation
 
 ifneq ($(MAKECMDGOALS),clean)
--include ${addprefix $(OBJECTDIR)/,$(CONTIKI_SOURCEFILES:.c=.d) \
-                                   $(PROJECT_SOURCEFILES:.c=.d)}
+-include ${addprefix $(OBJECTDIR)/,$(patsubst %.c,%.d,$(patsubst %.cpp,%.d, \
+                                     $(CONTIKI_SOURCEFILES) \
+                                     $(PROJECT_SOURCEFILES)))}
 endif
 
 ### See http://make.paulandlesley.org/autodep.html#advanced
