@@ -104,24 +104,31 @@ rtimer_arch_init(void) {
 void
 rtimer_arch_schedule(rtimer_clock_t t) {
   rtimer_clock_t now = rtimer_arch_now();
-  target = t; /* Update stored target time, read from ISR */
   if (t < (now + RTIMER_SCHEDULE_MARGIN)) {
     /* Already happened */
-    /* Normally rtimer_run_next() is called from interrupt context, in this case
-     * though, we may or may not be running within an interrupt handler. */
-    /* This should not cause any troubles, it is far worse if it were the other
-     * way around (non-interrupt function called from ISR), but I think it is
-     * worth mentioning here anyway. */
-    rtimer_run_next();
-    return;
+    t = now + RTIMER_SCHEDULE_MARGIN;
   }
+  target = t; /* Update stored target time, read from ISR */
+  if (t > now + RTIMER_PERIOD) {
+    /* We can not reach this time in one period, wrap around */
+    t = now + RTIMER_PERIOD;
+  }
+  /* Disable timer in order to modify the CMR register. */
+  /* It seems like modifying the CMR variable without stopping (against the
+   * reference manual's recommendations) cause sporadic failures of the
+   * interrupt to trigger. It seems to happen at random. */
+  /* The downside is that the CNR register is reset when the LPTMR is disabled,
+   * we need a new offset computation. */
+  offset = rtimer_arch_now();
+  BITBAND_REG(LPTMR0->CSR, LPTMR_CSR_TEN_SHIFT) = 0;
   /* Set timer value */
   /* t and offset are 32 bit ints, CMR_COMPARE is only 16 bit wide,
    * the MSBs will be cut off, so to cope with this we add an additional check
    * for the MSBs in the ISR. */
   LPTMR0->CMR = LPTMR_CMR_COMPARE(t - offset);
+  BITBAND_REG(LPTMR0->CSR, LPTMR_CSR_TEN_SHIFT) = 1;
 
-  PRINTF("rtimer_arch_schedule: %lu\n", (unsigned long)t);
+  //~ printf("ras: %lu, %lu\n", (unsigned long)LPTMR0->CMR, (unsigned long)offset);
 }
 
 rtimer_clock_t
@@ -136,25 +143,15 @@ rtimer_arch_now(void) {
 void
 _isr_lpt(void)
 {
-  static rtimer_clock_t last_cnr = 0;
-  rtimer_clock_t cnr;
-
-  LPTMR0_LATCH_CNR();
-  cnr = LPTMR0->CNR; /* Read the counter value */
-  if (cnr < last_cnr) {
-    /* overflow occurred */
-    offset += RTIMER_PERIOD;
-  }
-  last_cnr = cnr;
+  rtimer_clock_t now = rtimer_arch_now();
 
   /* Clear timer compare flag by writing a 1 to it */
   BITBAND_REG(LPTMR0->CSR, LPTMR_CSR_TCF_SHIFT) = 1;
 
-  /* Verify that the target actually has happened (this comparison is false if
-   * target was more than a full RTIMER_PERIOD into the future when scheduled) */
-  if (target < offset + cnr) {
+  if (target > now) {
+    /* Overflow, schedule the next period */
+    rtimer_arch_schedule(target);
+  } else {
     rtimer_run_next();
   }
-  /* Else: just wait until the next period, the LSBs of the target time are
-   * already set correctly in the CMR register. */
 }
