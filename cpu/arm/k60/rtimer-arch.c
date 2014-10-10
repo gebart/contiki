@@ -53,8 +53,17 @@
  * declared, cast to volatile uint32_t* as a workaround. */
 #define LPTMR0_LATCH_CNR() (*((volatile uint32_t*)(&(LPTMR0->CNR))) = 0)
 
+/* The period length of the rtimer, in rtimer ticks */
+#define RTIMER_PERIOD ((LPTMR_CNR_COUNTER_MASK >> LPTMR_CNR_COUNTER_SHIFT) + 1)
+
+/* Number of ticks into the future for us to not consider the rtimer as immediately expired */
+/* at 32768 Hz (LPTMR maximum), 1 tick == 30.51 us */
+/* at 4096 Hz (msp430 default), 1 tick == 244.1 us */
+#define RTIMER_SCHEDULE_MARGIN (5)
+
 /** Offset between current counter/timer and t=0 (boot instant) */
-static rtimer_clock_t offset;
+static volatile rtimer_clock_t offset;
+static volatile rtimer_clock_t target;
 
 /*
  * Initialize the clock module.
@@ -94,7 +103,22 @@ rtimer_arch_init(void) {
  */
 void
 rtimer_arch_schedule(rtimer_clock_t t) {
+  rtimer_clock_t now = rtimer_arch_now();
+  target = t; /* Update stored target time, read from ISR */
+  if (t < (now + RTIMER_SCHEDULE_MARGIN)) {
+    /* Already happened */
+    /* Normally rtimer_run_next() is called from interrupt context, in this case
+     * though, we may or may not be running within an interrupt handler. */
+    /* This should not cause any troubles, it is far worse if it were the other
+     * way around (non-interrupt function called from ISR), but I think it is
+     * worth mentioning here anyway. */
+    rtimer_run_next();
+    return;
+  }
   /* Set timer value */
+  /* t and offset are 32 bit ints, CMR_COMPARE is only 16 bit wide,
+   * the MSBs will be cut off, so to cope with this we add an additional check
+   * for the MSBs in the ISR. */
   LPTMR0->CMR = LPTMR_CMR_COMPARE(t - offset);
 
   PRINTF("rtimer_arch_schedule: %lu\n", (unsigned long)t);
@@ -119,9 +143,18 @@ _isr_lpt(void)
   cnr = LPTMR0->CNR; /* Read the counter value */
   if (cnr < last_cnr) {
     /* overflow occurred */
-    offset += RTIMER_ARCH_SECOND;
+    offset += RTIMER_PERIOD;
   }
+  last_cnr = cnr;
+
   /* Clear timer compare flag by writing a 1 to it */
   BITBAND_REG(LPTMR0->CSR, LPTMR_CSR_TCF_SHIFT) = 1;
-  rtimer_run_next();
+
+  /* Verify that the target actually has happened (this comparison is false if
+   * target was more than a full RTIMER_PERIOD into the future when scheduled) */
+  if (target < offset + cnr) {
+    rtimer_run_next();
+  }
+  /* Else: just wait until the next period, the LSBs of the target time are
+   * already set correctly in the CMR register. */
 }
