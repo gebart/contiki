@@ -12,7 +12,7 @@
 
 #include "core-clocks.h"
 #include "uart.h"
-#include "udelay.h"
+#include "clock.h"
 #include "llwu.h"
 #include "init-net.h"
 #include "power-control.h"
@@ -97,10 +97,6 @@ main(void)
   /* Turn on power to the on board peripherals */
   power_control_vperiph_set(1);
 
-  udelay_init();
-  udelay(0xFFFF);
-  udelay(0xFFFF);
-  random_init((unsigned short)SIM->UIDL);
 #ifndef WITH_SLIP
   PRINTF("Booted\n");
   PRINTF("CPUID: %08x\n", (unsigned int)SCB->CPUID);
@@ -111,14 +107,15 @@ main(void)
   /*
    * Initialize Contiki and our processes.
    */
+  random_init((unsigned short)SIM->UIDL);
   rtimer_init();
+  clock_init();
 
   process_init();
   process_start(&etimer_process, NULL);
 
   ctimer_init();
 
-  clock_init();
   init_cfs();
   init_net();
   voltage_init();
