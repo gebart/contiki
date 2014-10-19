@@ -8,7 +8,7 @@
 
 #include "flash.h"
 
-#include "udelay.h"
+#include "clock.h"
 
 /* TODO(henrik) Clean up */
 
@@ -443,7 +443,7 @@ flash_busy_wait(const flash_id_t id)
 {
   while(cmd_rdsr(id) & FLASH_STATUS_WIP) {
     /* XXX: Attempt to fix slow erase times on some chips by not flooding the device with status requests */
-    udelay(1000);
+    clock_delay_usec(1000);
   }
 }
 /* ************************************************************************** */
@@ -471,7 +471,7 @@ flash_init(void)
     /* Wait a while for memories to start */
     /* TODO(henrik) Change this to more exact times. */
     for(i = 0; i < 200; ++i) {
-      udelay(1000);
+      clock_delay_usec(1000);
     }
   }
   for(i = FLASH_ID0; i <= FLASH_ID0; ++i) {
