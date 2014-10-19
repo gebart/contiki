@@ -38,10 +38,10 @@
 #include <string.h>
 
 #include "contiki.h"
-#include "udelay.h"
+#include "clock.h"
 #include "llwu.h"
 
-#define delay_us(us) { udelay(us); }
+#define delay_us(us) { clock_delay_usec(us); }
 #define cli() MK60_DISABLE_INTERRUPT()
 #define sei() MK60_ENABLE_INTERRUPT()
 
