@@ -44,6 +44,10 @@
 #include "synchronization.h"
 #include "power-modes.h"
 
+
+/* one config per CTAR instance */
+spi_config_t *spi_conf[NUM_SPI][NUM_CTAR] = {{NULL}};
+
 static uint32_t spi_lock[NUM_SPI] = {0};
 
 /**
@@ -63,6 +67,9 @@ static uint32_t spi_lock[NUM_SPI] = {0};
  */
 static int find_closest_scalers(unsigned int module_clock, unsigned int target_clock, uint32_t *settings)
 {
+  int i;
+  int k;
+  int freq;
   static const int num_scalers = 16;
   static const int num_prescalers = 4;
   static const unsigned int scalers[16] = {
@@ -76,11 +83,11 @@ static int find_closest_scalers(unsigned int module_clock, unsigned int target_c
   int closest_prescaler = -1;
 
   /* Test all combinations until we arrive close to the target clock */
-  for (int i = 0; i < num_prescalers; ++i)
+  for (i = 0; i < num_prescalers; ++i)
   {
-    for (int k = 0; k < num_scalers; ++k)
+    for (k = 0; k < num_scalers; ++k)
     {
-      int freq = module_clock / (scalers[k] * prescalers[i]);
+      freq = module_clock / (scalers[k] * prescalers[i]);
       if (freq <= target_clock)
       {
         /* Found closest lower frequency at this prescaler setting,
@@ -161,27 +168,26 @@ spi_hw_init_master(const uint8_t spi_num) {
  *
  * Never call this function while the SPI bus has an active transfer going.
  */
-void spi_set_params(const uint8_t spi_num, unsigned int ctas,
-  unsigned int target_clock, unsigned int frame_size, unsigned int cpol,
-  unsigned int cpha) {
+void spi_set_params(const uint8_t spi_num, const uint8_t ctas, const spi_config_t* config) {
   uint32_t ctar = 0;
 
   /* All of the SPI modules run on the Bus clock */
-  find_closest_scalers(SystemBusClock, target_clock, &ctar);
+  find_closest_scalers(SystemBusClock, config->sck_freq, &ctar);
 
   /* FMSZ equals the frame size + 1 */
-  ctar |= SPI_CTAR_FMSZ(frame_size - 1);
+  ctar |= SPI_CTAR_FMSZ(config->frame_size - 1);
 
-  if (cpol != 0) {
+  if (config->cpol != 0) {
     ctar |= SPI_CTAR_CPOL_MASK;
   }
-  if (cpha != 0) {
+  if (config->cpha != 0) {
     ctar |= SPI_CTAR_CPHA_MASK;
   }
 
   SPI[spi_num]->CTAR[ctas] = ctar;
 }
 
+#if 0
 /**
  * Perform a transfer over SPI.
  *
@@ -222,6 +228,7 @@ uint16_t spi_transfer(const uint8_t spi_num, const uint8_t ctas, const uint32_t 
   /* Pop the buffer */
   return spi_dev->POPR;
 }
+#endif
 
 /**
  * Perform a series of writes followed by a series of reads to/from the SPI bus.

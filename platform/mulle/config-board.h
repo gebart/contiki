@@ -171,10 +171,58 @@ extern "C" {
 
 #define PIT_ISR_GLUE2(CHANNEL) (_isr_pit ## CHANNEL)
 #define PIT_ISR_GLUE(CHANNEL) PIT_ISR_GLUE2(CHANNEL)
+#define PIT_IRQn_GLUE2(CHANNEL) (PIT ## CHANNEL ## _IRQn)
+#define PIT_IRQn_GLUE(CHANNEL) PIT_IRQn_GLUE2(CHANNEL)
 /**
  * PIT channel interrupt used by clock_delay_usec and clock_delay_msec.
  */
 #define BOARD_DELAY_PIT_ISR PIT_ISR_GLUE(BOARD_DELAY_PIT_CHANNEL)
+#define BOARD_DELAY_PIT_IRQn PIT_IRQn_GLUE(BOARD_DELAY_PIT_CHANNEL)
+
+/*
+ * The onboard LIS3DH is connected to SPI0.
+ * SPI0_PCS0 is the active low CS signal.
+ */
+#define LIS3DH_SPI_NUM 0
+#define LIS3DH_CHIP_SELECT_PIN 0
+/*
+ * See spi-config.c for the CTAR configuration
+ */
+#define LIS3DH_CTAS 1
+
+/*
+ * The onboard AT86RF212/AT86RF230 is connected to SPI0.
+ * SPI0_PCS1 is the active low CS signal.
+ */
+#define AT86RF212_SPI_NUM 0
+#define AT86RF212_CHIP_SELECT_PIN 1
+/*
+ * See spi-config.c for the CTAR configuration
+ */
+#define AT86RF212_CTAS 0
+
+/*
+ * The onboard M25P16 flash memory is connected to SPI0.
+ * SPI0_PCS2 is the active low CS signal.
+ */
+#define FLASH_SPI_NUM 0
+#define FLASH_CHIP_SELECT_PIN 2
+/*
+ * See spi-config.c for the CTAR configuration
+ */
+#define FLASH_CTAS 1
+
+/*
+ * The onboard FM25L04 FRAM memory is connected to SPI0.
+ * SPI0_PCS2 is the active low CS signal.
+ */
+#define FRAM_SPI_NUM 0
+#define FRAM_CHIP_SELECT_PIN 3
+/*
+ * See spi-config.c for the CTAR configuration
+ */
+#define FRAM_CTAS 1
+
 
 
 #ifdef __cplusplus

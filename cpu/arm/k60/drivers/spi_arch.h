@@ -47,6 +47,17 @@
 extern "C" {
 #endif
 
+#define NUM_CTAR 2
+
+/**
+ * SPI bus configuration structure.
+ */
+typedef struct spi_config {
+  uint32_t sck_freq;
+  uint8_t frame_size;
+  uint8_t cpol;
+  uint8_t cpha;
+} spi_config_t;
 
 typedef enum spi_transfer_flag {
   SPI_TRANSFER_DONE = 0,
@@ -68,9 +79,9 @@ int spi_transfer_blocking(const uint8_t spi_num, const uint8_t ctas, const uint3
              uint8_t *data_in, size_t count_out, size_t count_in);
 void spi_start(const uint8_t spi_num);
 void spi_stop(const uint8_t spi_num);
-void spi_set_params(const uint8_t spi_num, unsigned int ctas,
-  unsigned int target_clock, unsigned int frame_size, unsigned int cpol,
-  unsigned int cpha);
+void spi_set_params(const uint8_t spi_num, const uint8_t ctas, const spi_config_t* config);
+
+extern spi_config_t spi0_conf[NUM_CTAR];
 
 #define SPI_IDLE_DATA (0xffff)
 

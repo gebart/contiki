@@ -42,15 +42,14 @@
 #include <stdbool.h>
 #include "lis3dh.h"
 #include "K60.h"
+#include "config-board.h"
 #include "interrupt.h"
 #include "power-control.h"
 #include "spi.h"
 #include "spi_arch.h"
 
-#define LIS3DH_CHIP_SELECT_PIN 0
+/* Convenience macro */
 #define LIS3DH_CHIP_SELECT_PIN_MASK (1 << LIS3DH_CHIP_SELECT_PIN)
-#define LIS3DH_CTAS 1
-#define LIS3DH_SPI_NUM 0
 
 /**
  * Write a single byte to the LIS3DH.

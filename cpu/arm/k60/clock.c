@@ -126,6 +126,10 @@ clock_delay_usec(uint16_t delay_us) {
   /* Enable PIT peripheral clock */
   BITBAND_REG(SIM->SCGC6, SIM_SCGC6_PIT_SHIFT) = 1;
 
+  /* Disable timer, disable interrupts */
+  BITBAND_REG(PIT->CHANNEL[BOARD_DELAY_PIT_CHANNEL].TCTRL, PIT_TCTRL_TEN_SHIFT) = 0;
+  BITBAND_REG(PIT->CHANNEL[BOARD_DELAY_PIT_CHANNEL].TCTRL, PIT_TCTRL_TIE_SHIFT) = 0;
+
   /* Clear interrupt flag */
   BITBAND_REG(PIT->CHANNEL[BOARD_DELAY_PIT_CHANNEL].TFLG, PIT_TFLG_TIF_SHIFT) = 1;
 
@@ -172,6 +176,7 @@ clock_init(void)
   /* The MCR really only controls the MDIS (module disable) and FRZ (debug
    * freeze) bits of the module. */
   PIT->MCR = 0x00;
+  NVIC_EnableIRQ(BOARD_DELAY_PIT_IRQn);
 }
 
 /* PIT interrupt handler for clock_delay_usec */
