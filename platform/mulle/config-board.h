@@ -138,6 +138,12 @@ extern "C" {
 #define NUM_UARTS 5
 
 /**
+ * Number of SPI modules in CPU.
+ */
+#define NUM_SPI 3
+
+
+/**
  * UART module used for SLIP communications.
  *
  * This string is passed to open() during slip_init_arch().
@@ -169,6 +175,7 @@ extern "C" {
  * PIT channel interrupt used by clock_delay_usec and clock_delay_msec.
  */
 #define BOARD_DELAY_PIT_ISR PIT_ISR_GLUE(BOARD_DELAY_PIT_CHANNEL)
+
 
 #ifdef __cplusplus
 } /* extern "C" */
