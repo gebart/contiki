@@ -69,16 +69,83 @@ typedef enum spi_transfer_sync {
   SPI_TRANSFER_BLOCKING = 1
 } spi_transfer_sync_t;
 
+/**
+ * Request exclusive access to the bus.
+ *
+ * This is used to ensure that different drivers do not attempt to use the bus
+ * at the same time.
+ *
+ * \note This function will block until the bus is free.
+ *
+ * \param spi_num The SPI module number.
+ */
 void spi_acquire_bus(const uint8_t spi_num);
+
+/**
+ * Release exclusive access of the bus.
+ *
+ * \param spi_num The SPI module number.
+ */
 void spi_release_bus(const uint8_t spi_num);
+
+/**
+ * Test if the bus lock is currently being held by someone.
+ *
+ * \param spi_num The SPI module number.
+ */
 int spi_is_busy(const uint8_t spi_num);
 
+/**
+ * Initialize the SPI hardware module.
+ *
+ * \param spi_num The SPI module number.
+ */
 void spi_hw_init_master(const uint8_t spi_num);
+
+/**
+ * Perform a series of writes followed by a series of reads to/from the SPI bus.
+ *
+ * \param spi_num SPI module number.
+ * \param ctas The CTAR register to use for timing information (0 or 1)
+ * \param cs The chip select pins to assert. Bitmask, not PCS number.
+ * \param cont Whether to keep asserting the chip select pin after the series of transfers ends.
+ * \param data_out Pointer to data to send.
+ * \param data_in Pointer to store received data.
+ * \param count_out Number of bytes to write.
+ * \param count_in Number of bytes to read.
+ */
 int spi_transfer_blocking(const uint8_t spi_num, const uint8_t ctas, const uint32_t cs,
              const spi_transfer_flag_t cont, const uint8_t *data_out,
              uint8_t *data_in, size_t count_out, size_t count_in);
+
+/**
+ * Enable the SPI hardware module (enable clock gate).
+ *
+ * \param spi_num The SPI module number.
+ */
 void spi_start(const uint8_t spi_num);
+
+/**
+ * Disable the SPI hardware module (disable clock gate).
+ *
+ * \param spi_num The SPI module number.
+ */
 void spi_stop(const uint8_t spi_num);
+
+/**
+ * Set transfer parameters for the bus.
+ *
+ * This will update the appropriate CTAR register with proper scaler and
+ * prescaler values based on the current clock settings.
+ *
+ * Remember to call this every time the bus clock changes.
+ *
+ * Never call this function while the SPI bus has an active transfer going.
+ *
+ * \param spi_num The SPI module number.
+ * \param ctas Index of the chosen CTAR register.
+ * \param config Pointer to bus configuration information.
+ */
 void spi_set_params(const uint8_t spi_num, const uint8_t ctas, const spi_config_t* config);
 
 extern spi_config_t spi0_conf[NUM_CTAR];

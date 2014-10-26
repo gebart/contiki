@@ -50,6 +50,8 @@ spi_config_t *spi_conf[NUM_SPI][NUM_CTAR] = {{NULL}};
 
 static uint32_t spi_lock[NUM_SPI] = {0};
 
+static volatile uint8_t spi_waiting_flag[NUM_SPI] = {0};
+
 /**
  * Find the prescaler and scaler settings that will yield a clock frequency
  * as close as possible (but not above) the target frequency, given the module
@@ -160,14 +162,6 @@ spi_hw_init_master(const uint8_t spi_num) {
   spi_stop(spi_num);
 }
 
-/**
- * Update the appropriate CTAR register with proper scaler and prescaler values
- * based on the current clock settings.
- *
- * Remember to call this every time the bus clock changes.
- *
- * Never call this function while the SPI bus has an active transfer going.
- */
 void spi_set_params(const uint8_t spi_num, const uint8_t ctas, const spi_config_t* config) {
   uint32_t ctar = 0;
 
@@ -187,61 +181,6 @@ void spi_set_params(const uint8_t spi_num, const uint8_t ctas, const spi_config_
   SPI[spi_num]->CTAR[ctas] = ctar;
 }
 
-#if 0
-/**
- * Perform a transfer over SPI.
- *
- * \param ctas The CTAR register to use for timing information (0 or 1)
- * \param cs The chip select pins to assert. Bitmask, not PCS number.
- * \param cont Whether to keep asserting the chip select pin after the current transfer ends.
- * \param data The data to write to the slave.
- * \param blocking If set to SPI_TRANSFER_BLOCKING, wait until all bits have been transferred before returning.
- * \return The byte received from the slave during the same transfer.
- *
- * \note There is no need for separate read and write functions, since SPI transfers work like a shift register (one bit out, one bit in.)
- */
-uint16_t spi_transfer(const uint8_t spi_num, const uint8_t ctas, const uint32_t cs,
-             const spi_transfer_flag_t cont, const uint16_t data_out,
-             const spi_transfer_sync_t blocking)
-{
-  SPI_Type *spi_dev = SPI[spi_num];
-  uint32_t spi_pushr;
-
-  spi_pushr = SPI_PUSHR_TXDATA(data_out);
-  spi_pushr |= SPI_PUSHR_CTAS(ctas);
-  spi_pushr |= SPI_PUSHR_PCS(cs);
-  if(cont == SPI_TRANSFER_CONT) {
-    spi_pushr |= SPI_PUSHR_CONT_MASK;
-  }
-
-  /* Clear transfer complete flag */
-  spi_dev->SR |= SPI_SR_TCF_MASK;
-
-  /* Shift a frame out/in */
-  spi_dev->PUSHR = spi_pushr;
-
-  if(blocking) {
-    /* Wait for transfer complete */
-    COND_WAIT(!(spi_dev->SR & SPI_SR_TCF_MASK));
-  }
-
-  /* Pop the buffer */
-  return spi_dev->POPR;
-}
-#endif
-
-/**
- * Perform a series of writes followed by a series of reads to/from the SPI bus.
- *
- * \param spi_num SPI module number.
- * \param ctas The CTAR register to use for timing information (0 or 1)
- * \param cs The chip select pins to assert. Bitmask, not PCS number.
- * \param cont Whether to keep asserting the chip select pin after the series of transfers ends.
- * \param data_out Pointer to data to send.
- * \param data_in Pointer to store received data.
- * \param count_out Number of bytes to write.
- * \param count_in Number of bytes to read.
- */
 int spi_transfer_blocking(const uint8_t spi_num, const uint8_t ctas, const uint32_t cs,
              const spi_transfer_flag_t cont, const uint8_t *data_out,
              uint8_t *data_in, size_t count_out, size_t count_in)
@@ -283,7 +222,8 @@ int spi_transfer_blocking(const uint8_t spi_num, const uint8_t ctas, const uint3
     spi_dev->PUSHR = spi_pushr;
 
     /* Wait for transfer complete */
-    COND_WAIT(!(spi_dev->SR & SPI_SR_TCF_MASK));
+    spi_waiting_flag[spi_num] = 1;
+    COND_WAIT(spi_waiting_flag[spi_num] != 0);
 
     /* Do a dummy read in order to allow for the next byte to be read */
     uint8_t tmp = spi_dev->POPR;
@@ -312,7 +252,8 @@ int spi_transfer_blocking(const uint8_t spi_num, const uint8_t ctas, const uint3
     spi_dev->PUSHR = spi_pushr;
 
     /* Wait for transfer complete */
-    COND_WAIT(!(spi_dev->SR & SPI_SR_TCF_MASK));
+    spi_waiting_flag[spi_num] = 1;
+    COND_WAIT(spi_waiting_flag[spi_num] != 0);
 
     (*data_in) = spi_dev->POPR;
     ++data_in; /* or += stride */
@@ -351,4 +292,13 @@ void spi_stop(const uint8_t spi_num)
       BITBAND_REG(SIM->SCGC3, SIM_SCGC3_SPI2_SHIFT) = 0;
       break;
   }
+}
+
+/**
+ * ISR for handling bus transfer complete interrupts.
+ */
+void _isr_spi0(void) {
+  /* Clear status flag by writing a 1 to it */
+  BITBAND_REG(SPI0->SR, SPI_SR_TCF_SHIFT) = 1;
+  spi_waiting_flag[0] = 0;
 }

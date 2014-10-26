@@ -5,6 +5,8 @@
 #include <string.h>
 
 #include "K60.h"
+#include "spi.h"
+#include "spi_arch.h"
 
 #include "flash.h"
 
@@ -36,6 +38,8 @@ typedef enum spi_transfer_sync {
   SPI_TRANSFER_ASYNC = 0,
   SPI_TRANSFER_BLOCKING = 1
 } spi_transfer_sync_t;
+
+static uint32_t flash_lock = 0;
 
 void
 spi_init(void)
