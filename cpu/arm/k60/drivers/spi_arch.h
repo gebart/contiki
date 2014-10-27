@@ -150,7 +150,7 @@ void spi_set_params(const uint8_t spi_num, const uint8_t ctas, const spi_config_
 
 extern spi_config_t spi0_conf[NUM_CTAR];
 
-#define SPI_IDLE_DATA (0xffff)
+void port_init_spi0(void);
 
 #ifdef __cplusplus
 } /* extern "C" */

@@ -27,3 +27,18 @@ spi_config_t spi1_conf[NUM_CTAR] = {
   { .sck_freq = 10000000, .frame_size = 8, .cpol = 1, .cpha = 1}
   };
 */
+
+/* Set port mux for SPI0 bus */
+void port_init_spi0(void) {
+  /* Turn on port */
+  BITBAND_REG(SIM->SCGC5, SIM_SCGC5_PORTD_SHIFT) = 1;
+  /* Set up mux */
+  /** \todo Update SPI pin mapping to more dynamic format. (remove magic numbers) */
+  PORTD->PCR[0] = PORT_PCR_MUX(2); /* SPI0_PCS0 */
+  PORTD->PCR[1] = PORT_PCR_MUX(2); /* SPI0_SCLK */
+  PORTD->PCR[2] = PORT_PCR_MUX(2); /* SPI0_MOSI */
+  PORTD->PCR[3] = PORT_PCR_MUX(2); /* SPI0_MISO */
+  PORTD->PCR[4] = PORT_PCR_MUX(2); /* SPI0_PCS1 */
+  PORTD->PCR[5] = PORT_PCR_MUX(2); /* SPI0_PCS2 */
+  PORTD->PCR[6] = PORT_PCR_MUX(2); /* SPI0_PCS3 */
+}

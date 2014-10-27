@@ -44,6 +44,7 @@
 #include "synchronization.h"
 #include "power-modes.h"
 
+#define SPI_IDLE_DATA (0xffff)
 
 /* one config per CTAR instance */
 spi_config_t *spi_conf[NUM_SPI][NUM_CTAR] = {{NULL}};
@@ -126,12 +127,17 @@ static int find_closest_scalers(unsigned int module_clock, unsigned int target_c
   return 0;
 }
 
-#if 0
 void
 spi_init(void)
 {
+  int i;
+  port_init_spi0();
+  spi_start(0);
+  for (i = 0; i < NUM_CTAR; ++i) {
+    spi_set_params(0, i, &spi0_conf[i]);
+  }
+  spi_stop(0);
 }
-#endif
 
 void spi_acquire_bus(const uint8_t spi_num) {
   lock_acquire(&spi_lock[spi_num]);
@@ -157,6 +163,10 @@ spi_hw_init_master(const uint8_t spi_num) {
   /* XXX: Hard-coded chip select active low */
   /* Disable FIFOs, this can be improved in the future */
   SPI[spi_num]->MCR = SPI_MCR_MSTR_MASK | SPI_MCR_PCSIS(0x1F) | SPI_MCR_DIS_RXF_MASK | SPI_MCR_DIS_TXF_MASK;
+
+  /* Enable interrupts for TCF flag */
+  BITBAND_REG(SPI[spi_num]->RSER, SPI_RSER_TCF_RE_SHIFT) = 1;
+  NVIC_EnableIRQ(SPI0_IRQn);
 
   /* disable clock gate */
   spi_stop(spi_num);
@@ -218,11 +228,13 @@ int spi_transfer_blocking(const uint8_t spi_num, const uint8_t ctas, const uint3
     /* Clear transfer complete flag */
     spi_dev->SR |= SPI_SR_TCF_MASK;
 
+    /* Set waiting flag */
+    spi_waiting_flag[spi_num] = 1;
+
     /* Shift a frame out/in */
     spi_dev->PUSHR = spi_pushr;
 
     /* Wait for transfer complete */
-    spi_waiting_flag[spi_num] = 1;
     COND_WAIT(spi_waiting_flag[spi_num] != 0);
 
     /* Do a dummy read in order to allow for the next byte to be read */
@@ -248,11 +260,13 @@ int spi_transfer_blocking(const uint8_t spi_num, const uint8_t ctas, const uint3
     /* Clear transfer complete flag */
     spi_dev->SR |= SPI_SR_TCF_MASK;
 
+    /* Set waiting flag */
+    spi_waiting_flag[spi_num] = 1;
+
     /* Shift a frame out/in */
     spi_dev->PUSHR = spi_pushr;
 
     /* Wait for transfer complete */
-    spi_waiting_flag[spi_num] = 1;
     COND_WAIT(spi_waiting_flag[spi_num] != 0);
 
     (*data_in) = spi_dev->POPR;
@@ -301,4 +315,10 @@ void _isr_spi0(void) {
   /* Clear status flag by writing a 1 to it */
   BITBAND_REG(SPI0->SR, SPI_SR_TCF_SHIFT) = 1;
   spi_waiting_flag[0] = 0;
+}
+
+void _isr_spi1(void) {
+  /* Clear status flag by writing a 1 to it */
+  BITBAND_REG(SPI1->SR, SPI_SR_TCF_SHIFT) = 1;
+  spi_waiting_flag[1] = 0;
 }
