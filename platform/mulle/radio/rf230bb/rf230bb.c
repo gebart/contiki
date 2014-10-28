@@ -608,123 +608,7 @@ rf230_setpendingbit(uint8_t value)
 {
   hal_subregister_write(SR_AACK_SET_PD, value);
 }
-#if 0
-/*----------------------------------------------------------------------------*/
-/**
-    \brief Calibrate the internal RC oscillator
 
-    This function calibrates the internal RC oscillator, based
-    on an external 32KHz crystal connected to TIMER2. In order to
-    verify the calibration result you can program the CKOUT fuse
-    and monitor the CPU clock on an I/O pin.
- */
-/* #define AVR_ENTER_CRITICAL_REGION( ) {uint8_t volatile saved_sreg = SREG; cli( ) */
-/* #define AVR_LEAVE_CRITICAL_REGION( ) SREG = saved_sreg;} */
-#define HAL_ENTER_CRITICAL_REGION() DisableInterrupts
-#define HAL_LEAVE_CRITICAL_REGION() EnableInterrupts
-uint8_t osccal_original, osccal_calibrated;
-void
-calibrate_rc_osc_32k(void)
-{
-
-  /* Calibrate RC Oscillator: The calibration routine is done by clocking TIMER2
-   * from the external 32kHz crystal while running an internal timer simultaneously.
-   * The internal timer will be clocked at the same speed as the internal RC
-   * oscillator, while TIMER2 is running at 32768 Hz. This way it is not necessary
-   * to use a timed loop, and keep track cycles in timed loop vs. optimization
-   * and compiler.
-   */
-  uint8_t osccal_original = OSCCAL;
-  volatile uint16_t temp;
-
-  /* Start with current value, which for some MCUs could be in upper or lower range */
-
-/*  PRR0 &= ~((1 << PRTIM2)|(1 << PRTIM1)); / *  Enable Timer 1 and 2 * / */
-
-  TIMSK2 = 0x00;   /*  Disable Timer/Counter 2 interrupts. */
-  TIMSK1 = 0x00;   /*  Disable Timer/Counter 1 interrupts. */
-
-  /* Enable TIMER/COUNTER 2 to be clocked from the external 32kHz clock crystal.
-   * Then wait for the timer to become stable before doing any calibration.
-   */
-  ASSR |= (1 << AS2);
-  /* while (ASSR & ((1 << TCN2UB)|(1 << OCR2AUB)|(1 << TCR2AUB)|(1 << TCR2BUB))) { ; } */
-  TCCR2B = 1 << CS20;     /* run timer 2 at divide by 1 (32KHz) */
-
-  delay_us(50000UL);    /* crystal takes significant time to stabilize */
-  AVR_ENTER_CRITICAL_REGION();
-
-  uint8_t counter = 128;
-  bool cal_ok = false;
-  do {
-    /* wait for timer to be ready for updated config */
-    TCCR1B = 1 << CS10;
-
-    while(ASSR & ((1 << TCN2UB) | (1 << OCR2AUB) | (1 << TCR2AUB) | (1 << TCR2BUB))) {
-    }
-
-    TCNT2 = 0x80;
-    TCNT1 = 0;
-
-    TIFR2 = 0xFF;     /* Clear TIFR2 flags (Yes, really) */
-
-    /* Wait for TIMER/COUNTER 2 to overflow. Stop TIMER/COUNTER 1 and 2, and
-     * read the counter value of TIMER/COUNTER 1. It will now contain the
-     * number of cpu cycles elapsed within the 3906.25 microsecond period.
-     */
-    while(!(TIFR2 & (1 << TOV2))) {
-    }
-    temp = TCNT1;
-
-    TCCR1B = 0;
-/* Defining these as floating point introduces a lot of code and the 256 byte .clz table to RAM */
-/* At 8 MHz we would expect 8*3906.25 = 31250 CPU clocks */
-#define cal_upper 32812 /* (31250*1.05) // 32812 = 0x802c */
-#define cal_lower 29687 /* (31250*0.95) // 29687 = 0x73f7 */
-    /* Iteratively reduce the error to be within limits */
-    if(temp < cal_lower) {
-      /* Too slow. Put the hammer down. */
-      if(OSCCAL == 0x7e) {
-        break;                       /* stay in lowest range */
-      }
-      if(OSCCAL == 0xff) {
-        break;
-      }
-      OSCCAL++;
-    } else if(temp > cal_upper) {
-      /* Too fast, retard. */
-      if(OSCCAL == 0x81) {
-        break;                       /* stay in highest range */
-      }
-      if(OSCCAL == 0x00) {
-        break;
-      }
-      OSCCAL--;
-    } else {
-      /* The CPU clock frequency is now within +/- 0.5% of the target value. */
-      cal_ok = true;
-    }
-
-    counter--;
-  } while((counter != 0) && (false == cal_ok));
-
-  osccal_calibrated = OSCCAL;
-  if(true != cal_ok) {
-    /* We failed, therefore restore previous OSCCAL value. */
-    OSCCAL = osccal_original;
-  }
-
-  OSCCAL = osccal_original;
-  TCCR2B = 0;
-
-  ASSR &= ~(1 << AS2);
-
-  /* Disable both timers again to save power. */
-  /*    PRR0 |= (1 << PRTIM2);/ * |(1 << PRTIM1); * / */
-
-  AVR_LEAVE_CRITICAL_REGION();
-}
-#endif
 /*---------------------------------------------------------------------------*/
 int
 rf230_init(void)
@@ -1605,13 +1489,7 @@ rf230_read(void *buf, unsigned short bufsize)
       /*  rssi = hal_subregister_read(SR_ED_LEVEL);  //0-84, resolution 1 dB */
       rssi = hal_register_read(RG_PHY_ED_LEVEL); /* 0-84, resolution 1 dB */
     } else {
-#if 0   /* 3-clock shift and add is faster on machines with no hardware multiply */
-/* avr-gcc may have an -Os bug that uses the general subroutine for multiplying by 3 */
-      rssi = hal_subregister_read(SR_RSSI);     /* 0-28, resolution 3 dB */
-      rssi = (rssi << 1) + rssi;                /* *3 */
-#else  /* 1 or 2 clock multiply, or compiler with correct optimization */
       rssi = 3 * hal_subregister_read(SR_RSSI);
-#endif
     }
 
     if(radio_was_off) {

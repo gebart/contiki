@@ -380,58 +380,6 @@ hal_frame_read(hal_rx_frame_t *rx_frame) /* TODO: Make sure this is working */
   }
 
   HAL_LEAVE_CRITICAL_REGION();
-#if 0
-  uint8_t frame_length, *rx_data;
-
-  /*Send frame read (long mode) command.*/
-  HAL_SPI_TRANSFER_OPEN();
-  HAL_SPI_TRANSFER(0x20);
-
-  /*Read frame length. This includes the checksum. */
-  frame_length = HAL_SPI_TRANSFER(0);
-
-  /*Check for correct frame length. Bypassing this test can result in a buffer overrun! */
-  if((frame_length < HAL_MIN_FRAME_LENGTH) || (frame_length > HAL_MAX_FRAME_LENGTH)) {
-    /* Length test failed */
-    rx_frame->length = 0;
-    rx_frame->lqi = 0;
-    rx_frame->crc = false;
-  } else {
-    rx_data = (rx_frame->data);
-    rx_frame->length = frame_length;
-
-    /*Transfer frame buffer to RAM buffer */
-
-    HAL_SPI_TRANSFER_WRITE(0);
-    HAL_SPI_TRANSFER_WAIT();
-    do {
-      *rx_data++ = HAL_SPI_TRANSFER_READ();
-      HAL_SPI_TRANSFER_WRITE(0);
-
-      /* CRC was checked in hardware, but redoing the checksum here ensures the rx buffer
-       * is not being overwritten by the next packet. Since that lengthy computation makes
-       * such overwrites more likely, we skip it and hope for the best.
-       * Without the check a full buffer is read in 320us at 2x spi clocking.
-       * The 802.15.4 standard requires 640us after a greater than 18 byte frame.
-       * With a low interrupt latency overwrites should never occur.
-       */
-      /*          crc = _crc_ccitt_update(crc, tempData); */
-
-      HAL_SPI_TRANSFER_WAIT();
-    } while(--frame_length > 0);
-
-    /*Read LQI value for this frame.*/
-    rx_frame->lqi = HAL_SPI_TRANSFER_READ();
-
-    /* If crc was calculated set crc field in hal_rx_frame_t accordingly.
-     * Else show the crc has passed the hardware check.
-     */
-    rx_frame->crc = true;
-  }
-
-  HAL_SPI_TRANSFER_CLOSE();
-
-#endif /* defined(__AVR_ATmega128RFA1__) */
 }
 /*----------------------------------------------------------------------------*/
 /** \brief  This function will download a frame to the radio transceiver's frame
