@@ -189,7 +189,7 @@ void spi_set_params(const spi_bus_t spi_num, const uint8_t ctas, const spi_confi
   spi_conf[spi_num][ctas] = config;
 }
 
-void spi_refresh_clock_params(void) {
+void spi_refresh_params(void) {
   int spi_num;
   int ctas;
 
@@ -318,6 +318,8 @@ void spi_stop(const spi_bus_t spi_num)
       break;
   }
 }
+
+/** \todo SPI: Handle all flags properly in ISR, remove assumption on TCF. */
 
 /**
  * ISR for handling bus transfer complete interrupts.

@@ -155,14 +155,22 @@ void spi_stop(const spi_bus_t spi_num);
  *
  * Never call this function while the SPI bus has an active transfer going.
  *
- * config is expected to remain a valid configuration in order for
- * spi_refresh_params to work properly.
+ * The struct pointed to by config is expected to remain a valid configuration
+ * in order for spi_refresh_params to work properly.
  *
  * \param spi_num The SPI module number.
  * \param ctas Index of the chosen CTAR register.
  * \param config Pointer to bus configuration information.
  */
 void spi_set_params(const spi_bus_t spi_num, const spi_ctar_t ctas, const spi_config_t* config);
+
+/**
+ * Refresh the latest configuration for the SPI bus.
+ *
+ * This should be run after changing the bus clock frequency in order to set new
+ * prescaler and scaler settings in the SPI hardware module.
+ */
+void spi_refresh_params(void);
 
 #ifdef __cplusplus
 } /* extern "C" */
