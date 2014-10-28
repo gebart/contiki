@@ -104,8 +104,7 @@ main(void)
 
   /* Initialize SPI bus driver */
   spi_init();
-  /* SPI0 is used for onboard peripherals */
-  spi_hw_init_master(0);
+  /** \todo make SPI0 on-demand clocked. */
   spi_start(0);
 
 #ifndef WITH_SLIP

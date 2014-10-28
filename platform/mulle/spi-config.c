@@ -49,6 +49,8 @@ spi_init(void)
 {
   int i;
   port_init_spi0();
+  /* SPI0 is used for onboard peripherals */
+  spi_hw_init_master(0);
   spi_start(0);
   for (i = 0; i < NUM_CTAR; ++i) {
     spi_set_params(0, i, &spi0_conf[i]);
