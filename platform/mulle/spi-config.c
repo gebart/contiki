@@ -22,14 +22,14 @@ static const spi_config_t spi0_conf[NUM_CTAR] = {
 
 /* SPI1 is only used by expansion boards. */
 /*
-spi_config_t spi1_conf[NUM_CTAR] = {
+static const spi_config_t spi1_conf[NUM_CTAR] = {
   { .sck_freq = 1000000, .frame_size = 8, .cpol = 0, .cpha = 0},
   { .sck_freq = 10000000, .frame_size = 8, .cpol = 1, .cpha = 1}
   };
 */
 
 /* Set port mux for SPI0 bus */
-void port_init_spi0(void) {
+static void port_init_spi0(void) {
   /* Turn on port */
   BITBAND_REG(SIM->SCGC5, SIM_SCGC5_PORTD_SHIFT) = 1;
   /* Set up mux */
