@@ -15,7 +15,7 @@
 
 #include "spi_arch.h"
 
-spi_config_t spi0_conf[NUM_CTAR] = {
+static const spi_config_t spi0_conf[NUM_CTAR] = {
   { .sck_freq = 7500000, .frame_size = 8, .cpol = 0, .cpha = 0},
   { .sck_freq = 10000000, .frame_size = 8, .cpol = 1, .cpha = 1}
   };
@@ -42,3 +42,17 @@ void port_init_spi0(void) {
   PORTD->PCR[5] = PORT_PCR_MUX(2); /* SPI0_PCS2 */
   PORTD->PCR[6] = PORT_PCR_MUX(2); /* SPI0_PCS3 */
 }
+
+/* Board or project specific SPI initialization procedure. */
+void
+spi_init(void)
+{
+  int i;
+  port_init_spi0();
+  spi_start(0);
+  for (i = 0; i < NUM_CTAR; ++i) {
+    spi_set_params(0, i, &spi0_conf[i]);
+  }
+  spi_stop(0);
+}
+

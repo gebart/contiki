@@ -179,38 +179,12 @@ lis3dh_memcpy_to_device(const lis3dh_reg_addr_t start_address,
   /* Release the bus for other threads. */
   spi_release_bus(LIS3DH_SPI_NUM);
 }
+
 /**
- * Perform the platform specific part of the initialization process of the LIS3DH.
- * This function is expected to set up the SPI module for the LIS3DH.
+ * Perform the platform specific part of the initialization process of the
+ * LIS3DH, if any.
  */
 void
 lis3dh_arch_init()
 {
-  /* Enable clock gate on PTD (for SPI0) */
-  SIM->SCGC5 |= SIM_SCGC5_PORTD_MASK;
-  /* Note: Interrupts will need to enable clock gate on PTC as well */
-
-  /* Enable clock gate for SPI0 module */
-  SIM->SCGC6 |= SIM_SCGC6_SPI0_MASK;
-
-  /* Configure SPI0 */
-  /* Master mode */
-  /* all peripheral chip select signals are active low */
-  /* Disable TX,RX FIFO */
-  SPI[0]->MCR = SPI_MCR_MSTR_MASK | SPI_MCR_PCSIS(0x1F) | SPI_MCR_DIS_RXF_MASK | SPI_MCR_DIS_TXF_MASK;     /* 0x803F3000; */
-
-  /* 8 bit frame size */
-  /* Set up different delays and clock scalers */
-  /* TODO: These need tuning */
-  /* FIXME: Coordinate SPI0 parameters between different peripheral drivers */
-  /* IMPORTANT: Clock polarity is active low! */
-  SPI0->CTAR[LIS3DH_CTAS] = SPI_CTAR_FMSZ(7) | SPI_CTAR_CSSCK(2) | SPI_CTAR_ASC(2) | SPI_CTAR_DT(2) | SPI_CTAR_BR(4) | SPI_CTAR_CPOL_MASK | SPI_CTAR_CPHA_MASK; /*0x38002224; *//* TODO: Should be able to speed up */
-
-  /* Mux SPI0 on port D */
-  PORTD->PCR[0] = PORT_PCR_MUX(2); /* SPI0_PCS0 */
-  PORTD->PCR[1] = PORT_PCR_MUX(2); /* SPI0_SCK */
-  PORTD->PCR[2] = PORT_PCR_MUX(2); /* SPI0_SOUT */
-  PORTD->PCR[3] = PORT_PCR_MUX(2); /* SPI0_SIN */
-
-  return;
 }

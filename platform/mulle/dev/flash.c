@@ -437,12 +437,9 @@ flash_init(void)
   uint32_t jedec_id;
   int i;
 
-  /** \todo move SPI initialization to contiki-main.c */
-  spi_init();
-  spi_hw_init_master(FLASH_SPI_NUM);
-  spi_start(FLASH_SPI_NUM);
-
   /* Wait a while for memories to start */
+  /* Data sheet for M25P16 says this should be around 10 ms max, but this may
+   * also depend on how much decoupling is used for the power circuit. */
   /* TODO(henrik) Change this to more exact times. */
   for(i = 0; i < 200; ++i) {
     udelay(1000);

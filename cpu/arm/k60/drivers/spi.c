@@ -47,9 +47,12 @@
 #define SPI_IDLE_DATA (0xffff)
 
 /* one config per CTAR instance */
-spi_config_t *spi_conf[NUM_SPI][NUM_CTAR] = {{NULL}};
+/* This is an array of pointers to the current SPI bus configurations. The saved
+ * pointers are used to be able to update the prescaler and scaler settings
+ * whenever the bus clock frequency changes. */
+static const spi_config_t *spi_conf[NUM_SPI][NUM_CTAR] = {{NULL}};
 
-static uint32_t spi_lock[NUM_SPI] = {0};
+static lock_t spi_lock[NUM_SPI] = {2, 2, 2}; /* Block access by default until spi_hw_init_master has been run */
 
 static volatile uint8_t spi_waiting_flag[NUM_SPI] = {0};
 
@@ -127,34 +130,25 @@ static int find_closest_scalers(unsigned int module_clock, unsigned int target_c
   return 0;
 }
 
-void
-spi_init(void)
-{
-  int i;
-  port_init_spi0();
-  spi_start(0);
-  for (i = 0; i < NUM_CTAR; ++i) {
-    spi_set_params(0, i, &spi0_conf[i]);
-  }
-  spi_stop(0);
-}
-
-void spi_acquire_bus(const uint8_t spi_num) {
+void spi_acquire_bus(const spi_bus_t spi_num) {
   lock_acquire(&spi_lock[spi_num]);
 }
 
-void spi_release_bus(const uint8_t spi_num) {
+void spi_release_bus(const spi_bus_t spi_num) {
   lock_release(&spi_lock[spi_num]);
 }
 
-int spi_is_busy(const uint8_t spi_num) {
+int spi_is_busy(const spi_bus_t spi_num) {
   return (spi_lock[spi_num] != 0);
 }
 
 void
-spi_hw_init_master(const uint8_t spi_num) {
+spi_hw_init_master(const spi_bus_t spi_num) {
   /* Clear lock variable */
   spi_lock[spi_num] = 0;
+
+  /* Block access to the bus */
+  spi_acquire_bus(spi_num);
 
   /* enable clock gate */
   spi_start(spi_num);
@@ -170,9 +164,12 @@ spi_hw_init_master(const uint8_t spi_num) {
 
   /* disable clock gate */
   spi_stop(spi_num);
+
+  /* Allow access to the bus */
+  spi_release_bus(spi_num);
 }
 
-void spi_set_params(const uint8_t spi_num, const uint8_t ctas, const spi_config_t* config) {
+void spi_set_params(const spi_bus_t spi_num, const uint8_t ctas, const spi_config_t* config) {
   uint32_t ctar = 0;
 
   /* All of the SPI modules run on the Bus clock */
@@ -189,9 +186,23 @@ void spi_set_params(const uint8_t spi_num, const uint8_t ctas, const spi_config_
   }
 
   SPI[spi_num]->CTAR[ctas] = ctar;
+  spi_conf[spi_num][ctas] = config;
 }
 
-int spi_transfer_blocking(const uint8_t spi_num, const uint8_t ctas, const uint32_t cs,
+void spi_refresh_clock_params(void) {
+  int spi_num;
+  int ctas;
+
+  for (spi_num = 0; spi_num < NUM_SPI; ++spi_num) {
+    for (ctas = 0; ctas < NUM_CTAR; ++ctas) {
+      if (spi_conf[spi_num][ctas] != NULL) {
+        spi_set_params(spi_num, ctas, spi_conf[spi_num][ctas]);
+      }
+    }
+  }
+}
+
+int spi_transfer_blocking(const spi_bus_t spi_num, const uint8_t ctas, const uint32_t cs,
              const spi_transfer_flag_t cont, const uint8_t *data_out,
              uint8_t *data_in, size_t count_out, size_t count_in)
 {
@@ -276,7 +287,7 @@ int spi_transfer_blocking(const uint8_t spi_num, const uint8_t ctas, const uint3
   return 0;
 }
 
-void spi_start(const uint8_t spi_num)
+void spi_start(const spi_bus_t spi_num)
 {
   /* Enable clock gate for the correct SPI hardware module */
   switch(spi_num) {
@@ -292,7 +303,7 @@ void spi_start(const uint8_t spi_num)
   }
 }
 
-void spi_stop(const uint8_t spi_num)
+void spi_stop(const spi_bus_t spi_num)
 {
   /* Enable clock gate for the correct SPI hardware module */
   switch(spi_num) {
