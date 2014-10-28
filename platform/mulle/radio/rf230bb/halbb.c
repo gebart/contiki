@@ -136,92 +136,12 @@ volatile extern signed char rf230_last_rssi;
 /* static hal_trx_end_isr_event_handler_t trx_end_callback; */
 
 /*============================ IMPLEMENTATION ================================*/
-#if 0 /* defined(__AVR_ATmega128RFA1__) */
-/* #include <avr/io.h> */
-#include <avr/interrupt.h>
-/* AVR1281 with internal RF231 radio */
-#define HAL_SPI_TRANSFER_OPEN()
-/* #define HAL_SPI_TRANSFER_WRITE(to_write) (SPDR = (to_write)) */
-#define HAL_SPI_TRANSFER_WAIT()
-#define HAL_SPI_TRANSFER_READ() (SPDR)
-#define HAL_SPI_TRANSFER_CLOSE()
-#if 0
-#define HAL_SPI_TRANSFER(to_write) ( \
-    HAL_SPI_TRANSFER_WRITE(to_write), \
-    HAL_SPI_TRANSFER_WAIT(), \
-    HAL_SPI_TRANSFER_READ())
-#endif
-#elif defined(__AVR__)
-/*
- * AVR with hardware SPI tranfers (TODO: move to hw spi hal for avr cpu)
- */
-#include <avr/io.h>
-#include <avr/interrupt.h>
-
-#define HAL_SPI_TRANSFER_OPEN() { \
-    HAL_ENTER_CRITICAL_REGION(); \
-    HAL_SS_LOW(); /* Start the SPI transaction by pulling the Slave Select low. */
-#define HAL_SPI_TRANSFER_WRITE(to_write) (SPDR = (to_write))
-#define HAL_SPI_TRANSFER_WAIT() ({ while((SPSR & (1 << SPIF)) == 0) {; } }) /* gcc extension, alternative inline function */
-#define HAL_SPI_TRANSFER_READ() (SPDR)
-#define HAL_SPI_TRANSFER_CLOSE() \
-  HAL_SS_HIGH();   /* End the transaction by pulling the Slave Select High. */ \
-  HAL_LEAVE_CRITICAL_REGION(); \
-  }
-#define HAL_SPI_TRANSFER(to_write) ( \
-    HAL_SPI_TRANSFER_WRITE(to_write), \
-    HAL_SPI_TRANSFER_WAIT(), \
-    HAL_SPI_TRANSFER_READ())
-#endif
-#if 0
-/*
- * Other SPI architecture (parts to core, parts to m16c6Xp
- */
-#include "contiki-mulle.h" /* MULLE_ENTER_CRITICAL_REGION */
-
-/* Software SPI transfers */
-#define HAL_SPI_TRANSFER_OPEN() { uint8_t spiTemp; \
-                                  HAL_ENTER_CRITICAL_REGION(); \
-                                  HAL_SS_LOW(); /* Start the SPI transaction by pulling the Slave Select low. */
-#define HAL_SPI_TRANSFER_WRITE(to_write) (spiTemp = spiWrite(to_write))
-#define HAL_SPI_TRANSFER_WAIT()  ({ 0; })
-#define HAL_SPI_TRANSFER_READ() (spiTemp)
-#define HAL_SPI_TRANSFER_CLOSE() \
-  HAL_SS_HIGH();   /* End the transaction by pulling the Slave Select High. */ \
-  HAL_LEAVE_CRITICAL_REGION(); \
-  }
-#define HAL_SPI_TRANSFER(to_write) (spiTemp = spiWrite(to_write))
-
-inline uint8_t
-spiWrite(uint8_t byte)
-{
-  uint8_t data = 0;
-  uint8_t mask = 0x80;
-  do {
-    if((byte & mask) != 0) {
-      HAL_PORT_MOSI |= (1 << HAL_MOSI_PIN);       /* call MOSI.set(); */
-    } else {
-      HAL_PORT_MOSI &= ~(1 << HAL_MOSI_PIN);       /* call MOSI.clr(); */
-    }
-    if((HAL_PORT_MISO & (1 << HAL_MISO_PIN)) > 0) {    /* call MISO.get() ) */
-      data |= mask;
-    }
-
-    HAL_PORT_SCK &= ~(1 << HAL_SCK_PIN);     /* call SCLK.clr(); */
-    HAL_PORT_SCK |= (1 << HAL_SCK_PIN);     /* call SCLK.set(); */
-  } while((mask >>= 1) != 0);
-  return data;
-}
-#endif /* !__AVR__ */
-
-/* #include "MK60DZ10.h" */
 
 /* K60: TODO */
+/* XXX: Refactor macros */
 #define HAL_SPI_TRANSFER_OPEN() HAL_ENTER_CRITICAL_REGION();
-/* #define HAL_SPI_TRANSFER_WRITE(data) */
-/* #define HAL_SPI_TRANSFER_WAIT() */
-/* #define HAL_SPI_TRANSFER_READ() */
 #define HAL_SPI_TRANSFER_CLOSE() HAL_LEAVE_CRITICAL_REGION();
+
 #include "K60.h"
 #include "llwu.h"
 
@@ -258,11 +178,8 @@ hal_spi_receive(int cont)
   SPI0->SR |= SPI_SR_TCF_MASK;
   return 0xFF & SPI0->POPR;
 }
-#ifdef MULLE_IRQ_PATCH
-#define HAL_RF230_ISR() void __attribute__((interrupt))  _isr_portc_pin_detect(void)
-#else
-#define HAL_RF230_ISR() void __attribute__((interrupt))  _isr_portb_pin_detect(void)
-#endif
+
+#define HAL_RF230_ISR() void _isr_portb_pin_detect(void)
 
 /** \brief  This function initializes the Hardware Abstraction Layer.
  */
