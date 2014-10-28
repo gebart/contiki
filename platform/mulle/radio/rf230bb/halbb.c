@@ -596,13 +596,8 @@ HAL_RF230_ISR()
   uint8_t interrupt_source;   /* used after HAL_SPI_TRANSFER_OPEN/CLOSE block */
 
   /* Clear Interrupt Status Flag */
-#ifdef MULLE_IRQ_PATCH
-  PORTC->PCR[1] |= 0x01000000;    /* Clear interrupt */
-  NVIC_ClearPendingIRQ(PORTC_IRQn);
-#else
-  PORTB->PCR[9] |= 0x01000000;    /* Clear interrupt */
+  BITBAND_REG(PORTB->PCR[9], PORT_PCR_ISF_SHIFT) = 1;    /* Clear interrupt */
   NVIC_ClearPendingIRQ(PORTB_IRQn);
-#endif
 
   INTERRUPTDEBUG(1);
 
