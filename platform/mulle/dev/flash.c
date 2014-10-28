@@ -11,6 +11,7 @@
 #include "flash.h"
 
 #include "clock.h"
+#include "udelay.h"
 
 /* ************************************************************************** */
 /* #define FLASH_DEBUG */
