@@ -516,9 +516,6 @@ on(void)
 /* If radio is off (slptr high), turn it on */
   if(hal_get_slptr()) {
     ENERGEST_ON(ENERGEST_TYPE_LED_RED);
-#if RF230BB_CONF_LEDONPORTE1
-    PORTE |= (1 << PE1); /* ledon */
-#endif
 
 /* SPI based radios. The wake time depends on board capacitance.
  * Make sure the delay is long enough, as using SPI too soon will reset the MCU!
@@ -546,9 +543,6 @@ on(void)
 static void
 off(void)
 {
-#if RF230BB_CONF_LEDONPORTE1
-  PORTE &= ~(1 << PE1); /* ledoff */
-#endif
 #ifdef RF230BB_HOOK_RADIO_OFF
   RF230BB_HOOK_RADIO_OFF();
 #endif
