@@ -1411,137 +1411,137 @@ rf230_read(void *buf, unsigned short bufsize)
     return 0;
   }
 #endif
-  }
+}
 /*---------------------------------------------------------------------------*/
-  void
-  rf230_set_txpower(uint8_t power)
-  {
-    set_txpower(power);
-  }
+void
+rf230_set_txpower(uint8_t power)
+{
+  set_txpower(power);
+}
 /*---------------------------------------------------------------------------*/
-  uint8_t
-  rf230_get_txpower(void)
-  {
-    uint8_t power = TX_PWR_UNDEFINED;
-    if(hal_get_slptr()) {
-      PRINTF("rf230_get_txpower:Sleeping");
-    } else {
-      power = hal_subregister_read(SR_TX_PWR);
-    }
-    return power;
+uint8_t
+rf230_get_txpower(void)
+{
+  uint8_t power = TX_PWR_UNDEFINED;
+  if(hal_get_slptr()) {
+    PRINTF("rf230_get_txpower:Sleeping");
+  } else {
+    power = hal_subregister_read(SR_TX_PWR);
   }
+  return power;
+}
 /*---------------------------------------------------------------------------*/
-  uint8_t
-  rf230_get_raw_rssi(void)
-  {
-    uint8_t rssi, state;
-    bool radio_was_off = 0;
+uint8_t
+rf230_get_raw_rssi(void)
+{
+  uint8_t rssi, state;
+  bool radio_was_off = 0;
 
-    /*The RSSI measurement should only be done in RX_ON or BUSY_RX.*/
-    if(!RF230_receive_on) {
-      radio_was_off = 1;
-      rf230_on();
-    }
+  /*The RSSI measurement should only be done in RX_ON or BUSY_RX.*/
+  if(!RF230_receive_on) {
+    radio_was_off = 1;
+    rf230_on();
+  }
 
 /* The energy detect register is used in extended mode (since RSSI will read 0) */
 /* The rssi register is multiplied by 3 to a consistent value from either register */
-    state = radio_get_trx_state();
-    if((state == RX_AACK_ON) || (state == BUSY_RX_AACK)) {
-      /*  rssi = hal_subregister_read(SR_ED_LEVEL);  //0-84, resolution 1 dB */
-      rssi = hal_register_read(RG_PHY_ED_LEVEL); /* 0-84, resolution 1 dB */
-    } else {
-      rssi = 3 * hal_subregister_read(SR_RSSI);
-    }
-
-    if(radio_was_off) {
-      rf230_off();
-    }
-    return rssi;
+  state = radio_get_trx_state();
+  if((state == RX_AACK_ON) || (state == BUSY_RX_AACK)) {
+    /*  rssi = hal_subregister_read(SR_ED_LEVEL);  //0-84, resolution 1 dB */
+    rssi = hal_register_read(RG_PHY_ED_LEVEL); /* 0-84, resolution 1 dB */
+  } else {
+    rssi = 3 * hal_subregister_read(SR_RSSI);
   }
+
+  if(radio_was_off) {
+    rf230_off();
+  }
+  return rssi;
+}
 /*---------------------------------------------------------------------------*/
-  static int
-  rf230_cca(void)
-  {
-    uint8_t cca = 0;
-    uint8_t radio_was_off = 0;
+static int
+rf230_cca(void)
+{
+  uint8_t cca = 0;
+  uint8_t radio_was_off = 0;
 
-    /* Turn radio on if necessary. If radio is currently busy return busy channel */
-    /* This may happen when testing radio duty cycling with RADIOALWAYSON */
-    if(RF230_receive_on) {
-      if(hal_get_slptr()) { /* should not be sleeping! */
-        DEBUGFLOW('<');
-        goto busyexit;
-      } else {
-        if(!rf230_isidle()) {
-          DEBUGFLOW('2');
-          goto busyexit;
-        }
-      }
+  /* Turn radio on if necessary. If radio is currently busy return busy channel */
+  /* This may happen when testing radio duty cycling with RADIOALWAYSON */
+  if(RF230_receive_on) {
+    if(hal_get_slptr()) { /* should not be sleeping! */
+      DEBUGFLOW('<');
+      goto busyexit;
     } else {
-      radio_was_off = 1;
-      rf230_on();
-    }
-
-    ENERGEST_ON(ENERGEST_TYPE_LED_YELLOW);
-    /* CCA Mode Mode 1=Energy above threshold  2=Carrier sense only  3=Both 0=Either (RF231 only) */
-    /* Use the current mode. Note triggering a manual CCA is not recommended in extended mode */
-/* hal_subregister_write(SR_CCA_MODE,1); */
-
-    /* Don't allow interrupts! */
-    /* Start the CCA, wait till done, return result */
-    /* Note reading the TRX_STATUS register clears both CCA_STATUS and CCA_DONE bits */
-    { /* uint8_t volatile saved_sreg = SREG; / * TODO: K60 * / */
-      cli();
-      rf230_waitidle();
-      hal_subregister_write(SR_CCA_REQUEST, 1);
-      delay_us(TIME_CCA);
-      while((cca & 0x80) == 0) {
-        cca = hal_register_read(RG_TRX_STATUS);
+      if(!rf230_isidle()) {
+        DEBUGFLOW('2');
+        goto busyexit;
       }
-      /* SREG=saved_sreg; / * TODO: K60 * / */
     }
-       ENERGEST_OFF(ENERGEST_TYPE_LED_YELLOW);
-       if(radio_was_off) {
-         rf230_off();
-       }
+  } else {
+    radio_was_off = 1;
+    rf230_on();
+  }
+
+  ENERGEST_ON(ENERGEST_TYPE_LED_YELLOW);
+  /* CCA Mode Mode 1=Energy above threshold  2=Carrier sense only  3=Both 0=Either (RF231 only) */
+  /* Use the current mode. Note triggering a manual CCA is not recommended in extended mode */
+  /* hal_subregister_write(SR_CCA_MODE,1); */
+
+  /* Don't allow interrupts! */
+  /* Start the CCA, wait till done, return result */
+  /* Note reading the TRX_STATUS register clears both CCA_STATUS and CCA_DONE bits */
+  { /* uint8_t volatile saved_sreg = SREG; / * TODO: K60 * / */
+    cli();
+    rf230_waitidle();
+    hal_subregister_write(SR_CCA_REQUEST, 1);
+    delay_us(TIME_CCA);
+    while((cca & 0x80) == 0) {
+      cca = hal_register_read(RG_TRX_STATUS);
+    }
+    /* SREG=saved_sreg; / * TODO: K60 * / */
+  }
+  ENERGEST_OFF(ENERGEST_TYPE_LED_YELLOW);
+  if(radio_was_off) {
+   rf230_off();
+  }
 /* if (cca & 0x40) {/ *DEBUGFLOW('3')* /;} else {rf230_pending=1;DEBUGFLOW('4');} */
-       if(cca & 0x40) {
+  if(cca & 0x40) {
 /*   DEBUGFLOW('5'); */
-         return 1;
-       } else {
+    return 1;
+  } else {
 /*  DEBUGFLOW('6'); */
 busyexit:
-         return 0;
-       }
-       }
+    return 0;
+  }
+}
 /*---------------------------------------------------------------------------*/
-       int
-       rf230_receiving_packet(void)
-       {
-         uint8_t radio_state;
-         if(hal_get_slptr()) {
-           DEBUGFLOW('=');
-         } else {
-           radio_state = hal_subregister_read(SR_TRX_STATUS);
-           if((radio_state == BUSY_RX) || (radio_state == BUSY_RX_AACK)) {
-/*      DEBUGFLOW('8'); */
-/*	  rf230_pending=1; */
-             return 1;
-           }
-         }
-         return 0;
-       }
+int
+rf230_receiving_packet(void)
+{
+  uint8_t radio_state;
+  if(hal_get_slptr()) {
+    DEBUGFLOW('=');
+  } else {
+    radio_state = hal_subregister_read(SR_TRX_STATUS);
+    if((radio_state == BUSY_RX) || (radio_state == BUSY_RX_AACK)) {
+      /* DEBUGFLOW('8'); */
+      /* rf230_pending=1; */
+      return 1;
+    }
+  }
+  return 0;
+}
 /*---------------------------------------------------------------------------*/
-       static int
-       rf230_pending_packet(void)
-       {
+static int
+rf230_pending_packet(void)
+{
 #if RF230_INSERTACK
-         if(ack_pending == 1) {
-           return 1;
-         }
+  if(ack_pending == 1) {
+    return 1;
+  }
 #endif
-         return rf230_pending;
-       }
+  return rf230_pending;
+}
 /*---------------------------------------------------------------------------*/
 #if RF230_CONF_SNEEZER && JACKDAW
 /* See A.2 in the datasheet for the sequence needed.
