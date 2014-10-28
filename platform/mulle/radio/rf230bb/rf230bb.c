@@ -523,14 +523,7 @@ on(void)
 #if RF230BB_CONF_LEDONPORTE1
     PORTE |= (1 << PE1); /* ledon */
 #endif
-#if defined(__AVR_ATmega128RFA1__)
-/* Use the poweron interrupt for delay */
-    rf230_interruptwait = 1;
-    sei();
-    hal_set_slptr_low();
-    while(rf230_interruptwait) {
-    }
-#else
+
 /* SPI based radios. The wake time depends on board capacitance.
  * Make sure the delay is long enough, as using SPI too soon will reset the MCU!
  * Use 2x the nominal value for safety. 1.5x is not long enough for Raven!
@@ -544,7 +537,6 @@ on(void)
     delay_us(2 * TIME_SLEEP_TO_TRX_OFF);
 /*  delay_us(TIME_SLEEP_TO_TRX_OFF+TIME_SLEEP_TO_TRX_OFF/2); */
 /*  SREG=sreg; */
-#endif
   }
 
 #if RF230_CONF_AUTOACK
@@ -834,19 +826,10 @@ rf230_transmit(unsigned short payload_len)
 
   ENERGEST_ON(ENERGEST_TYPE_TRANSMIT);
 
-#if defined(__AVR_ATmega128RFA1__)
-/* No interrupts across frame download! */
-  cli();
-/* slow down the transmit? */
-/*   delay_us(500); */
-#endif
   /* Toggle the SLP_TR pin to initiate the frame transmission */
   hal_set_slptr_high();
   hal_set_slptr_low();
   hal_frame_write(buffer, total_len);
-#if defined(__AVR_ATmega128RFA1__)
-  sei();
-#endif
   PRINTF("rf230_transmit: %d\r\n", (int)total_len);
 #if DEBUG > 1
 /* Note the dumped packet will have a zero checksum unless compiled with RF230_CONF_CHECKSUM
