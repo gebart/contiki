@@ -12,7 +12,7 @@
 #include "K60.h"
 #include "synchronization.h"
 
-static uint32_t xmem_lock;
+static lock_t xmem_lock;
 
 void
 xmem_init(void)
