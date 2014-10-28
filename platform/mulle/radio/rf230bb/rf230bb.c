@@ -672,13 +672,6 @@ rf230_init(void)
 void
 rf230_warm_reset(void)
 {
-#if RF230_CONF_SNEEZER && JACKDAW
-  /* Take jackdaw radio out of test mode */
-#warning Manipulating PORTB pins for RF230 Sneezer mode!
-  PORTB &= ~(1 << 7);
-  DDRB &= ~(1 << 7);
-#endif
-
   hal_register_write(RG_IRQ_MASK, RF230_SUPPORTED_INTERRUPT_MASK);
 
   /* Set up number of automatic retries 0-15 (0 implies PLL_ON sends instead of the extended TX_ARET mode */
