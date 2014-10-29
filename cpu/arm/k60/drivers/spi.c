@@ -153,6 +153,9 @@ spi_hw_init_master(const spi_bus_t spi_num) {
   /* enable clock gate */
   spi_start(spi_num);
 
+  /* Clear MDIS to enable the module. */
+  BITBAND_REG(SPI[spi_num]->MCR, SPI_MCR_MDIS_SHIFT) = 0;
+
   /* Enable master mode, select chip select signal polarity */
   /* XXX: Hard-coded chip select active low */
   /* Disable FIFOs, this can be improved in the future */
