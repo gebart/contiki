@@ -175,7 +175,7 @@ spi_hw_init_master(const spi_bus_t spi_num) {
 void spi_set_params(const spi_bus_t spi_num, const uint8_t ctas, const spi_config_t* config) {
   uint32_t ctar = 0;
 
-  /* All of the SPI modules run on the Bus clock */
+  /* All of the SPI modules run on the Bus clock, see K60 Ref Manual. 3.9.4.2 SPI clocking */
   find_closest_scalers(SystemBusClock, config->sck_freq, &ctar);
 
   /* FMSZ equals the frame size + 1 */

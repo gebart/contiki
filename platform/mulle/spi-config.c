@@ -16,7 +16,7 @@
 #include "spi_arch.h"
 
 static const spi_config_t spi0_conf[NUM_CTAR] = {
-  { .sck_freq = 7500000, .frame_size = 8, .cpol = 0, .cpha = 0},
+  { .sck_freq =  7500000, .frame_size = 8, .cpol = 0, .cpha = 0},
   { .sck_freq = 10000000, .frame_size = 8, .cpol = 1, .cpha = 1}
   };
 
