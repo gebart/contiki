@@ -42,8 +42,6 @@
 #include "llwu.h"
 
 #define delay_us(us) { udelay(us); }
-#define cli() MK60_DISABLE_INTERRUPT()
-#define sei() MK60_ENABLE_INTERRUPT()
 
 #include "dev/leds.h"
 #if 0
@@ -1095,49 +1093,28 @@ rf230_set_pan_addr(unsigned pan,
   }
 }
 /*---------------------------------------------------------------------------*/
-/*
- * Interrupt leaves frame intact in FIFO.
- */
 #if RF230_CONF_TIMESTAMPS
 static volatile rtimer_clock_t interrupt_time;
 static volatile int interrupt_time_set;
 #endif /* RF230_CONF_TIMESTAMPS */
+
 int
 rf230_interrupt(void)
 {
-  /* Poll the receive process, unless the stack thinks the radio is off */
-#if RADIOALWAYSON
-  if(RF230_receive_on) {
-    DEBUGFLOW('+');
-#endif
 #if RF230_CONF_TIMESTAMPS
   interrupt_time = timesynch_time();
   interrupt_time_set = 1;
 #endif /* RF230_CONF_TIMESTAMPS */
 
+  /* Poll the receive process */
   process_poll(&rf230_process);
 
   rf230_pending = 1;
 
-#if RADIOSTATS /* TODO:This will double count buffered packets */
-  RF230_receivepackets++;
-#endif
-  RIMESTATS_ADD(llrx);
-
-#if RADIOALWAYSON
-} else {
-  DEBUGFLOW('-');
-  rxframe[rxframe_head].length = 0;
-}
-#endif
   return 1;
 }
 /*---------------------------------------------------------------------------*/
-/* Process to handle input packets
- * Receive interrupts cause this process to be polled
- * It calls the core MAC layer which calls rf230_read to get the packet
- * rf230processflag can be printed in the main idle loop for debugging
- */
+
 #if 0
 uint8_t rf230processflag;
 #define RF230PROCESSFLAG(arg) rf230processflag = arg
@@ -1145,48 +1122,133 @@ uint8_t rf230processflag;
 #define RF230PROCESSFLAG(arg)
 #endif
 
+/* Split out of the main rf230 process to make it more readable */
+static inline void rf230_process_receive_packet(void) {
+  int len;
+
+#if RADIOSTATS /* TODO:This will double count buffered packets */
+  RF230_receivepackets++;
+#endif
+  RIMESTATS_ADD(llrx);
+
+  rf230_pending = 0;
+
+  packetbuf_clear();
+
+#ifdef WITH_SLIP
+  leds_toggle(LEDS_RED);
+#endif
+  len = rf230_read(packetbuf_dataptr(), PACKETBUF_SIZE);
+
+  PRINTF("rf230_read: %u bytes lqi %u\r\n", len, rf230_last_correlation);
+
+  /* TODO(henrik) Sometimes the radio stops working properly and signals 0 */
+  /*              read bytes. It may be due to multiple devices with same id */
+  /*              (border routers). */
+  if(len == 0) {
+    rf230_init();
+  }
+
+  RF230PROCESSFLAG(1);
+  if(len > 0) {
+    packetbuf_set_datalen(len);
+    RF230PROCESSFLAG(2);
+    NETSTACK_RDC.input();
+  } else {
+#if RADIOSTATS
+    RF230_receivefail++;
+#endif
+  }
+}
+
+static inline void rf230_handle_trx_end(void) {
+  uint8_t state;
+  state = hal_subregister_read(SR_TRX_STATUS);
+  if((state == BUSY_RX_AACK) || (state == RX_ON) || (state == BUSY_RX) || (state == RX_AACK_ON)) {
+    /* Received packet interrupt */
+    /* Buffer the frame */
+#ifdef RF230_MIN_RX_POWER
+    /* Discard packets weaker than the minimum if defined. This is for testing miniature meshes.*/
+    /* Save the rssi for printing in the main loop */
+#if RF230_CONF_AUTOACK
+    rf230_last_rssi = hal_register_read(RG_PHY_ED_LEVEL);
+#endif
+    if(rf230_last_rssi >= RF230_MIN_RX_POWER) {
+#endif
+      hal_frame_read(&rxframe[rxframe_tail]);
+      rxframe[rxframe_tail].rssi = rf230_last_rssi;
+      rxframe_tail++;
+      if(rxframe_tail >= RF230_CONF_RX_BUFFERS) {
+        rxframe_tail = 0;
+      }
+#if RADIOALWAYSON
+      /* Process the received frame only if the driver believes the radio was on. */
+      if(RF230_receive_on) {
+        DEBUGFLOW('+');
+        rf230_process_receive_packet();
+      } else {
+        DEBUGFLOW('-');
+        rxframe[rxframe_head].length = 0;
+      }
+#else /* !RADIOALWAYSON */
+      /* Process the received frame */
+      rf230_process_receive_packet();
+#endif
+#ifdef RF230_MIN_RX_POWER
+    }
+#endif
+  }
+}
+
+/* Process to handle input packets
+ * Receive interrupts cause this process to be polled
+ * It calls the core MAC layer which calls rf230_read to get the packet
+ * rf230processflag can be printed in the main idle loop for debugging
+ */
 PROCESS_THREAD(rf230_process, ev, data)
 {
-  int len;
+  uint8_t interrupt_source;
   PROCESS_BEGIN();
   RF230PROCESSFLAG(99);
 
   while(1) {
     PROCESS_YIELD_UNTIL(ev == PROCESS_EVENT_POLL);
+    /* Interrupts from the radio will cause this process to be polled. */
     RF230PROCESSFLAG(42);
+    /*Read Interrupt source.*/
+    interrupt_source = hal_register_read(RG_IRQ_STATUS);   /* K60: OK, tested */
 
-    rf230_pending = 0;
-
-    packetbuf_clear();
-
-    /* Turn off interrupts to avoid ISR writing to the same buffers we are reading. */
-    HAL_ENTER_CRITICAL_REGION();
-#ifdef WITH_SLIP
-    leds_toggle(LEDS_RED);
+    /* Handle the different interrupt flags. */
+    if((interrupt_source & HAL_RX_START_MASK)) {
+      /* Save RSSI for this packet if not in extended mode, scaling to 1dB resolution */
+#if !RF230_CONF_AUTOACK
+      rf230_last_rssi = 3 * hal_subregister_read(SR_RSSI);
 #endif
-    len = rf230_read(packetbuf_dataptr(), PACKETBUF_SIZE);
-
-    /* Restore interrupts. */
-    HAL_LEAVE_CRITICAL_REGION();
-    PRINTF("rf230_read: %u bytes lqi %u\r\n", len, rf230_last_correlation);
-
-    /* TODO(henrik) Sometimes the radio stops working properly and signals 0 */
-    /*              read bytes. It may be due to multiple devices with same id */
-    /*              (border routers). */
-    if(len == 0) {
-      rf230_init();
     }
+    if(interrupt_source & HAL_TRX_END_MASK) {
+      /* TRX_END means a frame was completed */
+      rf230_handle_trx_end();
+    }
+    if(interrupt_source & HAL_TRX_UR_MASK) {
+      /* Not implemented */
+    }
+    if(interrupt_source & HAL_PLL_UNLOCK_MASK) {
+      /* Not implemented */
+    }
+    if(interrupt_source & HAL_PLL_LOCK_MASK) {
+      /* Not implemented */
+    }
+    if(interrupt_source & HAL_BAT_LOW_MASK) {
+      /*  Disable BAT_LOW interrupt to prevent endless interrupts. The interrupt */
+      /*  will continously be asserted while the supply voltage is less than the */
+      /*  user-defined voltage threshold. */
+      uint8_t trx_isr_mask = hal_register_read(RG_IRQ_MASK);
+      trx_isr_mask &= ~HAL_BAT_LOW_MASK;
+      hal_register_write(RG_IRQ_MASK, trx_isr_mask);
+    }
+
 
     RF230PROCESSFLAG(1);
-    if(len > 0) {
-      packetbuf_set_datalen(len);
-      RF230PROCESSFLAG(2);
-      NETSTACK_RDC.input();
-    } else {
-#if RADIOSTATS
-      RF230_receivefail++;
-#endif
-    }
   }
 
   PROCESS_END();
@@ -1478,7 +1540,6 @@ rf230_cca(void)
   /* Start the CCA, wait till done, return result */
   /* Note reading the TRX_STATUS register clears both CCA_STATUS and CCA_DONE bits */
   { /* uint8_t volatile saved_sreg = SREG; / * TODO: K60 * / */
-    cli();
     rf230_waitidle();
     hal_subregister_write(SR_CCA_REQUEST, 1);
     delay_us(TIME_CCA);
