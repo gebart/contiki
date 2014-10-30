@@ -201,13 +201,6 @@ hal_init(void)
   /* Enable power switch to radio */
   hal_set_pwr_high();
 
-  /* Need to add extra delay to SCK->PCS and between frames timing. */
-  /* CS signal deassertion to assertion delay, t8, tDT > 250 ns => 12 DT divider at 48 MHz bus */
-  /* CS signal assertion to SCK delay, t1, tCSC > 180 ns => 8.64 CSC divider at 48 MHz bus */
-  /* last SCK rising edge to CS signal deassertion, t9, (tASC + (1/BR)/2) > 250 ns => 8 ASC divider at 48 MHz bus */
-  /* LSB last byte to MSB next byte, t5, (tCSC+tASC) > 250 ns => already fulfilled if the above conditions are satisfied. */
-  /* TODO: Move to spi-config.c */
-  SPI0->CTAR[0] = 0x38840211;
   /* Platform specific SPI is initialized in spi-config.c */
 
   /*** Enable interrupts from the radio transceiver. ***/
