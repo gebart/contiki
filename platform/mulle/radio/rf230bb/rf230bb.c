@@ -1339,49 +1339,49 @@ rf230_read(void *buf, unsigned short bufsize)
 #endif
 #endif /* RF230_CONF_CHECKSUM */
 
-/* Get the received signal strength for the packet, 0-84 dB above rx threshold */
+      /* Get the received signal strength for the packet, 0-84 dB above rx threshold */
 #if 0   /* more general */
-    rf230_last_rssi = rf230_get_raw_rssi();
+      rf230_last_rssi = rf230_get_raw_rssi();
 #else   /* faster */
 #if RF230_CONF_AUTOACK
-    /*   rf230_last_rssi = hal_subregister_read(SR_ED_LEVEL);  //0-84 resolution 1 dB */
-    rf230_last_rssi = hal_register_read(RG_PHY_ED_LEVEL);  /* 0-84, resolution 1 dB */
+      /*   rf230_last_rssi = hal_subregister_read(SR_ED_LEVEL);  //0-84 resolution 1 dB */
+      rf230_last_rssi = hal_register_read(RG_PHY_ED_LEVEL);  /* 0-84, resolution 1 dB */
 #else
-/* last_rssi will have been set at RX_START interrupt */
-/*  rf230_last_rssi = 3*hal_subregister_read(SR_RSSI);    //0-28 resolution 3 dB */
+      /* last_rssi will have been set at RX_START interrupt */
+      /*  rf230_last_rssi = 3*hal_subregister_read(SR_RSSI);    //0-28 resolution 3 dB */
 #endif
 #endif /* speed vs. generality */
 
-    /* Save the smallest rssi. The display routine can reset by setting it to zero */
-    if((rf230_smallest_rssi == 0) || (rf230_last_rssi < rf230_smallest_rssi)) {
-      rf230_smallest_rssi = rf230_last_rssi;
-    }
+      /* Save the smallest rssi. The display routine can reset by setting it to zero */
+      if((rf230_smallest_rssi == 0) || (rf230_last_rssi < rf230_smallest_rssi)) {
+        rf230_smallest_rssi = rf230_last_rssi;
+      }
 
-    /*   rf230_last_correlation = rxframe[rxframe_head].lqi; */
-    packetbuf_set_attr(PACKETBUF_ATTR_RSSI, rf230_last_rssi);
-    packetbuf_set_attr(PACKETBUF_ATTR_LINK_QUALITY, rf230_last_correlation);
+      /*   rf230_last_correlation = rxframe[rxframe_head].lqi; */
+      packetbuf_set_attr(PACKETBUF_ATTR_RSSI, rf230_last_rssi);
+      packetbuf_set_attr(PACKETBUF_ATTR_LINK_QUALITY, rf230_last_correlation);
 
-    RIMESTATS_ADD(rx);
+      RIMESTATS_ADD(rx);
 
 #if RF230_CONF_TIMESTAMPS
-    rf230_time_of_departure =
-      t.time +
-      setup_time_for_transmission +
-      (total_time_for_transmission * (len - 2)) / total_transmission_len;
+      rf230_time_of_departure =
+        t.time +
+        setup_time_for_transmission +
+        (total_time_for_transmission * (len - 2)) / total_transmission_len;
 
-    rf230_authority_level_of_sender = t.authority_level;
+      rf230_authority_level_of_sender = t.authority_level;
 
-    packetbuf_set_attr(PACKETBUF_ATTR_TIMESTAMP, t.time);
+      packetbuf_set_attr(PACKETBUF_ATTR_TIMESTAMP, t.time);
 #endif /* RF230_CONF_TIMESTAMPS */
 
 #if RF230_CONF_CHECKSUM
 #if FOOTER_LEN
-  } else {
-    DEBUGFLOW('x');
-    /* PRINTF("bad crc"); */
-    RIMESTATS_ADD(badcrc);
-    len = AUX_LEN;
-  }
+    } else {
+      DEBUGFLOW('x');
+      /* PRINTF("bad crc"); */
+      RIMESTATS_ADD(badcrc);
+      len = AUX_LEN;
+    }
 #endif
 #endif
 
