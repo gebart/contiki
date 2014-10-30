@@ -196,12 +196,12 @@ extern "C" {
  * The onboard AT86RF212/AT86RF230 is connected to SPI0.
  * SPI0_PCS1 is the active low CS signal.
  */
-#define AT86RF212_SPI_NUM 0
-#define AT86RF212_CHIP_SELECT_PIN 1
+#define RF230_SPI_NUM 0
+#define RF230_CHIP_SELECT_PIN 1
 /*
  * See spi-config.c for the CTAR configuration
  */
-#define AT86RF212_CTAS 0
+#define RF230_CTAS 0
 
 /*
  * The onboard M25P16 flash memory is connected to SPI0.
