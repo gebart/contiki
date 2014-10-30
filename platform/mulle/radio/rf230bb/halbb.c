@@ -137,49 +137,13 @@ volatile extern signed char rf230_last_rssi;
 
 /*============================ IMPLEMENTATION ================================*/
 
-/* K60: TODO */
-/* XXX: Refactor macros */
-#define HAL_SPI_TRANSFER_OPEN() HAL_ENTER_CRITICAL_REGION();
-#define HAL_SPI_TRANSFER_CLOSE() HAL_LEAVE_CRITICAL_REGION();
-
 #include "K60.h"
 #include "llwu.h"
 
-static inline void
-hal_spi_send(uint8_t data, int cont)
-{
-  /* Send data */
-  if(cont) {
-    SPI0->PUSHR = SPI_PUSHR_PCS((1 << HAL_SS_PIN)) | SPI_PUSHR_CONT_MASK | data;
-  } else {
-    SPI0->PUSHR = SPI_PUSHR_PCS((1 << HAL_SS_PIN)) | data;
-  }
-  SPI0->SR |= SPI_SR_TCF_MASK;
-  while(!(SPI0->SR & SPI_SR_TCF_MASK)) ;
-
-  /* Dummy read */
-  SPI0->SR |= SPI_SR_TCF_MASK;
-  data = (0xFF & SPI0->POPR);
-}
-
-static inline uint8_t
-hal_spi_receive(int cont)
-{
-  /* Dummy write */
-  if(cont) {
-    SPI0->PUSHR = SPI_PUSHR_PCS((1 << HAL_SS_PIN)) | SPI_PUSHR_CONT_MASK;
-  } else {
-    SPI0->PUSHR = SPI_PUSHR_PCS((1 << HAL_SS_PIN));
-  }
-  SPI0->SR |= SPI_SR_TCF_MASK;
-  while(!(SPI0->SR & SPI_SR_TCF_MASK)) ;
-
-  /* Read data */
-  SPI0->SR |= SPI_SR_TCF_MASK;
-  return 0xFF & SPI0->POPR;
-}
-
 #define HAL_RF230_ISR() void _isr_portb_pin_detect(void)
+
+/* Convenience macro */
+#define RF230_CHIP_SELECT_PIN_MASK (1 << RF230_CHIP_SELECT_PIN)
 
 /** \brief  This function initializes the Hardware Abstraction Layer.
  */
@@ -225,13 +189,17 @@ hal_register_read(uint8_t address)
   address &= HAL_TRX_CMD_RADDRM;
   address |= HAL_TRX_CMD_RR;
 
-  HAL_ENTER_CRITICAL_REGION();
+  spi_acquire_bus(RF230_SPI_NUM);
 
   /*** Send Register address and read register content. ***/
-  hal_spi_send(address, true);   /* Write address */
-  register_value = hal_spi_receive(false);   /* Read register */
+  /* Write address */
+  spi_transfer_blocking(RF230_SPI_NUM, RF230_CTAS, RF230_CHIP_SELECT_PIN_MASK,
+    SPI_TRANSFER_CONT, &address, NULL, 1, 0);
+  /* Read data */
+  spi_transfer_blocking(RF230_SPI_NUM, RF230_CTAS, RF230_CHIP_SELECT_PIN_MASK,
+    SPI_TRANSFER_DONE, NULL, &register_value, 0, 1);
 
-  HAL_LEAVE_CRITICAL_REGION();
+  spi_release_bus(RF230_SPI_NUM);
 
   return register_value;
 }
@@ -250,13 +218,17 @@ hal_register_write(uint8_t address, uint8_t value) /* K60: OK, tested */
   /* Add the Register Write command to the address. */
   address = HAL_TRX_CMD_RW | (HAL_TRX_CMD_RADDRM & address);
 
-  HAL_ENTER_CRITICAL_REGION();
+  spi_acquire_bus(RF230_SPI_NUM);
 
   /*** Send Register address and write register content. ***/
-  hal_spi_send(address, true);   /* Write address */
-  hal_spi_send(value, false);   /* Write data */
+  /* Write address */
+  spi_transfer_blocking(RF230_SPI_NUM, RF230_CTAS, RF230_CHIP_SELECT_PIN_MASK,
+    SPI_TRANSFER_CONT, &address, NULL, 1, 0);
+  /* Write data */
+  spi_transfer_blocking(RF230_SPI_NUM, RF230_CTAS, RF230_CHIP_SELECT_PIN_MASK,
+    SPI_TRANSFER_DONE, &value, NULL, 1, 0);
 
-  HAL_LEAVE_CRITICAL_REGION();
+  spi_release_bus(RF230_SPI_NUM);
 }
 /*----------------------------------------------------------------------------*/
 /** \brief  This function reads the value of a specific subregister.
@@ -323,18 +295,22 @@ hal_subregister_write(uint8_t address, uint8_t mask, uint8_t position,
 void
 hal_frame_read(hal_rx_frame_t *rx_frame) /* TODO: Make sure this is working */
 {
+  /* Send frame read (long mode) command.*/
+  static const uint8_t command = HAL_TRX_CMD_FR;
   uint8_t *rx_data;
   uint8_t frame_length;
 
-  HAL_ENTER_CRITICAL_REGION();
+  spi_acquire_bus(RF230_SPI_NUM);
 
-  /*Send frame read (long mode) command.*/
-  hal_spi_send(HAL_TRX_CMD_FR, true);
+  /* Write command */
+  spi_transfer_blocking(RF230_SPI_NUM, RF230_CTAS, RF230_CHIP_SELECT_PIN_MASK,
+    SPI_TRANSFER_CONT, &command, NULL, 1, 0);
 
-  /*Read frame length. This includes the checksum. */
-  frame_length = hal_spi_receive(true);
+  /* Read frame length. This includes the checksum. */
+  spi_transfer_blocking(RF230_SPI_NUM, RF230_CTAS, RF230_CHIP_SELECT_PIN_MASK,
+    SPI_TRANSFER_CONT, NULL, &frame_length, 0, 1);
 
-  /*Check for correct frame length. Bypassing this test can result in a buffer overrun! */
+  /* Check for correct frame length. Bypassing this test can result in a buffer overrun! */
   if((frame_length < HAL_MIN_FRAME_LENGTH) || (frame_length > HAL_MAX_FRAME_LENGTH)) {
     /* Length test failed */
     rx_frame->length = 0;
@@ -343,22 +319,22 @@ hal_frame_read(hal_rx_frame_t *rx_frame) /* TODO: Make sure this is working */
   } else {
     rx_data = (rx_frame->data);
     rx_frame->length = frame_length;
-    /*Transfer frame buffer to RAM buffer */
 
-    do {
-      *rx_data++ = hal_spi_receive(true);
-    } while(--frame_length > 0);
+    /* Transfer frame buffer to RAM buffer */
+    /* Read frame contents */
+    /* the LQI value for this frame is appended to the buffer, hence "frame_length + 1" */
+    spi_transfer_blocking(RF230_SPI_NUM, RF230_CTAS, RF230_CHIP_SELECT_PIN_MASK,
+      SPI_TRANSFER_DONE, NULL, rx_data, 0, frame_length + 1);
 
-    /*Read LQI value for this frame.*/
-    rx_frame->lqi = *rx_data++ = hal_spi_receive(false);
+    rx_frame->lqi = rx_data[frame_length];
 
     /* If crc was calculated set crc field in hal_rx_frame_t accordingly.
-     * Else show the crc has passed the hardware check.
+     * Else show the CRC has passed the hardware check.
      */
     rx_frame->crc = true;
   }
 
-  HAL_LEAVE_CRITICAL_REGION();
+  spi_release_bus(RF230_SPI_NUM);
 }
 /*----------------------------------------------------------------------------*/
 /** \brief  This function will download a frame to the radio transceiver's frame
@@ -370,6 +346,8 @@ hal_frame_read(hal_rx_frame_t *rx_frame) /* TODO: Make sure this is working */
 void
 hal_frame_write(uint8_t *write_buffer, uint8_t length) /* TODO: Make sure this is working */
 {
+  /* Send frame transmitt (long mode) command. */
+  static const uint8_t command = HAL_TRX_CMD_FW;
 #if 0 /* Print frame to uart */
   {
     int i;
@@ -382,15 +360,17 @@ hal_frame_write(uint8_t *write_buffer, uint8_t length) /* TODO: Make sure this i
     printf("\r\n");
   }
 #endif
-  HAL_ENTER_CRITICAL_REGION();
+  spi_acquire_bus(RF230_SPI_NUM);
 
-  /* Send frame transmitt (long mode) command. */
-  hal_spi_send(HAL_TRX_CMD_FW, true);
+  /* Write command */
+  spi_transfer_blocking(RF230_SPI_NUM, RF230_CTAS, RF230_CHIP_SELECT_PIN_MASK,
+    SPI_TRANSFER_CONT, &command, NULL, 1, 0);
 
-  /* Sendframe length.  */
-  hal_spi_send(length, true);
+  /* Write frame length.  */
+  spi_transfer_blocking(RF230_SPI_NUM, RF230_CTAS, RF230_CHIP_SELECT_PIN_MASK,
+    SPI_TRANSFER_CONT, &length, NULL, 1, 0);
 
-  /* Download to the Frame Buffer.
+  /* Write to the Frame Buffer.
    * When the FCS is autogenerated there is no need to transfer the last two bytes
    * since they will be overwritten.
    */
@@ -398,15 +378,10 @@ hal_frame_write(uint8_t *write_buffer, uint8_t length) /* TODO: Make sure this i
   length -= 2;
 #endif
 
-  do {
-    if(length == 1) { /* Do not assert) CS on last byte */
-      hal_spi_send(*write_buffer++, false);
-    } else {
-      hal_spi_send(*write_buffer++, true);
-    }
-  } while(--length);
+  spi_transfer_blocking(RF230_SPI_NUM, RF230_CTAS, RF230_CHIP_SELECT_PIN_MASK,
+    SPI_TRANSFER_DONE, write_buffer, NULL, length, 0);
 
-  HAL_LEAVE_CRITICAL_REGION();
+  spi_release_bus(RF230_SPI_NUM);
 }
 /*----------------------------------------------------------------------------*/
 /* This #if compile switch is used to provide a "standard" function body for the */
@@ -436,76 +411,10 @@ volatile char rf230interruptflag;
 /* Separate RF230 has a single radio interrupt and the source must be read from the IRQ_STATUS register */
 HAL_RF230_ISR()
 {
-  volatile uint8_t state;
-  uint8_t interrupt_source;   /* used after HAL_SPI_TRANSFER_OPEN/CLOSE block */
-
   /* Clear Interrupt Status Flag */
   BITBAND_REG(PORTB->PCR[9], PORT_PCR_ISF_SHIFT) = 1;    /* Clear interrupt */
   NVIC_ClearPendingIRQ(PORTB_IRQn);
-
-  INTERRUPTDEBUG(1);
-
-  /*Read Interrupt source.*/
-  interrupt_source = hal_register_read(RG_IRQ_STATUS);   /* K60: OK, tested */
-
-  /*Handle the incomming interrupt. Prioritized.*/
-  if((interrupt_source & HAL_RX_START_MASK)) {
-    INTERRUPTDEBUG(10);
-    /* Save RSSI for this packet if not in extended mode, scaling to 1dB resolution */
-#if !RF230_CONF_AUTOACK
-    rf230_last_rssi = 3 * hal_subregister_read(SR_RSSI);
-#endif
-  }
-  if(interrupt_source & HAL_TRX_END_MASK) {
-    INTERRUPTDEBUG(11);
-
-    state = hal_subregister_read(SR_TRX_STATUS);
-    if((state == BUSY_RX_AACK) || (state == RX_ON) || (state == BUSY_RX) || (state == RX_AACK_ON)) {
-      /* Received packet interrupt */
-      /* Buffer the frame and call rf230_interrupt to schedule poll for rf230 receive process */
-      if(rxframe[rxframe_tail].length) {
-        INTERRUPTDEBUG(42);
-      } else { INTERRUPTDEBUG(12);
-      }
-
-#ifdef RF230_MIN_RX_POWER
-      /* Discard packets weaker than the minimum if defined. This is for testing miniature meshes.*/
-      /* Save the rssi for printing in the main loop */
-#if RF230_CONF_AUTOACK
-      rf230_last_rssi = hal_register_read(RG_PHY_ED_LEVEL);
-#endif
-      if(rf230_last_rssi >= RF230_MIN_RX_POWER) {
-#endif
-      hal_frame_read(&rxframe[rxframe_tail]);
-      rxframe[rxframe_tail].rssi = rf230_last_rssi;
-      rxframe_tail++;
-      if(rxframe_tail >= RF230_CONF_RX_BUFFERS) {
-        rxframe_tail = 0;
-      }
-      rf230_interrupt();
-#ifdef RF230_MIN_RX_POWER
-    }
-#endif
-    }
-  }
-  if(interrupt_source & HAL_TRX_UR_MASK) {
-    INTERRUPTDEBUG(13);
-  }
-  if(interrupt_source & HAL_PLL_UNLOCK_MASK) {
-    INTERRUPTDEBUG(14);
-  }
-  if(interrupt_source & HAL_PLL_LOCK_MASK) {
-    INTERRUPTDEBUG(15);
-  }
-  if(interrupt_source & HAL_BAT_LOW_MASK) {
-    /*  Disable BAT_LOW interrupt to prevent endless interrupts. The interrupt */
-    /*  will continously be asserted while the supply voltage is less than the */
-    /*  user-defined voltage threshold. */
-    uint8_t trx_isr_mask = hal_register_read(RG_IRQ_MASK);
-    trx_isr_mask &= ~HAL_BAT_LOW_MASK;
-    hal_register_write(RG_IRQ_MASK, trx_isr_mask);
-    INTERRUPTDEBUG(16);
-  }
+  rf230_interrupt();
 }
 
 #endif /* defined(DOXYGEN) */
