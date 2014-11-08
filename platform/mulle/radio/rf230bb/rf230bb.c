@@ -41,7 +41,7 @@
 #include "udelay.h"
 #include "llwu.h"
 
-#define delay_us(us) { udelay(us); }
+#define delay_us udelay
 
 #include "dev/leds.h"
 #if 0
