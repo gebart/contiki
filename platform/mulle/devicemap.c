@@ -122,7 +122,7 @@ static const devoptab_t dotab_stdout = {
   S_IFCHR | S_IWUSR | S_IWGRP | S_IWOTH, /* Character device, 0222 perms (c-w--w--w-) */
   devnull_open_r,
   devnull_close_r,
-  uart1_write_r,
+  uart3_write_r,
   NULL, /* Not yet implemented */
   NULL, /* No seeking on UART */
   NULL, /* No fstat on UART */
