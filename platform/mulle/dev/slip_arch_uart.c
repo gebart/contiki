@@ -5,6 +5,7 @@
 #include "dev/slip.h"
 
 #include "uart.h"
+#include "port.h"
 #include "config-board.h"
 #include "llwu.h"
 
@@ -40,6 +41,23 @@ slip_arch_init(unsigned long ubr)
   }
 
   slip_fd = fd;
+  /** \todo Mulle: Move pin mux configuration to board specific file.*/
+#ifdef BOARD_SLIP_UART_TX_PIN_PORT
+  /* Enable the clock gate to the TX pin PORT */
+  port_module_enable(BOARD_SLIP_UART_TX_PIN_PORT);
+  /* Choose UART TX for the pin mux and disable PORT interrupts on the pin */
+  BOARD_SLIP_UART_TX_PIN_PORT->PCR[BOARD_SLIP_UART_TX_PIN_NUMBER] =
+    PORT_PCR_MUX(BOARD_SLIP_UART_TX_PIN_MUX);
+#endif
+#ifdef BOARD_SLIP_UART_RX_PIN_PORT
+  port_module_enable(BOARD_SLIP_UART_RX_PIN_PORT);
+
+  /* Choose UART RX for the pin mux and disable PORT interrupts on the pin */
+  BOARD_SLIP_UART_RX_PIN_PORT->PCR[BOARD_SLIP_UART_RX_PIN_NUMBER] =
+    PORT_PCR_MUX(BOARD_SLIP_UART_RX_PIN_MUX);
+#endif
+
+  uart_init(BOARD_SLIP_UART_NUM, 0, BOARD_SLIP_BAUD_RATE);
   uart_set_rx_callback(BOARD_SLIP_UART_NUM, slip_input_byte);
   uart_enable_rx_interrupt(BOARD_SLIP_UART_NUM);
   /* Don't allow LLS since it will disable the UART module clock, which prevents

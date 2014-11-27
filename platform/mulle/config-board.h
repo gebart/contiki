@@ -95,7 +95,7 @@ extern "C" {
 /**
  * UART module used for debug printf.
  */
-#define BOARD_DEBUG_UART_NUM 1
+#define BOARD_DEBUG_UART_NUM 3
 
 /**
  * Baud rate of debug UART.
@@ -149,6 +149,42 @@ extern "C" {
  * UART module used for SLIP communications.
  */
 #define BOARD_SLIP_UART_NUM 1
+
+/**
+ * PORT module containing the TX pin of the debug UART.
+ */
+#define BOARD_SLIP_UART_TX_PIN_PORT PORTE
+
+/**
+ * PORT module containing the RX pin of the debug UART.
+ */
+#define BOARD_SLIP_UART_RX_PIN_PORT PORTE
+
+/**
+ * Pin number within the PORT module of the TX pin of the debug UART.
+ */
+#define BOARD_SLIP_UART_TX_PIN_NUMBER 4
+
+/**
+ * Pin number within the PORT module of the RX pin of the debug UART.
+ */
+#define BOARD_SLIP_UART_RX_PIN_NUMBER 5
+
+/**
+ * Function number in the PORT mux for the TX pin of the debug UART.
+ */
+#define BOARD_SLIP_UART_TX_PIN_MUX 3
+
+/**
+ * Function number in the PORT mux for the RX pin of the debug UART.
+ */
+#define BOARD_SLIP_UART_RX_PIN_MUX 3
+
+
+/**
+ * SLIP baud rate
+ */
+#define BOARD_SLIP_BAUD_RATE 115200
 
 /**
  * RTC crystal load capacitance configuration bits.
