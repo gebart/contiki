@@ -88,7 +88,7 @@ typedef uint64_t rtimer_clock_t;
 #define UART0_CONF_ENABLE 0
 #define UART1_CONF_ENABLE 1
 #define UART2_CONF_ENABLE 0
-#define UART3_CONF_ENABLE 0
+#define UART3_CONF_ENABLE 1
 #define UART4_CONF_ENABLE 0
 #define UART5_CONF_ENABLE 0
 
