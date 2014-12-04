@@ -23,18 +23,12 @@
 
 /* ************************************************************************** */
 
-
+/* By using a union we can make this byte sequence endian agnostic and still
+ * perform a 32-bit compare operation on this and the received id. */
 static const union {
     uint8_t u8[4];
     uint32_t u32;
-} expected_jedec_id = { .u8 = {0x20, 0x20, 0x15, 0x00}};
-
-/* Little-endian byte order */
-#define FLASH_EXPECTED_JEDEC_ID (0x152020)
-#if 0
-/* Big-endian byte order */
-#define FLASH_EXPECTED_JEDEC_ID (0x202015)
-#endif
+} expected_jedec_id = { .u8 = {0x20, 0x20, 0x15, 0x00}}; /** \todo Mulle flash: Handle more chip IDs. */
 
 /* ************************************************************************** */
 typedef enum flash_cmd {
@@ -95,7 +89,7 @@ typedef enum flash_security {
 
 /* ************************************************************************** */
 
-static const int FLASH_PAGE_WRITE_SIZE = 32;
+static const int FLASH_PAGE_WRITE_SIZE = 32; /** \todo Mulle flash: Make page write size more configurable. */
 
 /* ************************************************************************** */
 
@@ -111,14 +105,11 @@ static struct {
 
 static void   cmd_wrdi(const flash_id_t);
 static void cmd_wren(const flash_id_t);
-/* static void	cmd_clsr(const flash_id_t); */
 static uint8_t cmd_rdscur(const flash_id_t);
-static void cmd_wrsr(const flash_id_t, const uint8_t);
 static uint8_t cmd_rdsr(const flash_id_t);
 static uint32_t cmd_rdid(const flash_id_t);
 static uint32_t cmd_pp(const flash_id_t, const flash_addr_t, const uint8_t *, const uint32_t);
 static void cmd_se(const flash_id_t, const uint32_t);
-/* static void	cmd_be(const flash_id_t, const uint32_t); */
 static void cmd_ce(const flash_id_t);
 
 /* ************************************************************************** */
@@ -167,22 +158,6 @@ cmd_rdsr(const flash_id_t id)
 }
 /* ************************************************************************** */
 
-static void cmd_wrsr(const flash_id_t id, const uint8_t status) __attribute__((unused));
-
-/** Write status register */
-static void
-cmd_wrsr(const flash_id_t id, const uint8_t status)
-{
-  uint8_t data_out[2];
-  data_out[0] = FLASH_CMD_WRSR;
-  data_out[1] = status;
-
-  spi_acquire_bus(FLASH_SPI_NUM);
-  spi_transfer_blocking(FLASH_SPI_NUM, FLASH_CTAS, id, SPI_TRANSFER_DONE, &data_out[0], NULL, 2, 0);
-  spi_release_bus(FLASH_SPI_NUM);
-}
-/* ************************************************************************** */
-
 static uint8_t
 cmd_rdscur(const flash_id_t id)
 {
@@ -195,15 +170,6 @@ cmd_rdscur(const flash_id_t id)
 
   return data_in;
 }
-/* ************************************************************************** */
-
-/*
-   static void cmd_clsr(const flash_id_t id)
-   {
-   spi_transfer(FLASH_CTAS, id, SPI_TRANSFER_DONE, FLASH_CMD_CLSR, SPI_TRANSFER_BLOCKING);
-   }
- */
-
 /* ************************************************************************** */
 
 static void
@@ -425,7 +391,6 @@ static void
 flash_write_prepare(const flash_id_t id)
 {
   flash_busy_wait(id);
-  /* cmd_clsr(id); */
   cmd_wren(id);
 }
 /* ************************************************************************** */
