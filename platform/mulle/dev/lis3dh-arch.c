@@ -178,12 +178,3 @@ lis3dh_memcpy_to_device(const lis3dh_reg_addr_t start_address,
   /* Release the bus for other threads. */
   spi_release_bus(LIS3DH_SPI_NUM);
 }
-
-/**
- * Perform the platform specific part of the initialization process of the
- * LIS3DH, if any.
- */
-void
-lis3dh_arch_init()
-{
-}
