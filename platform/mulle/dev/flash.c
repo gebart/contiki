@@ -135,9 +135,7 @@ cmd_rdid(const flash_id_t id)
     uint32_t u32;
   } data_in = { .u32 = 0 };
 
-  spi_acquire_bus(FLASH_SPI_NUM);
   spi_transfer_blocking(FLASH_SPI_NUM, FLASH_CTAS, id, SPI_TRANSFER_DONE, &data_out, &data_in.u8[0], 1, 3);
-  spi_release_bus(FLASH_SPI_NUM);
 
   return data_in.u32;
 }
@@ -150,9 +148,7 @@ cmd_rdsr(const flash_id_t id)
   static const uint8_t data_out = FLASH_CMD_RDSR;
   uint8_t data_in;
 
-  spi_acquire_bus(FLASH_SPI_NUM);
   spi_transfer_blocking(FLASH_SPI_NUM, FLASH_CTAS, id, SPI_TRANSFER_DONE, &data_out, &data_in, 1, 1);
-  spi_release_bus(FLASH_SPI_NUM);
 
   return data_in;
 }
@@ -164,9 +160,7 @@ cmd_rdscur(const flash_id_t id)
   uint8_t data_in;
   static const uint8_t data_out = FLASH_CMD_RDSCUR;
 
-  spi_acquire_bus(FLASH_SPI_NUM);
   spi_transfer_blocking(FLASH_SPI_NUM, FLASH_CTAS, id, SPI_TRANSFER_DONE, &data_out, &data_in, 1, 1);
-  spi_release_bus(FLASH_SPI_NUM);
 
   return data_in;
 }
@@ -177,13 +171,8 @@ cmd_wren(const flash_id_t id)
 {
   static const uint8_t data_out = FLASH_CMD_WREN;
 
-  /* Don't move the bus acquiring to outside the loop, cmd_rdsr needs it too */
   while(!(cmd_rdsr(id) & FLASH_STATUS_WEL)) {
-    spi_acquire_bus(FLASH_SPI_NUM);
-
     spi_transfer_blocking(FLASH_SPI_NUM, FLASH_CTAS, id, SPI_TRANSFER_DONE, &data_out, NULL, 1, 0);
-
-    spi_release_bus(FLASH_SPI_NUM);
   }
 }
 /* ************************************************************************** */
@@ -193,11 +182,7 @@ cmd_wrdi(const flash_id_t id)
 {
   static const uint8_t data_out = FLASH_CMD_WRDI;
 
-  spi_acquire_bus(FLASH_SPI_NUM);
-
   spi_transfer_blocking(FLASH_SPI_NUM, FLASH_CTAS, id, SPI_TRANSFER_DONE, &data_out, NULL, 1, 0);
-
-  spi_release_bus(FLASH_SPI_NUM);
 }
 /* ************************************************************************** */
 
@@ -211,8 +196,6 @@ cmd_pp(const flash_id_t id, const flash_addr_t addr, const uint8_t *data, const 
     return E_FLASH_OK;
   }
 
-  spi_acquire_bus(FLASH_SPI_NUM);
-
   /* Send command */
   spi_transfer_blocking(FLASH_SPI_NUM, FLASH_CTAS, id, SPI_TRANSFER_CONT, &cmd_out, NULL, 1, 0);
 
@@ -221,8 +204,6 @@ cmd_pp(const flash_id_t id, const flash_addr_t addr, const uint8_t *data, const 
 
   /* Send data */
   spi_transfer_blocking(FLASH_SPI_NUM, FLASH_CTAS, id, SPI_TRANSFER_DONE, data, NULL, size, 0);
-
-  spi_release_bus(FLASH_SPI_NUM);
 
 /*
    if (cmd_rdscur(id) & FLASH_SECURITY_P_FAIL) {
@@ -246,8 +227,6 @@ cmd_ppi(const flash_id_t id, const flash_addr_t addr, const uint8_t *data, const
     return E_FLASH_OK;
   }
 
-  spi_acquire_bus(FLASH_SPI_NUM);
-
   /* Send command */
   spi_transfer_blocking(FLASH_SPI_NUM, FLASH_CTAS, id, SPI_TRANSFER_CONT, &cmd_out, NULL, 1, 0);
 
@@ -262,8 +241,6 @@ cmd_ppi(const flash_id_t id, const flash_addr_t addr, const uint8_t *data, const
   }
   data_out = ~(*(data++));
   spi_transfer_blocking(FLASH_SPI_NUM, FLASH_CTAS, id, SPI_TRANSFER_DONE, &data_out, NULL, 1, 0);
-
-  spi_release_bus(FLASH_SPI_NUM);
 
 /*  if (cmd_rdscur(id) & FLASH_SECURITY_P_FAIL) { */
 /*    return E_FLASH_WRITE_FAILED; */
@@ -280,13 +257,9 @@ cmd_se(const flash_id_t id, const uint32_t sector)
   static const uint8_t cmd_out = FLASH_CMD_SE;
   uint32_t addr = sector * FLASH_SECTOR_SIZE;
 
-  spi_acquire_bus(FLASH_SPI_NUM);
-
   spi_transfer_blocking(FLASH_SPI_NUM, FLASH_CTAS, id, SPI_TRANSFER_CONT, &cmd_out, NULL, 1, 0);
 
   spi_write_addr(id, SPI_TRANSFER_DONE, addr);
-
-  spi_release_bus(FLASH_SPI_NUM);
 }
 /* ************************************************************************** */
 
@@ -296,11 +269,7 @@ cmd_ce(const flash_id_t id)
 {
   static const uint8_t cmd_out = FLASH_CMD_CE;
 
-  spi_acquire_bus(FLASH_SPI_NUM);
-
   spi_transfer_blocking(FLASH_SPI_NUM, FLASH_CTAS, id, SPI_TRANSFER_DONE, &cmd_out, NULL, 1, 0);
-
-  spi_release_bus(FLASH_SPI_NUM);
 }
 /* ************************************************************************** */
 /* Deep power down */
@@ -309,11 +278,7 @@ cmd_dp(const flash_id_t id)
 {
   static const uint8_t cmd_out = FLASH_CMD_DP;
 
-  spi_acquire_bus(FLASH_SPI_NUM);
-
   spi_transfer_blocking(FLASH_SPI_NUM, FLASH_CTAS, id, SPI_TRANSFER_DONE, &cmd_out, NULL, 1, 0);
-
-  spi_release_bus(FLASH_SPI_NUM);
 }
 /* ************************************************************************** */
 
@@ -323,11 +288,7 @@ cmd_rdp(const flash_id_t id)
 {
   static const uint8_t cmd_out = FLASH_CMD_RDP;
 
-  spi_acquire_bus(FLASH_SPI_NUM);
-
   spi_transfer_blocking(FLASH_SPI_NUM, FLASH_CTAS, id, SPI_TRANSFER_DONE, &cmd_out, NULL, 1, 0);
-
-  spi_release_bus(FLASH_SPI_NUM);
 }
 /* ************************************************************************** */
 
@@ -335,8 +296,6 @@ static void
 cmd_read(const flash_id_t id, const flash_addr_t addr, uint8_t *dest, const uint32_t size)
 {
   static const uint8_t cmd_out = FLASH_CMD_READ;
-
-  spi_acquire_bus(FLASH_SPI_NUM);
 
   /* Send command */
   spi_transfer_blocking(FLASH_SPI_NUM, FLASH_CTAS, id, SPI_TRANSFER_CONT, &cmd_out, NULL, 1, 0);
@@ -346,8 +305,6 @@ cmd_read(const flash_id_t id, const flash_addr_t addr, uint8_t *dest, const uint
 
   /* Read data bytes */
   spi_transfer_blocking(FLASH_SPI_NUM, FLASH_CTAS, id, SPI_TRANSFER_DONE, NULL, dest, 0, size);
-
-  spi_release_bus(FLASH_SPI_NUM);
 }
 /* ************************************************************************** */
 
@@ -357,8 +314,6 @@ cmd_readi(const flash_id_t id, const flash_addr_t addr, uint8_t *dest, const uin
   static const uint8_t cmd_out = FLASH_CMD_READ;
   uint32_t i;
 
-  spi_acquire_bus(FLASH_SPI_NUM);
-
   /* Send command */
   spi_transfer_blocking(FLASH_SPI_NUM, FLASH_CTAS, id, SPI_TRANSFER_CONT, &cmd_out, NULL, 1, 0);
 
@@ -367,8 +322,6 @@ cmd_readi(const flash_id_t id, const flash_addr_t addr, uint8_t *dest, const uin
 
   /* Read data bytes */
   spi_transfer_blocking(FLASH_SPI_NUM, FLASH_CTAS, id, SPI_TRANSFER_DONE, NULL, dest, 0, size);
-
-  spi_release_bus(FLASH_SPI_NUM);
 
   /* 1's complement */
   for(i = 0; i < size; ++i) {
@@ -380,9 +333,17 @@ cmd_readi(const flash_id_t id, const flash_addr_t addr, uint8_t *dest, const uin
 static void
 flash_busy_wait(const flash_id_t id)
 {
-  while(cmd_rdsr(id) & FLASH_STATUS_WIP) {
+  uint8_t status;
+  spi_acquire_bus(FLASH_SPI_NUM);
+  status = cmd_rdsr(id);
+  spi_release_bus(FLASH_SPI_NUM);
+
+  while(status & FLASH_STATUS_WIP) {
     /* XXX: Attempt to fix slow erase times on some chips by not flooding the device with status requests */
-    udelay(1000);
+    udelay(10000);
+    spi_acquire_bus(FLASH_SPI_NUM);
+    status = cmd_rdsr(id);
+    spi_release_bus(FLASH_SPI_NUM);
   }
 }
 /* ************************************************************************** */
@@ -391,7 +352,9 @@ static void
 flash_write_prepare(const flash_id_t id)
 {
   flash_busy_wait(id);
+  spi_acquire_bus(FLASH_SPI_NUM);
   cmd_wren(id);
+  spi_release_bus(FLASH_SPI_NUM);
 }
 /* ************************************************************************** */
 
@@ -411,14 +374,16 @@ flash_init(void)
   }
 
   for(i = FLASH_ID0; i <= FLASH_ID0; ++i) {
+    spi_acquire_bus(FLASH_SPI_NUM);
     status = cmd_rdsr(i);
+    spi_release_bus(FLASH_SPI_NUM);
     if(status) {
       DEBUG("Error: Status of flash 0 is non-zero (0x%02x).\n", status);
       return E_FLASH_INVALID_STATUS;
     }
-    /* Note: The result of cmd_rdid is returned in the host-endian. This driver
-     * will not work on big endian machines as it is now. */
+    spi_acquire_bus(FLASH_SPI_NUM);
     jedec_id = cmd_rdid(i);
+    spi_release_bus(FLASH_SPI_NUM);
     if(jedec_id != expected_jedec_id.u32) {
       DEBUG("Flash0: Invalid JEDEC-ID: 0x%08x\n", jedec_id);
       return E_FLASH_UNKNOWN;
@@ -435,21 +400,30 @@ flash_erase_chip(const flash_id_t id, const flash_flags_t flags)
   DEBUG("Starting chip erase...");
 
   if((flags & FLASH_WAIT) == 0) {
-    if(cmd_rdsr(id) & FLASH_STATUS_WIP) {
+    uint8_t status;
+    spi_acquire_bus(FLASH_SPI_NUM);
+    status = cmd_rdsr(id);
+    spi_release_bus(FLASH_SPI_NUM);
+
+    if(status & FLASH_STATUS_WIP) {
       return E_FLASH_BUSY;
     }
   }
 
   flash_write_prepare(id);
 
+  spi_acquire_bus(FLASH_SPI_NUM);
   cmd_ce(id);
+  spi_release_bus(FLASH_SPI_NUM);
 
   if(flags & FLASH_FINISH) {
     flash_busy_wait(id);
 /*    if (cmd_rdscur(id) & FLASH_SECURITY_E_FAIL) { */
 /*      DEBUG("failed!\n"); */
 /*    } */
+    spi_acquire_bus(FLASH_SPI_NUM);
     cmd_wrdi(id);
+    spi_release_bus(FLASH_SPI_NUM);
   }
 
   DEBUG("done.\n");
@@ -462,7 +436,12 @@ flash_error_t
 flash_erase_sector(const flash_id_t id, const uint32_t sector, const flash_flags_t flags)
 {
   if((flags & FLASH_WAIT) == 0) {
-    if(cmd_rdsr(id) & FLASH_STATUS_WIP) {
+    uint8_t status;
+    spi_acquire_bus(FLASH_SPI_NUM);
+    status = cmd_rdsr(id);
+    spi_release_bus(FLASH_SPI_NUM);
+
+    if(status & FLASH_STATUS_WIP) {
       return E_FLASH_BUSY;
     }
   }
@@ -471,7 +450,9 @@ flash_erase_sector(const flash_id_t id, const uint32_t sector, const flash_flags
 
   flash_write_prepare(id);
 
+  spi_acquire_bus(FLASH_SPI_NUM);
   cmd_se(id, sector);
+  spi_release_bus(FLASH_SPI_NUM);
 
   if(flags & FLASH_FINISH) {
     flash_busy_wait(id);
@@ -479,7 +460,9 @@ flash_erase_sector(const flash_id_t id, const uint32_t sector, const flash_flags
 /*      DEBUG("failed! (0x%02x)\n"); */
 /*      return E_FLASH_ERASE_FAILED; */
 /*    } */
+    spi_acquire_bus(FLASH_SPI_NUM);
     cmd_wrdi(id);
+    spi_release_bus(FLASH_SPI_NUM);
   }
 
   DEBUG("done.\n");
@@ -519,8 +502,13 @@ flash_write_process(const flash_flags_t flags)
     return E_FLASH_OK;
   }
 
-  if(flags & FLASH_WAIT) {
-    if(cmd_rdsr(scheduled_write.id) & FLASH_STATUS_WIP) {
+  if((flags & FLASH_WAIT) == 0) {
+    uint8_t status;
+    spi_acquire_bus(FLASH_SPI_NUM);
+    status = cmd_rdsr(scheduled_write.id);
+    spi_release_bus(FLASH_SPI_NUM);
+
+    if(status & FLASH_STATUS_WIP) {
       return E_FLASH_BUSY;
     }
   }
@@ -546,8 +534,14 @@ flash_write_process(const flash_flags_t flags)
   scheduled_write.data += count;
 
   if(flags & FLASH_FINISH) {
+    uint8_t scur;
+
     flash_busy_wait(scheduled_write.id);
-    if(cmd_rdscur(scheduled_write.id) & FLASH_SECURITY_P_FAIL) {
+    spi_acquire_bus(FLASH_SPI_NUM);
+    scur = cmd_rdscur(scheduled_write.id);
+    spi_release_bus(FLASH_SPI_NUM);
+
+    if(scur & FLASH_SECURITY_P_FAIL) {
       DEBUG("flash_write_process(): Page-programming failed.\n");
       return E_FLASH_WRITE_FAILED;
     }
@@ -574,7 +568,12 @@ flash_write(const flash_id_t id, const flash_addr_t addr, const uint8_t *data, c
   DEBUG("Starting flash write operation...");
 
   if((flags & FLASH_WAIT) == 0) {
-    if(cmd_rdsr(id) & FLASH_STATUS_WIP) {
+    uint8_t status;
+    spi_acquire_bus(FLASH_SPI_NUM);
+    status = cmd_rdsr(id);
+    spi_release_bus(FLASH_SPI_NUM);
+
+    if(status & FLASH_STATUS_WIP) {
       return E_FLASH_BUSY;
     }
   }
@@ -585,8 +584,13 @@ flash_write(const flash_id_t id, const flash_addr_t addr, const uint8_t *data, c
 
   count = FLASH_PAGE_SIZE - (addr % FLASH_PAGE_SIZE);
   if(size > count) {
+    uint8_t status;
     flash_write_prepare(id);
-    if(cmd_pp(id, addr + offset, data + offset, count)) {
+    spi_acquire_bus(FLASH_SPI_NUM);
+    status = cmd_pp(id, addr + offset, data + offset, count);
+    spi_release_bus(FLASH_SPI_NUM);
+
+    if(status != E_FLASH_OK) {
       DEBUG("failed!\n");
       return E_FLASH_WRITE_FAILED;
     }
@@ -595,13 +599,17 @@ flash_write(const flash_id_t id, const flash_addr_t addr, const uint8_t *data, c
   }
 
   while(offset < size) {
+    uint8_t status;
     count = size - offset;
     if(count > FLASH_PAGE_SIZE) {
       count = FLASH_PAGE_SIZE;
     }
 
     flash_write_prepare(id);
-    if(cmd_pp(id, addr + offset, data + offset, count)) {
+    spi_acquire_bus(FLASH_SPI_NUM);
+    status = cmd_pp(id, addr + offset, data + offset, count);
+    spi_release_bus(FLASH_SPI_NUM);
+    if(status != E_FLASH_OK) {
       DEBUG("failed!\n");
       return E_FLASH_WRITE_FAILED;
     }
@@ -628,7 +636,12 @@ flash_writei(const flash_id_t id, const flash_addr_t addr, const uint8_t *data, 
   DEBUG("Starting flash write operation...");
 
   if((flags & FLASH_WAIT) == 0) {
-    if(cmd_rdsr(id) & FLASH_STATUS_WIP) {
+    uint8_t status;
+    spi_acquire_bus(FLASH_SPI_NUM);
+    status = cmd_rdsr(id);
+    spi_release_bus(FLASH_SPI_NUM);
+
+    if(status & FLASH_STATUS_WIP) {
       return E_FLASH_BUSY;
     }
   }
@@ -639,8 +652,13 @@ flash_writei(const flash_id_t id, const flash_addr_t addr, const uint8_t *data, 
 
   count = FLASH_PAGE_SIZE - (addr % FLASH_PAGE_SIZE);
   if(size > count) {
+    uint8_t status;
     flash_write_prepare(id);
-    if(cmd_ppi(id, addr + offset, data + offset, count)) {
+    spi_acquire_bus(FLASH_SPI_NUM);
+    status = cmd_ppi(id, addr + offset, data + offset, count);
+    spi_release_bus(FLASH_SPI_NUM);
+
+    if(status != E_FLASH_OK) {
       DEBUG("failed!\n");
       return E_FLASH_WRITE_FAILED;
     }
@@ -649,13 +667,17 @@ flash_writei(const flash_id_t id, const flash_addr_t addr, const uint8_t *data, 
   }
 
   while(offset < size) {
+    uint8_t status;
     count = size - offset;
     if(count > FLASH_PAGE_SIZE) {
       count = FLASH_PAGE_SIZE;
     }
 
     flash_write_prepare(id);
-    if(cmd_ppi(id, addr + offset, data + offset, count)) {
+    spi_acquire_bus(FLASH_SPI_NUM);
+    status = cmd_ppi(id, addr + offset, data + offset, count);
+    spi_release_bus(FLASH_SPI_NUM);
+    if(status != E_FLASH_OK) {
       DEBUG("failed!\n");
       return E_FLASH_WRITE_FAILED;
     }
@@ -679,7 +701,13 @@ flash_read(const flash_id_t id, const flash_addr_t addr, uint8_t *dest, const ui
   if(flags & FLASH_WAIT) {
     flash_busy_wait(id);
   } else {
-    if(cmd_rdsr(id) & FLASH_STATUS_WIP) {
+    uint8_t status;
+
+    spi_acquire_bus(FLASH_SPI_NUM);
+    status = cmd_rdsr(id);
+    spi_release_bus(FLASH_SPI_NUM);
+
+    if(status & FLASH_STATUS_WIP) {
       return E_FLASH_BUSY;
     }
   }
@@ -689,7 +717,9 @@ flash_read(const flash_id_t id, const flash_addr_t addr, uint8_t *dest, const ui
   }
 
   DEBUG("Starting flash read operation...");
+  spi_acquire_bus(FLASH_SPI_NUM);
   cmd_read(id, addr, dest, size);
+  spi_release_bus(FLASH_SPI_NUM);
   DEBUG("done.\n");
 
   return E_FLASH_OK;
@@ -702,7 +732,13 @@ flash_readi(const flash_id_t id, const flash_addr_t addr, uint8_t *dest, const u
   if(flags & FLASH_WAIT) {
     flash_busy_wait(id);
   } else {
-    if(cmd_rdsr(id) & FLASH_STATUS_WIP) {
+    uint8_t status;
+
+    spi_acquire_bus(FLASH_SPI_NUM);
+    status = cmd_rdsr(id);
+    spi_release_bus(FLASH_SPI_NUM);
+
+    if(status & FLASH_STATUS_WIP) {
       return E_FLASH_BUSY;
     }
   }
@@ -712,7 +748,9 @@ flash_readi(const flash_id_t id, const flash_addr_t addr, uint8_t *dest, const u
   }
 
   DEBUG("Starting flash read operation...");
+  spi_acquire_bus(FLASH_SPI_NUM);
   cmd_readi(id, addr, dest, size);
+  spi_release_bus(FLASH_SPI_NUM);
   DEBUG("done.\n");
 
   return E_FLASH_OK;
@@ -735,7 +773,12 @@ flash_status(const flash_id_t id)
 flash_error_t
 flash_sleep(const flash_id_t id, const flash_flags_t flags)
 {
+  spi_acquire_bus(FLASH_SPI_NUM);
+
   cmd_dp(id);
+
+  spi_release_bus(FLASH_SPI_NUM);
+
   return E_FLASH_OK;
 }
 /* ************************************************************************** */
@@ -743,7 +786,12 @@ flash_sleep(const flash_id_t id, const flash_flags_t flags)
 flash_error_t
 flash_wakeup(const flash_id_t id, const flash_flags_t flags)
 {
+  spi_acquire_bus(FLASH_SPI_NUM);
+
   cmd_rdp(id);
+
+  spi_release_bus(FLASH_SPI_NUM);
+
   return E_FLASH_OK;
 }
 /* ************************************************************************** */
