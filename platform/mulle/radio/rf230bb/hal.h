@@ -61,7 +61,7 @@
 #include "K60.h"
 /* #include <util/crc16.h> */
 #include "contiki-conf.h"
-#include "interrupt.h"
+#include "spi-k60.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -82,29 +82,19 @@ extern "C" {
 #define hal_set_slptr_low()  (BITBAND_REG(SLPTR_GPIO->PCOR, SLPTR_PIN) = 1) /**< This macro pulls the SLP_TR pin low. */
 #define hal_get_slptr()      (BITBAND_REG(SLPTR_GPIO->PDOR, SLPTR_PIN))    /**< Read current state of the SLP_TR pin (High/Low). */
 /* rst and pwr is the same */
-#define hal_set_rst_high()   PTD->PSOR = (1 << 7); delay_us(0xFFFF)          /**< This macro pulls the RST pin high. */
+#define hal_set_rst_high()   do { PTD->PSOR = (1 << 7); delay_us(0xFFFF); } while(0)          /**< This macro pulls the RST pin high. */
 #define hal_set_rst_low()    (PTD->PCOR = (1 << 7))           /**< This macro pulls the RST pin low. */
 #define hal_get_rst()        ((PTD->PDOR & (1 << 7)) >> 7)    /**< Read current state of the RST pin (High/Low). */
 #define hal_set_pwr_high()   (PTD->PSOR = (1 << 7))           /**< This macro pulls the RST pin high. */
 #define hal_set_pwr_low()    (PTD->PCOR = (1 << 7))           /**< This macro pulls the RST pin low. */
 #define hal_get_pwr()        ((PTD->PDOR & (1 << 7)) >> 7)    /**< Read current state of the RST pin (High/Low). */
-#define HAL_SS_PIN            1                                /**< The slave select pin. */
 
 /** \} */
 
-#define HAL_SS_HIGH()  /* Done in HW on K60 */
-#define HAL_SS_LOW()   /* Done in HW on K60 */
-
-#define HAL_ENABLE_RADIO_INTERRUPT() { PORTB->PCR[9] |= (1 << 24); \
+#define HAL_ENABLE_RADIO_INTERRUPT() do { PORTB->PCR[9] |= (1 << 24); \
   NVIC_ClearPendingIRQ(PORTB_IRQn); \
-  NVIC_EnableIRQ(PORTB_IRQn); }
+  NVIC_EnableIRQ(PORTB_IRQn); } while(0)
 #define HAL_DISABLE_RADIO_INTERRUPT() (NVIC_DisableIRQ(PORTB_IRQn))
-
-#define HAL_ENABLE_OVERFLOW_INTERRUPT() ()
-#define HAL_DISABLE_OVERFLOW_INTERRUPT() ()
-
-#define HAL_ENTER_CRITICAL_REGION() MK60_ENTER_CRITICAL_REGION()
-#define HAL_LEAVE_CRITICAL_REGION() MK60_LEAVE_CRITICAL_REGION()
 
 /** \brief  Enable the interrupt from the radio transceiver.
  */
