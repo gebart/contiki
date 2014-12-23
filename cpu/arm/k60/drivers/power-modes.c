@@ -57,6 +57,7 @@
 #define POWER_MODE_NORMAL (0b000)
 #define POWER_MODE_VLPS   (0b010)
 #define POWER_MODE_LLS    (0b011)
+#define POWER_MODE_VLLS   (0b100)
 
 void
 power_modes_init(void)
@@ -66,9 +67,9 @@ power_modes_init(void)
   /* Note: This register can only be written once after each reset, so we must
    * enable all power modes that we wish to use. */
 #if K60_CPU_REV == 1
-  MC->PMPROT |= MC_PMPROT_ALLS_MASK | MC_PMPROT_AVLP_MASK;
+  MC->PMPROT |= MC_PMPROT_ALLS_MASK | MC_PMPROT_AVLP_MASK | MC_PMPROT_AVLLS1_MASK | MC_PMPROT_AVLLS2_MASK | MC_PMPROT_AVLLS3_MASK;
 #else /* K60_CPU_REV == 1 */
-  SMC->PMPROT |= SMC_PMPROT_ALLS_MASK | SMC_PMPROT_AVLP_MASK;
+  SMC->PMPROT |= SMC_PMPROT_ALLS_MASK | SMC_PMPROT_AVLP_MASK | SMC_PMPROT_AVLLS_MASK;
 #endif /* K60_CPU_REV == 1 */
 }
 
