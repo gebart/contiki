@@ -53,7 +53,8 @@ extern volatile uint32_t llwu_inhibit_lls_sema;
 extern volatile uint32_t llwu_inhibit_vlps_sema;
 extern volatile uint32_t llwu_inhibit_stop_sema;
 
-/** Internal modules whose interrupts are mapped to LLWU wake up sources.
+/**
+ * Internal modules whose interrupts are mapped to LLWU wake up sources.
  *
  * Wake up source module number: Kinetis Module
  * 0: LPTMR
