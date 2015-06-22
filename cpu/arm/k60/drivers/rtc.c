@@ -79,7 +79,17 @@ rtc_time_set(uint32_t seconds) {
 
 uint32_t
 rtc_time_get(void) {
-  return RTC->TSR;
+  uint32_t t;
+  for (int i = 0; i < 3; i++) {
+    /* Read twice to make sure we get a stable reading */
+    t = RTC->TSR;
+
+    if (t == RTC->TSR) {
+      return t;
+    }
+  }
+  /* Fallback if we are not getting stable readings */
+  return t;
 }
 
 void
