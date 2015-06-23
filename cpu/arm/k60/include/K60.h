@@ -56,6 +56,9 @@ extern "C" {
  * running on the right hardware */
 #define K60_EXPECTED_CPUID 0x410fc241u
 
+/* The LPTMR module on rev 2.x parts needs latching */
+#define LPTIMER_CNR_NEEDS_LATCHING 1
+
 #elif K60_CPU_REV == 1
 
 /* K60 CPU silicon version 1.x */
@@ -65,6 +68,9 @@ extern "C" {
 /** The expected CPUID value, can be used to implement a check that we are
  * running on the right hardware */
 #define K60_EXPECTED_CPUID 0x410fc240u
+
+/* The LPTMR module on rev 1.x parts does not support latching */
+#define LPTIMER_CNR_NEEDS_LATCHING 0
 
 /* Some compatibility defines to minimize the ifdefs needed for the register
  * name changes */
