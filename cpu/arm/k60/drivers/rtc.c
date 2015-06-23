@@ -80,7 +80,8 @@ rtc_time_set(uint32_t seconds) {
 uint32_t
 rtc_time_get(void) {
   uint32_t t;
-  for (int i = 0; i < 3; i++) {
+  int i;
+  for (i = 0; i < 3; i++) {
     /* Read twice to make sure we get a stable reading */
     t = RTC->TSR;
 
