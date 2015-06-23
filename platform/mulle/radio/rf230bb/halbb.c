@@ -437,18 +437,18 @@ volatile char rf230interruptflag;
 HAL_RF230_ISR()
 {
   volatile uint8_t state;
-  uint8_t interrupt_source;   /* used after HAL_SPI_TRANSFER_OPEN/CLOSE block */
+  uint8_t interrupt_source;
+
+  INTERRUPTDEBUG(1);
+
+  /* Read Interrupt source. */
+  interrupt_source = hal_register_read(RG_IRQ_STATUS);   /* K60: OK, tested */
 
   /* Clear Interrupt Status Flag */
   BITBAND_REG(PORTB->PCR[9], PORT_PCR_ISF_SHIFT) = 1;    /* Clear interrupt */
   NVIC_ClearPendingIRQ(PORTB_IRQn);
 
-  INTERRUPTDEBUG(1);
-
-  /*Read Interrupt source.*/
-  interrupt_source = hal_register_read(RG_IRQ_STATUS);   /* K60: OK, tested */
-
-  /*Handle the incomming interrupt. Prioritized.*/
+  /* Handle the incoming interrupt. Prioritized. */
   if((interrupt_source & HAL_RX_START_MASK)) {
     INTERRUPTDEBUG(10);
     /* Save RSSI for this packet if not in extended mode, scaling to 1dB resolution */
