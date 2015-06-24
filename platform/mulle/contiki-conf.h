@@ -116,13 +116,7 @@ typedef uint32_t rtimer_clock_t;
 #define NETSTACK_CONF_MAC           csma_driver
 #endif /* NETSTACK_CONF_MAC */
 
-#ifndef CONTIKIMAC
-#ifndef NETSTACK_CONF_RDC
-#define NETSTACK_CONF_RDC           nullrdc_driver
-#endif /* NETSTACK_CONF_RDC */
-#define RF230_CONF_AUTOACK          0
-#define RF230_CONF_AUTORETRIES      3
-#else /* CONTIKIMAC */
+#if CONTIKIMAC
 #ifndef NETSTACK_CONF_RDC
 #define NETSTACK_CONF_RDC         contikimac_driver
 #endif /* NETSTACK_CONF_RDC */
@@ -150,6 +144,13 @@ typedef uint32_t rtimer_clock_t;
 
 /* Phase optimization seem to cause problems (drifting clocks?) */
 #define CONTIKIMAC_CONF_WITH_PHASE_OPTIMIZATION 0
+
+#else /* CONTIKIMAC */
+#ifndef NETSTACK_CONF_RDC
+#define NETSTACK_CONF_RDC           nullrdc_driver
+#endif /* NETSTACK_CONF_RDC */
+#define RF230_CONF_AUTOACK          0
+#define RF230_CONF_AUTORETRIES      3
 #endif /* CONTIKIMAC */
 
 #ifndef NETSTACK_CONF_FRAMER
