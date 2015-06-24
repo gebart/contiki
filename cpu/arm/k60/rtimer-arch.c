@@ -137,20 +137,20 @@ inline static uint32_t lptmr_update_cmr(uint32_t cmr)
    * interrupt to trigger. It seems to happen at random. */
   /* The downside is that the CNR register is reset when the LPTMR is disabled,
    * we need a new offset computation. */
-    /* Wait for the LPTMR tick counter to increase before trying to stop and
-     * start the timer in order to avoid, as far as possible, losing any ticks. */
-    uint32_t prev = lptmr_get_cnr();
-    uint32_t now = lptmr_get_cnr();
-    while (prev == now) {
-        prev = now;
-        now = lptmr_get_cnr();
-    }
+  /* Wait for the LPTMR tick counter to increase before trying to stop and
+   * start the timer in order to avoid, as far as possible, losing any ticks. */
+  uint32_t prev = lptmr_get_cnr();
+  uint32_t now = lptmr_get_cnr();
+  while (prev == now) {
+    prev = now;
+    now = lptmr_get_cnr();
+  }
 
-    /* Disable the timer and set the new CMR */
-    BITBAND_REG(LPTMR0->CSR, LPTMR_CSR_TEN_SHIFT) = 0;
-    LPTMR0->CMR = cmr;
-    BITBAND_REG(LPTMR0->CSR, LPTMR_CSR_TEN_SHIFT) = 1;
-    return now;
+  /* Disable the timer and set the new CMR */
+  BITBAND_REG(LPTMR0->CSR, LPTMR_CSR_TEN_SHIFT) = 0;
+  LPTMR0->CMR = cmr;
+  BITBAND_REG(LPTMR0->CSR, LPTMR_CSR_TEN_SHIFT) = 1;
+  return now;
 }
 
 /*
@@ -176,10 +176,13 @@ rtimer_arch_init(void) {
   LPTMR0->CMR = LPTMR_CMR_COMPARE(LPTIMER_MAXTICKS);
   /* Enable interrupts. */
   BITBAND_REG(LPTMR0->CSR, LPTMR_CSR_TIE_SHIFT) = 1;
+  /* Clear timer compare flag by writing a 1 to it */
+  LPTIMER_TCF = 1;
   /* Enable timer */
   BITBAND_REG(LPTMR0->CSR, LPTMR_CSR_TEN_SHIFT) = 1;
 
   /* Enable LPT interrupt */
+  NVIC_ClearPendingIRQ(LPTimer_IRQn);
   NVIC_EnableIRQ(LPTimer_IRQn);
 
   PRINTF("rtimer_arch_init: Done\n");
@@ -188,30 +191,42 @@ rtimer_arch_init(void) {
 void
 rtimer_arch_schedule(rtimer_clock_t t) {
   rtimer_clock_t now = rtimer_arch_now();
+  /* there seems to be problems with the below method of running
+   * rtimer_run_next() from inside rtimer_arch_schedule. It fails to reschedule
+   * the clock tick rt_do_clock(). */
+#if 0
   if (t < (now + RTIMER_SPINLOCK_MARGIN)) {
     /* Set target to zero to prevent ISR from interfering */
     target = 0;
     /* Spin until target is reached */
-    while (t < rtimer_arch_now()) {
+    while (t < now) {
+      now = rtimer_arch_now();
     }
     rtimer_run_next();
     return;
   }
+#endif /* 0 */
   MK60_ENTER_CRITICAL_REGION();
   target = t; /* Update stored target time, read from ISR */
   /* Compute relative target time */
   t = t - now;
+  /* The reset in lptmr_update_cmr below happens synchronously and takes
+   * one LPTMR clock cycle, and the synchronization before the reset costs one
+   * tick. Add the lost ticks to the counter to compensate. */
+  t = t - 2;
   if (t > LPTIMER_MAXTICKS) {
     /* We can not reach this time in one period, wrap around */
     t = LPTIMER_MAXTICKS;
   }
+  else if (t == 0) {
+    /* The synchronization loop in the next scheduling will not work if the CMR
+     * is set to zero */
+    t = 1;
+  }
   uint32_t cnr = lptmr_update_cmr(t);
   /* Update the offset with the old counter value */
   offset += cnr;
-  /* The reset in lptmr_update_cmr above happens synchronously and takes
-   * one LPTMR clock cycle, and the synchronization before the reset costs one
-   * tick. Add the lost ticks to the counter to compensate. */
-  offset += 1 + 1;
+  offset += 2;
   MK60_LEAVE_CRITICAL_REGION();
 }
 
