@@ -53,8 +53,6 @@ static const spi_config_t *spi_conf[NUM_SPI][NUM_CTAR] = {{NULL}};
 
 static lock_t spi_lock[NUM_SPI] = {2, 2, 2}; /* Block access by default until spi_hw_init_master has been run */
 
-static volatile uint8_t spi_waiting_flag[NUM_SPI] = {0};
-
 /**
  * Find the prescaler and scaler settings that will yield a delay timing
  * as close as possible (but not shorter than) the target delay, given the
@@ -206,9 +204,6 @@ spi_hw_init_master(const spi_bus_t spi_num) {
   /* Disable FIFOs, this can be improved in the future */
   SPI[spi_num]->MCR = SPI_MCR_MSTR_MASK | SPI_MCR_PCSIS(0x1F) | SPI_MCR_DIS_RXF_MASK | SPI_MCR_DIS_TXF_MASK;
 
-  /* Enable interrupts for TCF flag */
-  BITBAND_REG(SPI[spi_num]->RSER, SPI_RSER_TCF_RE_SHIFT) = 1;
-
   switch(spi_num) {
     case SPI_0:
       NVIC_EnableIRQ(SPI0_IRQn);
@@ -315,23 +310,8 @@ int spi_transfer_blocking(const spi_bus_t spi_num, const uint8_t ctas, const uin
              uint8_t *data_in, size_t count_out, size_t count_in)
 {
   SPI_Type *spi_dev = SPI[spi_num];
-  /* Frame size in bits */
-  unsigned short frame_size = ((SPI[spi_num]->CTAR[ctas] & SPI_CTAR_FMSZ_MASK) >> SPI_CTAR_FMSZ_SHIFT) + 1;
-
-  /* Array stride in bytes */
-  /* unsigned int stride = (frame_size / 8) + 1; */
-
   uint32_t common_flags = SPI_PUSHR_CTAS(ctas) | SPI_PUSHR_PCS(cs);
-
   uint32_t spi_pushr;
-
-  /* this may yield unaligned memory accesses because of uint8_t* casted to
-   * uint16_t*. Using the DMA module will avoid this. */
-  if (frame_size > 8) {
-    /* Error! not implemented yet */
-    DEBUGGER_BREAK(BREAK_INVALID_PARAM);
-    while(1);
-  }
 
   while (count_out > 0) {
     spi_pushr = common_flags;
@@ -347,19 +327,16 @@ int spi_transfer_blocking(const spi_bus_t spi_num, const uint8_t ctas, const uin
     /* Clear transfer complete flag */
     spi_dev->SR |= SPI_SR_TCF_MASK;
 
-    /* Set waiting flag */
-    spi_waiting_flag[spi_num] = 1;
-
     /* Shift a frame out/in */
     spi_dev->PUSHR = spi_pushr;
 
     /* Wait for transfer complete */
-    COND_WAIT(spi_waiting_flag[spi_num] != 0);
+    while ((spi_dev->SR & SPI_SR_TCF_MASK) == 0) {
+    }
 
     /* Do a dummy read in order to allow for the next byte to be read */
     uint8_t tmp = spi_dev->POPR;
     (void)tmp; /* Suppress warning about unused value. */
-
   }
 
   /* Prepare read */
@@ -379,14 +356,12 @@ int spi_transfer_blocking(const spi_bus_t spi_num, const uint8_t ctas, const uin
     /* Clear transfer complete flag */
     spi_dev->SR |= SPI_SR_TCF_MASK;
 
-    /* Set waiting flag */
-    spi_waiting_flag[spi_num] = 1;
-
     /* Shift a frame out/in */
     spi_dev->PUSHR = spi_pushr;
 
     /* Wait for transfer complete */
-    COND_WAIT(spi_waiting_flag[spi_num] != 0);
+    while ((spi_dev->SR & SPI_SR_TCF_MASK) == 0) {
+    }
 
     (*data_in) = spi_dev->POPR;
     ++data_in; /* or += stride */
@@ -425,21 +400,4 @@ void spi_stop(const spi_bus_t spi_num)
       BITBAND_REG(SIM->SCGC3, SIM_SCGC3_SPI2_SHIFT) = 0;
       break;
   }
-}
-
-/** \todo SPI: Handle all flags properly in ISR, remove assumption on TCF. */
-
-/**
- * ISR for handling bus transfer complete interrupts.
- */
-void _isr_spi0(void) {
-  /* Clear status flag by writing a 1 to it */
-  BITBAND_REG(SPI0->SR, SPI_SR_TCF_SHIFT) = 1;
-  spi_waiting_flag[0] = 0;
-}
-
-void _isr_spi1(void) {
-  /* Clear status flag by writing a 1 to it */
-  BITBAND_REG(SPI1->SR, SPI_SR_TCF_SHIFT) = 1;
-  spi_waiting_flag[1] = 0;
 }
