@@ -205,6 +205,11 @@ rtimer_arch_schedule(rtimer_clock_t t) {
     rtimer_run_next();
     return;
   }
+#else /* 0 */
+  if (t < (now + RTIMER_SPINLOCK_MARGIN)) {
+    /* delay the timer */
+    t = now + RTIMER_SPINLOCK_MARGIN;
+  }
 #endif /* 0 */
   MK60_ENTER_CRITICAL_REGION();
   target = t; /* Update stored target time, read from ISR */
@@ -213,7 +218,9 @@ rtimer_arch_schedule(rtimer_clock_t t) {
   /* The reset in lptmr_update_cmr below happens synchronously and takes
    * one LPTMR clock cycle, and the synchronization before the reset costs one
    * tick. Add the lost ticks to the counter to compensate. */
-  t = t - 2;
+  /* Subtract one more to account for the one tick delay in asserting the
+   * interrupt flag after CMR and CNR match */
+  t = t - 2 - 1;
   if (t > LPTIMER_MAXTICKS) {
     /* We can not reach this time in one period, wrap around */
     t = LPTIMER_MAXTICKS;
@@ -227,6 +234,7 @@ rtimer_arch_schedule(rtimer_clock_t t) {
   /* Update the offset with the old counter value */
   offset += cnr;
   offset += 2;
+  /* The final +1 of the offset is performed in the ISR */
   MK60_LEAVE_CRITICAL_REGION();
 }
 
