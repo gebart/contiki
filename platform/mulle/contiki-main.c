@@ -71,6 +71,11 @@ main(void)
 {
   leds_arch_init();
 
+  power_control_init();
+
+  /* Turn off power to the on board peripherals to force a power on reset */
+  power_control_vperiph_set(0);
+
   /* Set up core clocks so that timings will be correct in all modules */
   SystemInit();
 
@@ -96,8 +101,6 @@ main(void)
 #endif
   /* TODO: Fix problems with LLS when using ContikiMAC. */
   LLWU_INHIBIT_LLS();
-
-  power_control_init();
 
   /* Turn on power to the on board peripherals */
   power_control_vperiph_set(1);
