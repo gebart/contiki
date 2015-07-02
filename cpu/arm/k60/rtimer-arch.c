@@ -77,7 +77,7 @@ rtimer_arch_init(void) {
   /* Setup Low Power Timer (LPT) */
 
   /* Enable LPT clock gate */
-  BITBAND_REG(SIM->SCGC5, SIM_SCGC5_LPTIMER_SHIFT) = 1;
+  BITBAND_REG32(SIM->SCGC5, SIM_SCGC5_LPTIMER_SHIFT) = 1;
 
   /* Disable timer to change settings. */
   /* Logic is reset when the timer is disabled, TCF flag is also cleared on disable. */
@@ -86,11 +86,11 @@ rtimer_arch_init(void) {
   LPTMR0->PSR = (LPTMR_PSR_PBYP_MASK | LPTMR_PSR_PCS(0b10));
   LPTMR0->CMR = LPTMR_CMR_COMPARE(32767);
   /* Enable free running mode. */
-  BITBAND_REG(LPTMR0->CSR, LPTMR_CSR_TFC_SHIFT) = 1;
+  BITBAND_REG32(LPTMR0->CSR, LPTMR_CSR_TFC_SHIFT) = 1;
   /* Enable interrupts. */
-  BITBAND_REG(LPTMR0->CSR, LPTMR_CSR_TIE_SHIFT) = 1;
+  BITBAND_REG32(LPTMR0->CSR, LPTMR_CSR_TIE_SHIFT) = 1;
   /* Enable timer */
-  BITBAND_REG(LPTMR0->CSR, LPTMR_CSR_TEN_SHIFT) = 1;
+  BITBAND_REG32(LPTMR0->CSR, LPTMR_CSR_TEN_SHIFT) = 1;
 
   /* Enable LPT interrupt */
   NVIC_EnableIRQ(LPTimer_IRQn);
@@ -119,13 +119,13 @@ rtimer_arch_schedule(rtimer_clock_t t) {
    * we need a new offset computation. */
   offset = rtimer_arch_now();
   /* Disable timer in order to modify the CMR register. */
-  BITBAND_REG(LPTMR0->CSR, LPTMR_CSR_TEN_SHIFT) = 0;
+  BITBAND_REG32(LPTMR0->CSR, LPTMR_CSR_TEN_SHIFT) = 0;
   /* Set timer value */
   /* t and offset are 32 bit ints, CMR_COMPARE is only 16 bit wide,
    * the MSBs will be cut off, so to cope with this we add an additional check
    * for the MSBs in the ISR. */
   LPTMR0->CMR = LPTMR_CMR_COMPARE(t - offset);
-  BITBAND_REG(LPTMR0->CSR, LPTMR_CSR_TEN_SHIFT) = 1;
+  BITBAND_REG32(LPTMR0->CSR, LPTMR_CSR_TEN_SHIFT) = 1;
 }
 
 rtimer_clock_t
@@ -143,7 +143,7 @@ _isr_lpt(void)
   rtimer_clock_t now = rtimer_arch_now();
 
   /* Clear timer compare flag by writing a 1 to it */
-  BITBAND_REG(LPTMR0->CSR, LPTMR_CSR_TCF_SHIFT) = 1;
+  BITBAND_REG32(LPTMR0->CSR, LPTMR_CSR_TCF_SHIFT) = 1;
 
   if (target > now) {
     /* Overflow, schedule the next period */

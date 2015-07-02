@@ -81,17 +81,17 @@ power_control_init()
 void
 power_control_vperiph_set(bool state)
 {
-  BITBAND_REG(POWER_CONTROL_VPERIPH_GPIO->PDOR, POWER_CONTROL_VPERIPH_PIN_NUMBER) = (state ? 1 : 0);
+  BITBAND_REG32(POWER_CONTROL_VPERIPH_GPIO->PDOR, POWER_CONTROL_VPERIPH_PIN_NUMBER) = (state ? 1 : 0);
 }
 
 void
 power_control_vsec_set(bool state)
 {
-  BITBAND_REG(POWER_CONTROL_VSEC_GPIO->PDOR, POWER_CONTROL_VSEC_PIN_NUMBER) = (state ? 1 : 0);
+  BITBAND_REG32(POWER_CONTROL_VSEC_GPIO->PDOR, POWER_CONTROL_VSEC_PIN_NUMBER) = (state ? 1 : 0);
 }
 
 void
 power_control_avdd_set(bool state)
 {
-  BITBAND_REG(POWER_CONTROL_AVDD_GPIO->PDOR, POWER_CONTROL_AVDD_PIN_NUMBER) = (state ? 1 : 0);
+  BITBAND_REG32(POWER_CONTROL_AVDD_GPIO->PDOR, POWER_CONTROL_AVDD_PIN_NUMBER) = (state ? 1 : 0);
 }

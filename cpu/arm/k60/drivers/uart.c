@@ -137,22 +137,22 @@ uart_module_enable(const unsigned int uart_num)
 {
   switch (uart_num) {
     case 0:
-      BITBAND_REG(SIM->SCGC4, SIM_SCGC4_UART0_SHIFT) = 1;
+      BITBAND_REG32(SIM->SCGC4, SIM_SCGC4_UART0_SHIFT) = 1;
       break;
     case 1:
-      BITBAND_REG(SIM->SCGC4, SIM_SCGC4_UART1_SHIFT) = 1;
+      BITBAND_REG32(SIM->SCGC4, SIM_SCGC4_UART1_SHIFT) = 1;
       break;
     case 2:
-      BITBAND_REG(SIM->SCGC4, SIM_SCGC4_UART2_SHIFT) = 1;
+      BITBAND_REG32(SIM->SCGC4, SIM_SCGC4_UART2_SHIFT) = 1;
       break;
     case 3:
-      BITBAND_REG(SIM->SCGC4, SIM_SCGC4_UART3_SHIFT) = 1;
+      BITBAND_REG32(SIM->SCGC4, SIM_SCGC4_UART3_SHIFT) = 1;
       break;
     case 4:
-      BITBAND_REG(SIM->SCGC1, SIM_SCGC1_UART4_SHIFT) = 1;
+      BITBAND_REG32(SIM->SCGC1, SIM_SCGC1_UART4_SHIFT) = 1;
       break;
     case 5:
-      BITBAND_REG(SIM->SCGC1, SIM_SCGC1_UART5_SHIFT) = 1;
+      BITBAND_REG32(SIM->SCGC1, SIM_SCGC1_UART5_SHIFT) = 1;
       break;
     default:
       /* Unknown UART module!! */

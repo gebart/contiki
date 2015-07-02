@@ -32,10 +32,10 @@ udelay(uint16_t us)
   PIT->CHANNEL[0].LDVAL = PIT_LDVAL_TSV((F_BUS / 1000000) * (uint32_t)us);
 
   /* Disable timer to load a new value */
-  BITBAND_REG(PIT->CHANNEL[0].TCTRL, PIT_TCTRL_TEN_SHIFT) = 0;
+  BITBAND_REG32(PIT->CHANNEL[0].TCTRL, PIT_TCTRL_TEN_SHIFT) = 0;
 
   /* Clear interrupt flag */
-  BITBAND_REG(PIT->CHANNEL[0].TFLG, PIT_TFLG_TIF_SHIFT) = 1;
+  BITBAND_REG32(PIT->CHANNEL[0].TFLG, PIT_TFLG_TIF_SHIFT) = 1;
 
   /* Enable timer, no interrupt, no chaining */
   PIT->CHANNEL[0].TCTRL = PIT_TCTRL_TEN_MASK;

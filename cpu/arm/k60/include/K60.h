@@ -78,54 +78,54 @@ extern "C" {
 
 /* The base array initializers are missing from the older MK60DZ10.h header. */
 /* Copy and paste from MK60D10.h: */
-#define ADC_BASES                                { ADC0, ADC1 }
-#define AIPS_BASES                               { AIPS0, AIPS1 }
-#define AXBS_BASES                               { AXBS }
-#define CAN_BASES                                { CAN0, CAN1 }
-#define CAU_BASES                                { CAU }
-#define CMP_BASES                                { CMP0, CMP1, CMP2 }
-#define CMT_BASES                                { CMT }
-#define CRC_BASES                                { CRC0 }
-#define DAC_BASES                                { DAC0, DAC1 }
-#define DMA_BASES                                { DMA0 }
-#define DMAMUX_BASES                             { DMAMUX }
-#define ENET_BASES                               { ENET }
-#define EWM_BASES                                { EWM }
-#define FB_BASES                                 { FB }
-#define FMC_BASES                                { FMC }
-#define FTFL_BASES                               { FTFL }
-#define FTM_BASES                                { FTM0, FTM1, FTM2 }
-#define GPIO_BASES                               { PTA, PTB, PTC, PTD, PTE }
-#define I2C_BASES                                { I2C0, I2C1 }
-#define I2S_BASES                                { I2S0 }
-#define LLWU_BASES                               { LLWU }
-#define LPTMR_BASES                              { LPTMR0 }
-#define MCG_BASES                                { MCG }
-#define MCM_BASES                                { MCM }
-#define MPU_BASES                                { MPU }
-#define NV_BASES                                 { FTFL_FlashConfig }
-#define OSC_BASES                                { OSC }
-#define PDB_BASES                                { PDB0 }
-#define PIT_BASES                                { PIT }
-#define PMC_BASES                                { PMC }
-#define PORT_BASES                               { PORTA, PORTB, PORTC, PORTD, PORTE }
+#define ADC_BASE_PTRS                                { ADC0, ADC1 }
+#define AIPS_BASE_PTRS                               { AIPS0, AIPS1 }
+#define AXBS_BASE_PTRS                               { AXBS }
+#define CAN_BASE_PTRS                                { CAN0, CAN1 }
+#define CAU_BASE_PTRS                                { CAU }
+#define CMP_BASE_PTRS                                { CMP0, CMP1, CMP2 }
+#define CMT_BASE_PTRS                                { CMT }
+#define CRC_BASE_PTRS                                { CRC0 }
+#define DAC_BASE_PTRS                                { DAC0, DAC1 }
+#define DMA_BASE_PTRS                                { DMA0 }
+#define DMAMUX_BASE_PTRS                             { DMAMUX }
+#define ENET_BASE_PTRS                               { ENET }
+#define EWM_BASE_PTRS                                { EWM }
+#define FB_BASE_PTRS                                 { FB }
+#define FMC_BASE_PTRS                                { FMC }
+#define FTFL_BASE_PTRS                               { FTFL }
+#define FTM_BASE_PTRS                                { FTM0, FTM1, FTM2 }
+#define GPIO_BASE_PTRS                               { PTA, PTB, PTC, PTD, PTE }
+#define I2C_BASE_PTRS                                { I2C0, I2C1 }
+#define I2S_BASE_PTRS                                { I2S0 }
+#define LLWU_BASE_PTRS                               { LLWU }
+#define LPTMR_BASE_PTRS                              { LPTMR0 }
+#define MCG_BASE_PTRS                                { MCG }
+#define MCM_BASE_PTRS                                { MCM }
+#define MPU_BASE_PTRS                                { MPU }
+#define NV_BASE_PTRS                                 { FTFL_FlashConfig }
+#define OSC_BASE_PTRS                                { OSC }
+#define PDB_BASE_PTRS                                { PDB0 }
+#define PIT_BASE_PTRS                                { PIT }
+#define PMC_BASE_PTRS                                { PMC }
+#define PORT_BASE_PTRS                               { PORTA, PORTB, PORTC, PORTD, PORTE }
 /* No RCM in MK60DZ10.h */
-/* #define RCM_BASES                                { RCM } */
-#define RFSYS_BASES                              { RFSYS }
-#define RFVBAT_BASES                             { RFVBAT }
-#define RNG_BASES                                { RNG }
-#define RTC_BASES                                { RTC }
-#define SDHC_BASES                               { SDHC }
-#define SIM_BASES                                { SIM }
+/* #define RCM_BASE_PTRS                                { RCM } */
+#define RFSYS_BASE_PTRS                              { RFSYS }
+#define RFVBAT_BASE_PTRS                             { RFVBAT }
+#define RNG_BASE_PTRS                                { RNG }
+#define RTC_BASE_PTRS                                { RTC }
+#define SDHC_BASE_PTRS                               { SDHC }
+#define SIM_BASE_PTRS                                { SIM }
 /* MC->SMC in rev.1 to rev.2 conversion */
-#define MC_BASES                                 { MC }
-#define SPI_BASES                                { SPI0, SPI1, SPI2 }
-#define TSI_BASES                                { TSI0 }
-#define UART_BASES                               { UART0, UART1, UART2, UART3, UART4, UART5 }
-#define USB_BASES                                { USB0 }
-#define USBDCD_BASES                             { USBDCD }
-#define VREF_BASES                               { VREF }
-#define WDOG_BASES                               { WDOG }
+#define MC_BASE_PTRS                                 { MC }
+#define SPI_BASE_PTRS                                { SPI0, SPI1, SPI2 }
+#define TSI_BASE_PTRS                                { TSI0 }
+#define UART_BASE_PTRS                               { UART0, UART1, UART2, UART3, UART4, UART5 }
+#define USB_BASE_PTRS                                { USB0 }
+#define USBDCD_BASE_PTRS                             { USBDCD }
+#define VREF_BASE_PTRS                               { VREF }
+#define WDOG_BASE_PTRS                               { WDOG }
 
 #else
 #error K60_CPU_REV must be set to the correct CPU revision!

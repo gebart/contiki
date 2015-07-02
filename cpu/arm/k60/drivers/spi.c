@@ -197,7 +197,7 @@ spi_hw_init_master(const spi_bus_t spi_num) {
   spi_start(spi_num);
 
   /* Clear MDIS to enable the module. */
-  BITBAND_REG(SPI[spi_num]->MCR, SPI_MCR_MDIS_SHIFT) = 0;
+  BITBAND_REG32(SPI[spi_num]->MCR, SPI_MCR_MDIS_SHIFT) = 0;
 
   /* Enable master mode, select chip select signal polarity */
   /* XXX: Hard-coded chip select active low */
@@ -375,13 +375,13 @@ void spi_start(const spi_bus_t spi_num)
   /* Enable clock gate for the correct SPI hardware module */
   switch(spi_num) {
     case SPI_0:
-      BITBAND_REG(SIM->SCGC6, SIM_SCGC6_SPI0_SHIFT) = 1;
+      BITBAND_REG32(SIM->SCGC6, SIM_SCGC6_SPI0_SHIFT) = 1;
       break;
     case SPI_1:
-      BITBAND_REG(SIM->SCGC6, SIM_SCGC6_SPI1_SHIFT) = 1;
+      BITBAND_REG32(SIM->SCGC6, SIM_SCGC6_SPI1_SHIFT) = 1;
       break;
     case SPI_2:
-      BITBAND_REG(SIM->SCGC3, SIM_SCGC3_SPI2_SHIFT) = 1;
+      BITBAND_REG32(SIM->SCGC3, SIM_SCGC3_SPI2_SHIFT) = 1;
       break;
   }
 }
@@ -391,13 +391,13 @@ void spi_stop(const spi_bus_t spi_num)
   /* Enable clock gate for the correct SPI hardware module */
   switch(spi_num) {
     case SPI_0:
-      BITBAND_REG(SIM->SCGC6, SIM_SCGC6_SPI0_SHIFT) = 0;
+      BITBAND_REG32(SIM->SCGC6, SIM_SCGC6_SPI0_SHIFT) = 0;
       break;
     case SPI_1:
-      BITBAND_REG(SIM->SCGC6, SIM_SCGC6_SPI1_SHIFT) = 0;
+      BITBAND_REG32(SIM->SCGC6, SIM_SCGC6_SPI1_SHIFT) = 0;
       break;
     case SPI_2:
-      BITBAND_REG(SIM->SCGC3, SIM_SCGC3_SPI2_SHIFT) = 0;
+      BITBAND_REG32(SIM->SCGC3, SIM_SCGC3_SPI2_SHIFT) = 0;
       break;
   }
 }

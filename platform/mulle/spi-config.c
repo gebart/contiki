@@ -53,7 +53,7 @@ static const spi_config_t spi1_conf[NUM_CTAR] = {
 /* Set port mux for SPI0 bus */
 static void port_init_spi0(void) {
   /* Turn on port */
-  BITBAND_REG(SIM->SCGC5, SIM_SCGC5_PORTD_SHIFT) = 1;
+  BITBAND_REG32(SIM->SCGC5, SIM_SCGC5_PORTD_SHIFT) = 1;
   /* Set up mux */
   /** \todo Update SPI pin mapping to more dynamic format. (remove magic numbers) */
   PORTD->PCR[0] = PORT_PCR_MUX(2); /* SPI0_PCS0 */

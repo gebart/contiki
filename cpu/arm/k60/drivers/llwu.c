@@ -34,7 +34,7 @@ llwu_init()
 {
   list_init(llwu);
   /* Setup Low Leakage Wake-up Unit (LLWU) */
-  BITBAND_REG(SIM->SCGC4, SIM_SCGC4_LLWU_SHIFT) = 1;   /* Enable LLWU clock gate */
+  BITBAND_REG32(SIM->SCGC4, SIM_SCGC4_LLWU_SHIFT) = 1;   /* Enable LLWU clock gate */
 
   power_modes_init();
 

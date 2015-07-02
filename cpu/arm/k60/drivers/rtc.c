@@ -50,7 +50,7 @@ rtc_init(void)
 
   /* Enable clock gate for RTC module */
   /* side note: It is ironic that we need to enable the clock gate for a clock module */
-  BITBAND_REG(SIM->SCGC6, SIM_SCGC6_RTC_SHIFT) = 1;
+  BITBAND_REG32(SIM->SCGC6, SIM_SCGC6_RTC_SHIFT) = 1;
 
   /* Reset the RTC status */
   RTC->SR = 0;
@@ -62,13 +62,13 @@ rtc_init(void)
 void
 rtc_start(void) {
   /* Enable RTC seconds counter. The RTC module has been initialized beforehand. */
-  BITBAND_REG(RTC->SR, RTC_SR_TCE_SHIFT) = 1;
+  BITBAND_REG32(RTC->SR, RTC_SR_TCE_SHIFT) = 1;
 }
 
 void
 rtc_stop(void) {
   /* Disable RTC seconds counter. */
-  BITBAND_REG(RTC->SR, RTC_SR_TCE_SHIFT) = 0;
+  BITBAND_REG32(RTC->SR, RTC_SR_TCE_SHIFT) = 0;
 }
 
 void
