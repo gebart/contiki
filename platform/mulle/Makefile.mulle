@@ -36,6 +36,7 @@ CONTIKI_TARGET_SOURCEFILES += contiki-main.c \
   cfs-coffee.c \
   lis3dh.c \
   lis3dh-arch.c \
+  hih6130.c \
   radio-sensor.c \
   battery-sensor.c \
   button-sensor.c
