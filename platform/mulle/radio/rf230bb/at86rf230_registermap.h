@@ -113,13 +113,43 @@ extern "C" {
 /** Constant CMD_TX_ARET_ON for sub-register @ref SR_TRX_CMD */
 #define CMD_TX_ARET_ON           (25)
 /** Offset for register TRX_CTRL_0 */
-#define RG_TRX_CTRL_0                    (0x03)
+#define RG_TRX_CTRL_0            (0x03)
 /** Offset for register TRX_CTRL_1 */
-#define RG_TRX_CTRL_1                    (0x04)
+#define RG_TRX_CTRL_1            (0x04)
 /** Access parameters for sub-register PAD_IO in register @ref RG_TRX_CTRL_0 */
-#define SR_PAD_IO                    0x03, 0xc0, 6
+#define SR_PAD_IO                0x03, 0xc0, 6
 /** Access parameters for sub-register PAD_IO_CLKM in register @ref RG_TRX_CTRL_0 */
-#define SR_PAD_IO_CLKM               0x03, 0x30, 4
+#define SR_PAD_IO_CLKM           0x03, 0x30, 4
+/** Offset for register TRX_CTRL_2 */
+#define RG_TRX_CTRL_2            (0x0C)
+/** Access parameters for sub-register OQPSK_DATA_RATE in register @ref RG_TRX_CTRL_2 */
+#define SR_OQPSK_DATA_RATE       RG_TRX_CTRL_2, 0x03, 0
+/** Access parameters for sub-register SUB_MODE in register @ref RG_TRX_CTRL_2 */
+#define SR_SUB_MODE              RG_TRX_CTRL_2, 0x04, 2
+/** Access parameters for sub-register BPSK_OQPSK in register @ref RG_TRX_CTRL_2 */
+#define SR_BPSK_OQPSK            RG_TRX_CTRL_2, 0x08, 3
+/** Access parameters for sub-register ALT_SPECTRUM in register @ref RG_TRX_CTRL_2 */
+#define SR_ALT_SPECTRUM          RG_TRX_CTRL_2, 0x10, 4
+/** Access parameters for sub-register OQPSK_SCRAM_EN in register @ref RG_TRX_CTRL_2 */
+#define SR_OQPSK_SCRAM_EN        RG_TRX_CTRL_2, 0x20, 5
+/** @name Radio modes suitable for 868 MHz, see Table 9-8. Register 0x0C (TRX_CTRL_2) Bit Alignment. */
+/** @{ */
+/** IEEE 802.15.4 - 2003/2006/2011: channel page 0, channel 0 */
+#define RF230_PHY_MODE_BPSK_20             (0x00)
+/** IEEE 802.15.4 - 2006/2011: channel page 2, channel 0 */
+#define RF230_PHY_MODE_OQPSK_SIN_RC_100    (0x08)
+/** Proprietary high data rate 200 kbit/s */
+#define RF230_PHY_MODE_OQPSK_SIN_RC_200    (0x09)
+/** Proprietary high data rate 400 kbit/s, scrambler on */
+#define RF230_PHY_MODE_OQPSK_SIN_RC_400    (0x2a)
+/** @} */
+/** @name Radio modes suitable for 915 MHz, see Table 9-8. Register 0x0C (TRX_CTRL_2) Bit Alignment. */
+/** @{ */
+/** IEEE 802.15.4 - 2003/2006/2011: channel page 0, channel 1 to 10 */
+#define RF230_PHY_MODE_BPSK_40             (0x04)
+/** IEEE 802.15.4 - 2006/2011: channel page 2, channel 1 to 10 */
+#define RF230_PHY_MODE_OQPSK_SIN_250       (0x0c)
+/** @} */
 /** Constant CLKM_2mA for sub-register @ref SR_PAD_IO_CLKM */
 #define CLKM_2mA                 (0)
 /** Constant CLKM_4mA for sub-register @ref SR_PAD_IO_CLKM */

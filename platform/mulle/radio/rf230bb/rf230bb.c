@@ -745,6 +745,20 @@ rf230_warm_reset(void)
   hal_subregister_write(SR_TX_AUTO_CRC_ON, 1);
 #endif
 
+  /* Select PHY mode */
+  uint8_t trx_ctrl2;
+  trx_ctrl2 = hal_register_read(RG_TRX_CTRL_2);
+  /* Clear settings */
+  trx_ctrl2 &= ~(0x3f);
+#ifdef RF230_CONF_PHY_MODE
+  trx_ctrl2 |= RF230_CONF_PHY_MODE;
+#else
+  /* Default, BPSK-20 */
+  trx_ctrl2 |= RF230_PHY_MODE_BPSK_20;
+#endif
+  hal_register_write(RG_TRX_CTRL_2, trx_ctrl2);
+
+
 /* Limit tx power for testing miniature Raven mesh */
 #ifdef RF230_MAX_TX_POWER
   set_txpower(RF230_MAX_TX_POWER);  /* 0=3dbm 15=-17.2dbm */
