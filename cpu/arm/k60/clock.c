@@ -37,11 +37,11 @@ static struct rtimer rt_clock;
 /* This is based on the MC1322x clock module rtimer implementation. */
 /* the typical clock things like incrementing current_tick and etimer checks */
 /* are performed as a periodically scheduled rtimer */
-static void
+/*static*/ void
 rt_do_clock(struct rtimer *t, void *ptr)
 {
-  rtimer_set(t, RTIMER_TIME(t) + (RTIMER_SECOND/CLOCK_SECOND), 1,
-             (rtimer_callback_t)rt_do_clock, ptr);
+//  rtimer_set(t, RTIMER_TIME(t) + (RTIMER_SECOND/CLOCK_SECOND), 1,
+//             (rtimer_callback_t)rt_do_clock, ptr);
 
   current_tick++;
 
@@ -165,7 +165,7 @@ clock_delay_usec(uint16_t delay_us) {
 void
 clock_init(void)
 {
-  rtimer_set(&rt_clock, RTIMER_NOW() + RTIMER_SECOND/CLOCK_SECOND, 1, (rtimer_callback_t)rt_do_clock, NULL);
+  //rtimer_set(&rt_clock, RTIMER_NOW() + RTIMER_SECOND/CLOCK_SECOND, 1, (rtimer_callback_t)rt_do_clock, NULL);
 
   /* Enable PIT peripheral clock */
   BITBAND_REG32(SIM->SCGC6, SIM_SCGC6_PIT_SHIFT) = 1;

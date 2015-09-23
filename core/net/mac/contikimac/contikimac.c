@@ -362,7 +362,7 @@ powercycle(struct rtimer *t, void *ptr)
 #endif
     }
 #else
-    cycle_start += CYCLE_TIME;
+    //cycle_start += CYCLE_TIME;
 #endif
 
     packet_seen = 0;
@@ -464,6 +464,7 @@ powercycle(struct rtimer *t, void *ptr)
       PT_YIELD(&pt);
 #endif
     }
+    cycle_start += CYCLE_TIME;
   }
 
   PT_END(&pt);

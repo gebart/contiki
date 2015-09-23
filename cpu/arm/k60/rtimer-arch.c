@@ -39,6 +39,7 @@
 
 #include "rtimer-arch.h"
 #include "K60.h"
+#include "clock.h"
 
 #define DEBUG 0
 #if DEBUG
@@ -64,6 +65,15 @@
 /** Offset between current counter/timer and t=0 (boot instant) */
 static volatile rtimer_clock_t offset;
 static volatile rtimer_clock_t target;
+
+
+#define SYS_TIC_PERIOD (RTIMER_ARCH_SECOND/CLOCK_SECOND)
+
+/* Next time in the future when the system tic is to be scheduled */
+static volatile rtimer_clock_t sys_tic_next = SYS_TIC_PERIOD;
+
+/* Flag that indicates if something is scheduled */
+static volatile int scheduled = 0;
 
 /*
  * Initialize the clock module.
@@ -96,16 +106,24 @@ rtimer_arch_init(void) {
   NVIC_EnableIRQ(LPTimer_IRQn);
 
   PRINTF("rtimer_arch_init: Done\n");
+
+  rtimer_arch_schedule(sys_tic_next);
 }
 
 void
 rtimer_arch_schedule(rtimer_clock_t t) {
   rtimer_clock_t now = rtimer_arch_now();
+  scheduled = 1;
+  target = t; /* Update stored target time, read from ISR */
+
+  if (target > sys_tic_next)
+  {
+    t = sys_tic_next;
+  }
   if (t < (now + RTIMER_SCHEDULE_MARGIN)) {
     /* Already happened */
     t = now + RTIMER_SCHEDULE_MARGIN;
   }
-  target = t; /* Update stored target time, read from ISR */
   if (t > now + RTIMER_PERIOD) {
     /* We can not reach this time in one period, wrap around */
     t = now + RTIMER_PERIOD;
@@ -136,12 +154,19 @@ rtimer_arch_now(void) {
   return offset + cnr;
 }
 
+// TODO(henrik) Make connection to system tick callback more clean.
+void rt_do_clock(struct rtimer *t, void *ptr);
 /* Interrupt handler for rtimer triggers */
 void
 _isr_lpt(void)
 {
   rtimer_clock_t now = rtimer_arch_now();
 
+  if (now > sys_tic_next)
+  {
+    rt_do_clock(0,0);
+    sys_tic_next += SYS_TIC_PERIOD;
+  }
   /* Clear timer compare flag by writing a 1 to it */
   BITBAND_REG32(LPTMR0->CSR, LPTMR_CSR_TCF_SHIFT) = 1;
 
@@ -149,6 +174,11 @@ _isr_lpt(void)
     /* Overflow, schedule the next period */
     rtimer_arch_schedule(target);
   } else {
+    scheduled = 0;
     rtimer_run_next();
+  }
+  if (!scheduled)
+  {
+    rtimer_arch_schedule(sys_tic_next);
   }
 }

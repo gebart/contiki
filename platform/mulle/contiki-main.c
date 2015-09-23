@@ -99,8 +99,6 @@ main(void)
 #else
   llwu_set_allow(deep_sleep, 0);
 #endif
-  /* TODO: Fix problems with LLS when using ContikiMAC. */
-  LLWU_INHIBIT_LLS();
 
   /* Turn on power to the on board peripherals */
   power_control_vperiph_set(1);
