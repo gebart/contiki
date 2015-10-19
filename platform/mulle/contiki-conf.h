@@ -43,6 +43,7 @@
 #define __CONTIKI_CONF_H__
 
 #include <stdint.h>
+#include "at86rf230_registermap.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -108,6 +109,11 @@ typedef uint32_t rtimer_clock_t;
 /* Disable slip-bridge implementation of putchar because it messes up newlib buffered stdio */
 #define SLIP_BRIDGE_CONF_NO_PUTCHAR 1
 
+#ifndef RF230_CONF_PHY_MODE
+/* PHY mode is configured for 100 kbit/s data rate and following the 802.15.4 standard */
+#define RF230_CONF_PHY_MODE         RF230_PHY_MODE_OQPSK_SIN_RC_100
+#endif
+
 #ifndef NETSTACK_CONF_NETWORK
 #define NETSTACK_CONF_NETWORK       sicslowpan_driver
 #endif /* NETSTACK_CONF_NETWORK */
@@ -131,6 +137,7 @@ typedef uint32_t rtimer_clock_t;
 #define RF230_CONF_AUTORETRIES      1
 #define NETSTACK_CONF_RDC_CHANNEL_CHECK_RATE   8
 
+#if RF230_CONF_PHY_MODE == RF230_PHY_MODE_BPSK_40
 // 0.4 ms on Mulle (rf212)
 #define CONTIKIMAC_CONF_CCA_CHECK_TIME (RTIMER_ARCH_SECOND / 2000)
 // Time to send 2 packets (tl) + one wait between packets (Ti)
@@ -141,6 +148,9 @@ typedef uint32_t rtimer_clock_t;
 #define CONTIKIMAC_CONF_AFTER_ACK_DETECTECT_WAIT_TIME (RTIMER_ARCH_SECOND / 500)
 // Tc
 #define CONTIKIMAC_CONF_CCA_SLEEP_TIME (RTIMER_ARCH_SECOND / 125)
+#else
+#error "CONTIKIMAC does not support the specified radio speed"
+#endif
 
 /* Phase optimization seem to cause problems (drifting clocks?) */
 #define CONTIKIMAC_CONF_WITH_PHASE_OPTIMIZATION 0
