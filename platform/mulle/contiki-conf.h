@@ -144,18 +144,27 @@ typedef uint32_t rtimer_clock_t;
  *       10 symbols with a speed of 40 = 400 us. 400 is used here.
  *
  * MODE         Sp      Tl      Ta        Td      Tr      min(Ts)  Ti   Tc    Pbytes
- * BPSQ-20      50      53.2    0.6       2.4     0.4     3.8
+ * BPSQ-20      50      53.2    0.6       2.4     0.4     3.8      3.5  4     6
  * BPSQ-40      25      26.6    0.3       1.2     0.2     1.9      3    3.5   13.5
- * O-QPSK-100   40      10.64   0.48      0.48    0.32    1.6      1    1.1   17
- * O-QPSK-250   16      4.254   0.192     0.192   0.128   0.64
- * O-QPSK-200   40      5.56    0.48      0.48    0.32    1.6
+ * O-QPSK-100   40      10.64   0.48      0.48    0.32    1.6      1    1.1   15.75
+ * O-QPSK-250   16      4.254   0.192     0.192   0.128   0.64     0.5  0.6   21
+ * O-QPSK-200   40      5.56    0.48      0.48    0.32    1.6      1    1.1   31.5
  * O-QPSK-400   40      3.02    0.48      0.48    0.32    1.6
  * O-QPSK-500   16      2.224   0.192     0.192   0.128   0.64
  * O-QPSK-1000  16      1.208   0.192     0.192   0.128   0.64
  *
+ * NOTE: Ti and Tc are in some cases tuned manually for better performance.
+ *       In general increasing CONTIKIMAC_CONF_LISTEN_TIME_AFTER_PACKET_DETECTED (=> larger Tl)
+ *       gives less PL.
  */
 
-#if RF230_CONF_PHY_MODE == RF230_PHY_MODE_BPSK_40
+#if RF230_CONF_PHY_MODE == RF230_PHY_MODE_BPSK_20
+#define CONTIKIMAC_Ti 3.5
+#define CONTIKIMAC_Tc 4
+#define CONTIKIMAC_Tr 0.4
+#define CONTIKIMAC_Tl 53.2
+#define CONTIKIMAC_Td 2.4
+#elif RF230_CONF_PHY_MODE == RF230_PHY_MODE_BPSK_40
 #define CONTIKIMAC_Ti 3
 #define CONTIKIMAC_Tc 3.5
 #define CONTIKIMAC_Tr 0.2
@@ -167,6 +176,18 @@ typedef uint32_t rtimer_clock_t;
 #define CONTIKIMAC_Tr 0.32
 #define CONTIKIMAC_Tl 10.64
 #define CONTIKIMAC_Td 0.48
+#elif RF230_CONF_PHY_MODE == RF230_PHY_MODE_OQPSK_SIN_RC_200
+#define CONTIKIMAC_Ti 1
+#define CONTIKIMAC_Tc 1.1
+#define CONTIKIMAC_Tr 0.32
+#define CONTIKIMAC_Tl (5.56+0.5) // Manually increased Tl for better stability
+#define CONTIKIMAC_Td 0.48
+#elif RF230_CONF_PHY_MODE == RF230_PHY_MODE_OQPSK_SIN_250
+#define CONTIKIMAC_Ti 0.5
+#define CONTIKIMAC_Tc 0.6
+#define CONTIKIMAC_Tr 0.128
+#define CONTIKIMAC_Tl (4.254+0.5) // Manually increased Tl for better stability
+#define CONTIKIMAC_Td 0.192
 #else
 #error "CONTIKIMAC does not support the specified radio speed"
 #endif
@@ -193,7 +214,7 @@ typedef uint32_t rtimer_clock_t;
 // Tr
 #define CONTIKIMAC_CONF_CCA_CHECK_TIME (RTIMER_ARCH_SECOND / (1000/CONTIKIMAC_Tr))
 // Time to send 2 packets (tl) + one wait between packets (Ti)
-#define CONTIKIMAC_CONF_LISTEN_TIME_AFTER_PACKET_DETECTED (CONTIKIMAC_CONF_INTER_PACKET_INTERVAL + 2*(RTIMER_ARCH_SECOND / (1000/CONTIKIMAC_Tl)))
+#define CONTIKIMAC_CONF_LISTEN_TIME_AFTER_PACKET_DETECTED ((CONTIKIMAC_CONF_INTER_PACKET_INTERVAL + 2*(RTIMER_ARCH_SECOND / (1000/CONTIKIMAC_Tl))))
 // Td
 #define CONTIKIMAC_CONF_AFTER_ACK_DETECTECT_WAIT_TIME (RTIMER_ARCH_SECOND / (1000/CONTIKIMAC_Td))
 
