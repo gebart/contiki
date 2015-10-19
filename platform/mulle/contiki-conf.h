@@ -122,6 +122,55 @@ typedef uint32_t rtimer_clock_t;
 #define NETSTACK_CONF_MAC           csma_driver
 #endif /* NETSTACK_CONF_MAC */
 
+/**
+ * BPSQ: 1 Symbol = 1 Bit => 8 Symbols = 1 Byte
+ * O-QPSK: 1 Symbol = 4 Bits => 2 Symbols = 1 Byte
+ *
+ * Tl   (ms): The transmission time of the longest possible packet (127 bytes of payload)
+ * Ta   (ms): The time between receiving a packet and sending the acknowledgment packet, 12 symbols for 802.15.4
+ * Td   (ms): The time required for successfully detecting an acknowledgment from the receiver, this can be done after SHR+PHR
+ * Sp   (us): Symbol period (us) (table 7.2)
+ * Tr   (ms): CCA measurement time, 8 symbols
+ * Tc   (ms): Interval between CCA measurements
+ * Ts   (ms): The transmission time of the shortest packet
+ * Ti   (ms): The interval between each packet transmission.
+ * Pbytes   : Minimum packet size allowed to be sent
+ *
+ * The parameters must fulfill the following condition:
+ *
+ * Ta + Td < Ti < Tc < Tc + 2Tr < Ts.
+ *
+ * NOTE: The RF212 datasheet specifies 300 us for SHR with O-QPSK-(100, 200, 400) but calculating it gives 400,
+ *       10 symbols with a speed of 40 = 400 us. 400 is used here.
+ *
+ * MODE         Sp      Tl      Ta        Td      Tr      min(Ts)  Ti   Tc    Pbytes
+ * BPSQ-20      50      53.2    0.6       2.4     0.4     3.8
+ * BPSQ-40      25      26.6    0.3       1.2     0.2     1.9      3    3.5   3.5
+ * O-QPSK-100   40      10.64   0.48      0.48    0.32    1.6
+ * O-QPSK-250   16      4.254   0.192     0.192   0.128   0.64
+ * O-QPSK-200   40      5.56    0.48      0.48    0.32    1.6
+ * O-QPSK-400   40      3.02    0.48      0.48    0.32    1.6
+ * O-QPSK-500   16      2.224   0.192     0.192   0.128   0.64
+ * O-QPSK-1000  16      1.208   0.192     0.192   0.128   0.64
+ *
+ */
+
+#if RF230_CONF_PHY_MODE == RF230_PHY_MODE_BPSK_40
+#define CONTIKIMAC_Ti 3
+#define CONTIKIMAC_Tc 3.5
+#define CONTIKIMAC_Tr 0.2
+#define CONTIKIMAC_Tl 26.6
+#define CONTIKIMAC_Td 1.2
+#elif RF230_CONF_PHY_MODE == RF230_PHY_MODE_OQPSK_SIN_RC_100
+#define CONTIKIMAC_Ti 1
+#define CONTIKIMAC_Tc 1.1
+#define CONTIKIMAC_Tr 0.32
+#define CONTIKIMAC_Tl 10.64
+#define CONTIKIMAC_Td 0.48
+#else
+#error "CONTIKIMAC does not support the specified radio speed"
+#endif
+
 #if CONTIKIMAC
 #ifndef NETSTACK_CONF_RDC
 #define NETSTACK_CONF_RDC         contikimac_driver
@@ -137,20 +186,16 @@ typedef uint32_t rtimer_clock_t;
 #define RF230_CONF_AUTORETRIES      1
 #define NETSTACK_CONF_RDC_CHANNEL_CHECK_RATE   8
 
-#if RF230_CONF_PHY_MODE == RF230_PHY_MODE_BPSK_40
-// 0.4 ms on Mulle (rf212)
-#define CONTIKIMAC_CONF_CCA_CHECK_TIME (RTIMER_ARCH_SECOND / 2000)
-// Time to send 2 packets (tl) + one wait between packets (Ti)
-#define CONTIKIMAC_CONF_LISTEN_TIME_AFTER_PACKET_DETECTED (RTIMER_ARCH_SECOND / 9)
-// Ti 4 ms
-#define CONTIKIMAC_CONF_INTER_PACKET_INTERVAL (RTIMER_ARCH_SECOND / 250)
-// Td = 2 ms
-#define CONTIKIMAC_CONF_AFTER_ACK_DETECTECT_WAIT_TIME (RTIMER_ARCH_SECOND / 500)
+// Ti
+#define CONTIKIMAC_CONF_INTER_PACKET_INTERVAL (RTIMER_ARCH_SECOND / (1000/CONTIKIMAC_Ti))
 // Tc
-#define CONTIKIMAC_CONF_CCA_SLEEP_TIME (RTIMER_ARCH_SECOND / 125)
-#else
-#error "CONTIKIMAC does not support the specified radio speed"
-#endif
+#define CONTIKIMAC_CONF_CCA_SLEEP_TIME (RTIMER_ARCH_SECOND / (1000/CONTIKIMAC_Tc))
+// Tr
+#define CONTIKIMAC_CONF_CCA_CHECK_TIME (RTIMER_ARCH_SECOND / (1000/CONTIKIMAC_Tr))
+// Time to send 2 packets (tl) + one wait between packets (Ti)
+#define CONTIKIMAC_CONF_LISTEN_TIME_AFTER_PACKET_DETECTED (CONTIKIMAC_CONF_INTER_PACKET_INTERVAL + 2*(RTIMER_ARCH_SECOND / (1000/CONTIKIMAC_Tl)))
+// Td
+#define CONTIKIMAC_CONF_AFTER_ACK_DETECTECT_WAIT_TIME (RTIMER_ARCH_SECOND / (1000/CONTIKIMAC_Td))
 
 /* Phase optimization seem to cause problems (drifting clocks?) */
 #define CONTIKIMAC_CONF_WITH_PHASE_OPTIMIZATION 0
