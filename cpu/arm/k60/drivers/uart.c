@@ -147,6 +147,40 @@ uart_init(const unsigned int uart_num, uint32_t module_clk_hz, const uint32_t ba
 
   /* Enable transmitter */
   uart_dev->C2 |= UART_C2_TE_MASK;
+
+  /* Set up ring buffer and enable interrupt */
+  switch (uart_num) {
+#if UART0_CONF_ENABLE
+    case 0:
+      NVIC_EnableIRQ(UART0_RX_TX_IRQn);
+      break;
+#endif
+#if UART1_CONF_ENABLE
+    case 1:
+      NVIC_EnableIRQ(UART1_RX_TX_IRQn);
+      break;
+#endif
+#if UART2_CONF_ENABLE
+    case 2:
+      NVIC_EnableIRQ(UART2_RX_TX_IRQn);
+      break;
+#endif
+#if UART3_CONF_ENABLE
+    case 3:
+      NVIC_EnableIRQ(UART3_RX_TX_IRQn);
+      break;
+#endif
+#if UART4_CONF_ENABLE
+    case 4:
+      NVIC_EnableIRQ(UART4_RX_TX_IRQn);
+      break;
+#endif
+#if UART5_CONF_ENABLE
+    case 5:
+      NVIC_EnableIRQ(UART5_RX_TX_IRQn);
+      break;
+#endif
+  }
 }
 
 /*
