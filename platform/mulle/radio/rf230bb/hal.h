@@ -75,20 +75,32 @@ extern "C" {
  *       that the source code can directly use.
  * \{
  */
+#define SLPTR_PORT PORTE
 #define SLPTR_GPIO PTE
 #define SLPTR_PIN 6
 
-#define hal_set_slptr_high() (BITBAND_REG32(SLPTR_GPIO->PSOR, SLPTR_PIN) = 1) /**< This macro pulls the SLP_TR pin high. */
-#define hal_set_slptr_low()  (BITBAND_REG32(SLPTR_GPIO->PCOR, SLPTR_PIN) = 1) /**< This macro pulls the SLP_TR pin low. */
+#define RST_PORT PORTC
+#define RST_GPIO PTC
+#define RST_PIN 12
+
+#define hal_set_slptr_high() do { SLPTR_GPIO->PSOR = (1 << SLPTR_PIN); } while(0) /**< This macro pulls the SLP_TR pin high. */
+#define hal_set_slptr_low()  do { SLPTR_GPIO->PCOR = (1 << SLPTR_PIN); } while(0) /**< This macro pulls the SLP_TR pin low. */
 #define hal_get_slptr()      (BITBAND_REG32(SLPTR_GPIO->PDOR, SLPTR_PIN))    /**< Read current state of the SLP_TR pin (High/Low). */
 /* rst and pwr is the same */
-#define hal_set_rst_high()   PTD->PSOR = (1 << 7); delay_us(0xFFFF)          /**< This macro pulls the RST pin high. */
-#define hal_set_rst_low()    (PTD->PCOR = (1 << 7))           /**< This macro pulls the RST pin low. */
-#define hal_get_rst()        ((PTD->PDOR & (1 << 7)) >> 7)    /**< Read current state of the RST pin (High/Low). */
-#define hal_set_pwr_high()   (PTD->PSOR = (1 << 7))           /**< This macro pulls the RST pin high. */
-#define hal_set_pwr_low()    (PTD->PCOR = (1 << 7))           /**< This macro pulls the RST pin low. */
-#define hal_get_pwr()        ((PTD->PDOR & (1 << 7)) >> 7)    /**< Read current state of the RST pin (High/Low). */
-#define HAL_SS_PIN            1                                /**< The slave select pin. */
+/* fixed in mulle v0.81, RST pin is connected to PTC12 */
+#define hal_set_rst_high()   do { \
+  PTD->PSOR = (1 << 7); delay_us(0xFFFF); /* Turn on power */ \
+  RST_GPIO->PSOR = (1 << RST_PIN); \
+  } while(0)  /**< This macro pulls the RST pin high. */
+#define hal_set_rst_low()   do { \
+  PTD->PCOR = (1 << 7); /* Turn off power */ \
+  RST_GPIO->PCOR = (1 << RST_PIN); \
+  } while(0)  /**< This macro pulls the RST pin low. */
+#define hal_get_rst()        (BITBAND_REG32(RST_GPIO->PDOR, RST_PIN))    /**< Read current state of the RST pin (High/Low). */
+#define hal_set_pwr_high()   do { PTD->PSOR = (1 << 7); } while(0)       /**< This macro pulls the power pin high. */
+#define hal_set_pwr_low()    do { PTD->PCOR = (1 << 7); } while(0)       /**< This macro pulls the power pin low. */
+#define hal_get_pwr()        (BITBAND_REG32(PTD->PDOR, 7) /**< Read current state of the RST pin (High/Low). */
+#define HAL_SS_PIN            1                           /**< The slave select pin. */
 
 /** \} */
 

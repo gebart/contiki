@@ -188,12 +188,19 @@ hal_init(void)
 {
   /*** IO Specific Initialization.****/
 
-  /* Enable PORTC clock gate */
+  /* Enable PORTE clock gate */
   SIM->SCGC5 |= SIM_SCGC5_PORTE_MASK;
 
-  PORTE->PCR[6] |= 0x0100;     /* Sleep */
+  SLPTR_PORT->PCR[SLPTR_PIN] |= 0x0100;     /* Sleep */
 
-  PTE->PDDR |= 0x0040; /* Setup PTE6 (Sleep) as output */
+  SLPTR_GPIO->PDDR |= (1 << SLPTR_PIN); /* Setup PTE6 (Sleep) as output */
+
+  /* Enable PORTC clock gate */
+  SIM->SCGC5 |= SIM_SCGC5_PORTC_MASK;
+
+  RST_PORT->PCR[RST_PIN] |= 0x0100;     /* RESET */
+
+  RST_GPIO->PDDR |= (1 << RST_PIN); /* Setup RST as output */
 
   SIM->SCGC5 |= SIM_SCGC5_PORTB_MASK;
   PORTB->PCR[9] |= 0x000c0100;       /* Set PTB9 (IRQ) as GPIO with active high interrupt */
