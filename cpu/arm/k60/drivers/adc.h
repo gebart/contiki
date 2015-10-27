@@ -91,6 +91,7 @@ typedef enum adc_channel {
 adc_error_t adc_calibrate(adc_number_t adc_num);
 
 uint16_t adc_read_raw(adc_number_t adc_num, adc_channel_t adc_channel);
+int16_t adc_read_diff(adc_number_t adc_num, adc_channel_t adc_channel);
 
 #ifdef __cplusplus
 } /* extern "C" */

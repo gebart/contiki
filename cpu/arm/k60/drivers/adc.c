@@ -83,6 +83,7 @@ adc_calibrate(adc_number_t adc_num)
 
   return ADC_SUCCESS;
 }
+
 uint16_t
 adc_read_raw(adc_number_t adc_num, adc_channel_t adc_channel)
 {
@@ -95,3 +96,23 @@ adc_read_raw(adc_number_t adc_num, adc_channel_t adc_channel)
 
   return ADC_ptr->R[0];
 }
+
+/**
+ * \fn int16_t adc_read_diff(adc_number_t adc_num, adc_channel_t adc_channel)
+ * \brief Initates a differential ADC read
+ *
+ */
+int16_t
+adc_read_diff(adc_number_t adc_num, adc_channel_t adc_channel)
+{
+  ADC_Type *ADC_ptr = ADC[adc_num];
+
+  ADC_ptr->SC1[0] = (1 << 5) | ADC_SC1_ADCH((uint8_t)adc_channel); /* Select the correct channel and initiate a conversion */
+
+  /* Wait for the conversion to finish */
+  while(!((ADC_ptr->SC1[0]) & ADC_SC1_COCO_MASK))
+    ;
+
+  return ADC_ptr->R[0];
+}
+
