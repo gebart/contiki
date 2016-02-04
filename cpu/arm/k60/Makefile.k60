@@ -2,7 +2,7 @@
 
 ### Optimization setting
 ifndef OPTI
-OPTI=0
+OPTI=s
 endif
 
 #### Debug settings
