@@ -76,7 +76,7 @@ SIZE     = $(TCPREFIX)size
 GDB      = $(GDBPREFIX)gdb
 CFLAGSNO = -I$(CONTIKI_CPU)/include \
            -I$(CONTIKI_CPU_ARM_COMMON)/CMSIS \
-           -I$(CONTIKI)/platform/$(TARGET) \
+           -I$(CONTIKI)/platform/$(TARGET)/include \
            ${addprefix -I,$(APPDIRS)} \
            -I. -I$(CONTIKI)/core \
            -Wall -mcpu=cortex-m4 \
