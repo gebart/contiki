@@ -242,7 +242,7 @@ uart_set_rx_callback(const unsigned int uart_num, rx_callback_t callback)
 
 #if UART0_CONF_ENABLE
 void
-_isr_uart0_status()
+_isr_uart0_status(void)
 {
   rx_irq_handler(0);
 }
@@ -250,7 +250,7 @@ _isr_uart0_status()
 
 #if UART1_CONF_ENABLE
 void
-_isr_uart1_status()
+_isr_uart1_status(void)
 {
   rx_irq_handler(1);
 }
@@ -258,7 +258,7 @@ _isr_uart1_status()
 
 #if UART2_CONF_ENABLE
 void
-_isr_uart2_status()
+_isr_uart2_status(void)
 {
   rx_irq_handler(2);
 }
@@ -266,7 +266,7 @@ _isr_uart2_status()
 
 #if UART3_CONF_ENABLE
 void
-_isr_uart3_status()
+_isr_uart3_status(void)
 {
   rx_irq_handler(3);
 }
@@ -274,7 +274,7 @@ _isr_uart3_status()
 
 #if UART4_CONF_ENABLE
 void
-_isr_uart4_status()
+_isr_uart4_status(void)
 {
   rx_irq_handler(4);
 }
@@ -282,7 +282,7 @@ _isr_uart4_status()
 
 #if UART5_CONF_ENABLE
 void
-_isr_uart5_status()
+_isr_uart5_status(void)
 {
   rx_irq_handler(5);
 }

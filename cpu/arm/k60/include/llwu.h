@@ -121,12 +121,12 @@ typedef struct llwu_control {
 /* Macro to create new llwu control struct for clients. */
 #define LLWU_CONTROL(name) static llwu_control_t name[1] = { { NULL, 1 } } /* default allow deep sleep */
 
-void llwu_init();
+void llwu_init(void);
 
 /**
  *  Sleep until some process is polled, ie interrupt occurs.
  */
-void llwu_sleep();
+void llwu_sleep(void);
 /**
  * Register as a controller for llwu.
  * @param c Controller struct.

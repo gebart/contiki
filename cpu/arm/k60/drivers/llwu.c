@@ -21,7 +21,7 @@
 LIST(llwu);
 static char allow_deep_sleep = 1;
 
-static void update_llwu();
+static void update_llwu(void);
 
 volatile uint32_t llwu_inhibit_lls_sema = 0;
 volatile uint32_t llwu_inhibit_vlps_sema = 0;
@@ -30,7 +30,7 @@ volatile uint32_t llwu_inhibit_stop_sema = 0;
 /* TODO(henrik) Add callbacks before entering deep sleep. */
 /*---------------------------------------------------------------------------*/
 void
-llwu_init()
+llwu_init(void)
 {
   list_init(llwu);
   /* Setup Low Leakage Wake-up Unit (LLWU) */
@@ -59,7 +59,7 @@ llwu_set_allow(llwu_control_t *c, char allow)
 }
 /*---------------------------------------------------------------------------*/
 static void
-update_llwu()
+update_llwu(void)
 {
   llwu_control_t *n;
   allow_deep_sleep = 1;
