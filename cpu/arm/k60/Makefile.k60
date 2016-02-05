@@ -30,12 +30,16 @@ CONTIKI_TARGET_SOURCEFILES += \
   fault-handlers.c \
   adc.c \
   dac.c \
-  i2c.c \
   ds18b20.c \
   system_MK60D10.c
 
 
 CONTIKI_SOURCEFILES += $(CONTIKI_TARGET_SOURCEFILES)
+
+PERIPH_SOURCEFILES += \
+  gpio.c \
+  i2c.c \
+  #
 
 ### Compiler definitions
 
@@ -154,6 +158,8 @@ CPU_STARTOBJ=${addprefix $(OBJECTDIR)/,$(CPU_STARTC:.c=.o)}
 
 PROJECT_OBJECTFILES += ${addprefix $(OBJECTDIR)/,$(CONTIKI_TARGET_MAIN:.c=.o)}
 
+PERIPH_OBJECTFILES += $(addprefix $(OBJECTDIR)/,$(addprefix periph/, $(PERIPH_SOURCEFILES:.c=.o)))
+
 ### Compilation rules
 all:
 
@@ -162,9 +168,19 @@ all:
 	$(Q)$(CC) $(CFLAGS) -c $< -o $@
 	$(STRIP) --strip-unneeded -g -x $@
 
+# Build the periph drivers as a separate library for easier relinking
+periph-$(TARGET).a: $(PERIPH_OBJECTFILES)
+	$(TRACE_AR)
+	$(Q)$(AR) $(AROPTS) $@ $^
+
+$(PERIPH_OBJECTFILES): | $(OBJECTDIR)/periph
+
+$(OBJECTDIR)/periph:
+	mkdir -p $@
+
 # Link the final binary and display the size
 CUSTOM_RULE_LINK = 1
-%.$(TARGET): %.co $(PROJECT_OBJECTFILES) $(PROJECT_LIBRARIES) contiki-$(TARGET).a $(CPU_STARTOBJ)
+%.$(TARGET): %.co $(PROJECT_OBJECTFILES) $(PROJECT_LIBRARIES) periph-$(TARGET).a contiki-$(TARGET).a $(CPU_STARTOBJ)
 	$(TRACE_LD)
 	$(Q)$(LD) $(LDFLAGS) $(TARGET_STARTFILES) $(LD_START_GROUP) ${filter-out %.a,$^} ${filter %.a,$^} $(TARGET_LIBFILES) $(LD_END_GROUP) -o $@
 	-@$(SIZE) -B -d $@ 2>/dev/null

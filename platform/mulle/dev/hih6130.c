@@ -23,7 +23,7 @@
 #include <stdint.h>
 
 #include "hih6130.h"
-#include "i2c.h"
+#include "periph/i2c.h"
 
 /* Humidity is stored in the first 2 bytes of data */
 #define HIH6130_HUMIDITY_DATA_LENGTH (2)
