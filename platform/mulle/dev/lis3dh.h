@@ -478,20 +478,20 @@ typedef enum {
 /* Platform-independent functions, implemented in lis3dh.c */
 void lis3dh_set_bits(const lis3dh_reg_addr_t addr, const uint8_t bitmask);
 void lis3dh_clear_bits(const lis3dh_reg_addr_t addr, const uint8_t bitmask);
-int16_t lis3dh_read_xaxis();
-int16_t lis3dh_read_yaxis();
-int16_t lis3dh_read_zaxis();
+int16_t lis3dh_read_xaxis(void);
+int16_t lis3dh_read_yaxis(void);
+int16_t lis3dh_read_zaxis(void);
 void lis3dh_read_xyz(int16_t *buffer);
-int16_t lis3dh_read_aux_adc1();
-int16_t lis3dh_read_aux_adc2();
-int16_t lis3dh_read_aux_adc3();
+int16_t lis3dh_read_aux_adc1(void);
+int16_t lis3dh_read_aux_adc2(void);
+int16_t lis3dh_read_aux_adc3(void);
 void lis3dh_set_aux_adc(const uint8_t enable, const uint8_t temperature);
 void lis3dh_set_axes(const uint8_t axes);
 void lis3dh_set_fifo_mode(const lis3dh_fifo_mode_t mode);
 void lis3dh_set_fifo(const uint8_t enable);
 void lis3dh_set_odr(const lis3dh_odr_t odr);
 void lis3dh_set_scale(const lis3dh_scale_t scale);
-void lis3dh_init();
+void lis3dh_init(void);
 
 /*
  * Platform specific functions, should be implemented in lis3dh-arch.c for each
@@ -504,7 +504,7 @@ void lis3dh_memcpy_from_device(const lis3dh_reg_addr_t start_address,
                                uint8_t *buffer, uint8_t count);
 void lis3dh_memcpy_to_device(const lis3dh_reg_addr_t start_address,
                              const uint8_t *buffer, uint8_t count);
-void lis3dh_arch_init();
+void lis3dh_arch_init(void);
 
 #ifdef __cplusplus
 } /* extern "C" */

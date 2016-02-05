@@ -48,7 +48,7 @@
 extern "C" {
 #endif
 
-void power_control_init();
+void power_control_init(void);
 void power_control_vperiph_set(bool state);
 void power_control_vsec_set(bool state);
 void power_control_avdd_set(bool state);

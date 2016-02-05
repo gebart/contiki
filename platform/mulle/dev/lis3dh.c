@@ -90,7 +90,7 @@ lis3dh_write_bits(const lis3dh_reg_addr_t addr, const uint8_t mask,
  * \return The oldest X axis acceleration measurement available.
  */
 int16_t
-lis3dh_read_xaxis()
+lis3dh_read_xaxis(void)
 {
   return lis3dh_read_int16(OUT_X_L);
 }
@@ -100,7 +100,7 @@ lis3dh_read_xaxis()
  * \return The oldest Y axis acceleration measurement available.
  */
 int16_t
-lis3dh_read_yaxis()
+lis3dh_read_yaxis(void)
 {
   return lis3dh_read_int16(OUT_Y_L);
 }
@@ -110,7 +110,7 @@ lis3dh_read_yaxis()
  * \return The oldest Z axis acceleration measurement available.
  */
 int16_t
-lis3dh_read_zaxis()
+lis3dh_read_zaxis(void)
 {
   return lis3dh_read_int16(OUT_Z_L);
 }
@@ -131,7 +131,7 @@ lis3dh_read_xyz(int16_t *buffer)
  * \return The current ADC reading.
  */
 int16_t
-lis3dh_read_aux_adc1()
+lis3dh_read_aux_adc1(void)
 {
   return lis3dh_read_int16(OUT_AUX_ADC1_L);
 }
@@ -141,7 +141,7 @@ lis3dh_read_aux_adc1()
  * \return The current ADC reading.
  */
 int16_t
-lis3dh_read_aux_adc2()
+lis3dh_read_aux_adc2(void)
 {
   return lis3dh_read_int16(OUT_AUX_ADC2_L);
 }
@@ -154,7 +154,7 @@ lis3dh_read_aux_adc2()
  * \return The current ADC reading.
  */
 int16_t
-lis3dh_read_aux_adc3()
+lis3dh_read_aux_adc3(void)
 {
   return lis3dh_read_int16(OUT_AUX_ADC3_L);
 }
@@ -260,7 +260,7 @@ lis3dh_set_scale(const lis3dh_scale_t scale)
  * \todo Signal errors when initializing the LIS3DH hardware.
  */
 void
-lis3dh_init()
+lis3dh_init(void)
 {
   uint8_t databyte;
 

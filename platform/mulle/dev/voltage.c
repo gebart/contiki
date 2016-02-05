@@ -77,7 +77,7 @@ voltage_from_raw_adc(uint16_t adc_raw)
 }
 /** \todo Use interrupts to handle AD conversions of Vbat/Vchr */
 uint16_t
-voltage_read_vbat()
+voltage_read_vbat(void)
 {
   uint16_t raw;
   uint16_t millivolts;
@@ -91,7 +91,7 @@ voltage_read_vbat()
   return millivolts;
 }
 uint16_t
-voltage_read_vchr()
+voltage_read_vchr(void)
 {
   uint16_t raw;
   uint32_t millivolts;

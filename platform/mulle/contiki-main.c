@@ -36,7 +36,7 @@
 /*---------------------------------------------------------------------------*/
 #define COFFEE_AUTO_FORMAT 1
 static void
-init_cfs()
+init_cfs(void)
 {
   int fd;
   PRINTF("Initialize xmem and coffee...\n");

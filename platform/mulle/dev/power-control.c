@@ -44,7 +44,7 @@
 #include "port.h"
 
 void
-power_control_init()
+power_control_init(void)
 {
   /* Enable clock gate on the hardware ports controlling the power switches */
   port_module_enable(POWER_CONTROL_VPERIPH_PORT);

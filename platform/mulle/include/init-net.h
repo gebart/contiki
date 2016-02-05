@@ -46,7 +46,7 @@ extern "C" {
 #endif
 
 void init_net(void);
-unsigned char *init_net_get_addr();
+unsigned char *init_net_get_addr(void);
 
 #ifdef __cplusplus
 } /* extern "C" */

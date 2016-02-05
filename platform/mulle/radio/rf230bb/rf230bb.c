@@ -528,7 +528,7 @@ rf230_set_promiscuous_mode(bool isPromiscuous)
 #endif
 }
 bool
-rf230_is_ready_to_send()
+rf230_is_ready_to_send(void)
 {
   switch(radio_get_trx_state()) {
   case BUSY_TX:
