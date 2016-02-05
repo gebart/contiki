@@ -46,7 +46,8 @@
 #define sei() MK60_ENABLE_INTERRUPT()
 #define IRQ_POLLING 1
 #include "dev/leds.h"
-#if 0
+#define DEBUG 0
+#if DEBUG
 #define PRINTF(...)              printf(__VA_ARGS__)
 #define PRINTSHORT(...)            printf(__VA_ARGS__)
 #else
@@ -220,6 +221,8 @@ typedef enum {
 PROCESS(rf230_process, "RF230 driver");
 /*---------------------------------------------------------------------------*/
 
+int rf230_interrupt(void);
+
 int rf230_on(void);
 int rf230_off(void);
 
@@ -235,6 +238,31 @@ static int rf230_cca(void);
 
 uint8_t rf230_last_correlation, rf230_last_rssi, rf230_smallest_rssi;
 
+/*---------------------------------------------------------------------------*/
+static radio_result_t
+get_value(radio_param_t param, radio_value_t *value)
+{
+  return RADIO_RESULT_NOT_SUPPORTED;
+}
+/*---------------------------------------------------------------------------*/
+static radio_result_t
+set_value(radio_param_t param, radio_value_t value)
+{
+  return RADIO_RESULT_NOT_SUPPORTED;
+}
+/*---------------------------------------------------------------------------*/
+static radio_result_t
+get_object(radio_param_t param, void *dest, size_t size)
+{
+  return RADIO_RESULT_NOT_SUPPORTED;
+}
+/*---------------------------------------------------------------------------*/
+static radio_result_t
+set_object(radio_param_t param, const void *src, size_t size)
+{
+  return RADIO_RESULT_NOT_SUPPORTED;
+}
+/*---------------------------------------------------------------------------*/
 const struct radio_driver rf230_driver =
 {
   rf230_init,
@@ -246,7 +274,11 @@ const struct radio_driver rf230_driver =
   rf230_receiving_packet,
   rf230_pending_packet,
   rf230_on,
-  rf230_off
+  rf230_off,
+  get_value,
+  set_value,
+  get_object,
+  set_object
 };
 
 uint8_t RF230_receive_on;
@@ -509,7 +541,19 @@ rf230_is_ready_to_send()
 static void
 flushrx(void)
 {
-  rxframe[rxframe_head].length = 0;
+  /* Clear the length field to allow buffering of the next packet */
+  rxframe[rxframe_head].length=0;
+  rxframe_head++;
+  if (rxframe_head >= RF230_CONF_RX_BUFFERS) {
+    rxframe_head=0;
+  }
+  /* If another packet has been buffered, schedule another receive poll */
+  if (rxframe[rxframe_head].length) {
+    rf230_interrupt();
+  }
+  else {
+    rf230_pending = 0;
+  }
 }
 /*---------------------------------------------------------------------------*/
 static void
@@ -1271,11 +1315,13 @@ rf230_read(void *buf, unsigned short bufsize)
   if(len == 0) {
 #if RADIOALWAYSON && DEBUGFLOWSIZE
     if(RF230_receive_on == 0) {
+      /* cxmac calls with radio off? */
       if(debugflow[debugflowsize - 1] != 'z') {
         DEBUGFLOW('z');
       }
-    }                                                                              /* cxmac calls with radio off? */
+    }
 #endif
+    flushrx();
     return 0;
   }
 
@@ -1344,16 +1390,8 @@ rf230_read(void *buf, unsigned short bufsize)
     rf230_last_correlation = rxframe[rxframe_head].lqi;
     rf230_last_rssi = rxframe[rxframe_head].rssi;
 
-    /* Clear the length field to allow buffering of the next packet */
-    rxframe[rxframe_head].length = 0;
-    rxframe_head++;
-    if(rxframe_head >= RF230_CONF_RX_BUFFERS) {
-      rxframe_head = 0;
-    }
-    /* If another packet has been buffered, schedule another receive poll */
-    if(rxframe[rxframe_head].length) {
-      rf230_interrupt();
-    }
+    /* Prepare to receive another packet */
+    flushrx();
 
     /* Point to the checksum */
     framep += len - AUX_LEN;
