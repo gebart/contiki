@@ -142,6 +142,7 @@ init_net(void)
 
   queuebuf_init();
   NETSTACK_RDC.init();
+  NETSTACK_LLSEC.init();
   NETSTACK_MAC.init();
   NETSTACK_NETWORK.init();
 
