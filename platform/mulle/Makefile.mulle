@@ -4,19 +4,63 @@ endif
 PLATFORM_DIR = $(CONTIKI)/platform/mulle
 
 CPU_NAME = k60
+CPU_DIR = $(CONTIKI)/cpu/arm/$(CPU_NAME)
+
+export BAUD ?= 115200
+
+# Default GDB port
+export GDB_PORT ?= 3333
+
+# Backwards compatibility with older environment settings (.profile, .bashrc etc.)
+# MULLE_SERIAL was called MULLE_BOARD_SERIAL_NUMBER previously.
+ifdef MULLE_BOARD_SERIAL_NUMBER
+  ifeq ($(MULLE_SERIAL),)
+    MULLE_SERIAL=$(MULLE_BOARD_SERIAL_NUMBER)
+  endif
+endif
+
+# MULLE_SERIAL is used to select which specific Mulle board we are compiling for.
+# This was called MULLE_BOARD_SERIAL_NUMBER previously, renamed because
+# MULLE_BOARD_SERIAL_NUMBER is too long to type.
+ifdef MULLE_SERIAL
+  CFLAGS += -DMULLE_SERIAL=$(MULLE_SERIAL)
+endif
+
+# MULLE_SERIAL is used to select which specific Mulle board we are compiling for.
+# This was called MULLE_BOARD_SERIAL_NUMBER previously, renamed because
+# MULLE_BOARD_SERIAL_NUMBER is too long to type.
+ifdef MULLE_SERIAL
+  ifeq "200" "$(word 1, $(sort 200 $(MULLE_SERIAL)))"
+    # >= 200
+    ifneq "220" "$(word 1, $(sort 220 $(MULLE_SERIAL)))"
+      # < 220
+      CPU_MODEL = K60DN256ZVLL10
+      # It seems some of the MK60DZ10 devices have problems with JTAG speeds >= around 400 KHz
+      # when programming, we reduce the speed to 300 KHz with this command.
+      CPU_OOCD_FLAGS += -c 'adapter_khz 300'
+    else
+      # >= 220
+      CPU_MODEL = K60DN512VLL10
+    endif
+  endif
+endif
 
 ### CPU part number (must have a specific linker script for each part)
 # Note that MK60DN256ZVLL10 (version 1.x) and MK60DN256VLL10 (version 2.x, no Z)
 # only differ in some register locations etc, not in the actual memory layout,
 # so it is safe to use the same linker script for both version 1.x and version
 # 2.x silicon.
-CPU_PART ?= K60DN512VLL10
+# The linker script needs to know the flash and RAM sizes of the device.
 
-CPU_DIR = $(CONTIKI)/cpu/arm/$(CPU_NAME)
+ifeq ($(CPU_MODEL),)
+  CPU_MODEL = K60DN512VLL10
+endif
+
+export CPU_MODEL
+
 CONTIKI_TARGET_DIRS += . dev
 CONTIKI_CORE=contiki-main
 CONTIKI_TARGET_MAIN = ${CONTIKI_CORE}.o
-
 
 CONTIKI_TARGET_SOURCEFILES += contiki-main.c \
   devicemap.c \
@@ -52,21 +96,6 @@ ifdef MULLEAPPS
   CONTIKI_SOURCEFILES += $(APP_SOURCES) $(DSC_SOURCES)
 endif
 
-# Backwards compatibility with older environment settings (.profile, .bashrc etc.)
-# MULLE_SERIAL was called MULLE_BOARD_SERIAL_NUMBER previously.
-ifdef MULLE_BOARD_SERIAL_NUMBER
-  ifeq ($(MULLE_SERIAL),)
-    MULLE_SERIAL=$(MULLE_BOARD_SERIAL_NUMBER)
-  endif
-endif
-
-# MULLE_SERIAL is used to select which specific Mulle board we are compiling for.
-# This was called MULLE_BOARD_SERIAL_NUMBER previously, renamed because
-# MULLE_BOARD_SERIAL_NUMBER is too long to type.
-ifdef MULLE_SERIAL
-  CFLAGS += -DMULLE_SERIAL=$(MULLE_SERIAL)
-endif
-
 include $(PLATFORM_DIR)/radio/rf230bb/Makefile.rf230bb
 CFLAGS += -DRF230BB
 
@@ -98,21 +127,31 @@ endif
 
 OOCD_BOARD_FLAGS ?= -f '$(PLATFORM_DIR)/tools/openocd/mulle-programmer-$(PROGRAMMER_VERSION).conf'
 
+# Host OS name
+OS := $(shell uname)
 
-# Add serial matching command
-ifneq ($(PROGRAMMER_SERIAL),)
-  OOCD_BOARD_FLAGS += -c 'ftdi_serial $(PROGRAMMER_SERIAL)'
-
-  ifeq ($(PORT),)
-    # try to find tty name by serial number, only works on Linux currently.
-    ifeq ($(HOST_OS),Linux)
-      PORT :=$(shell $(PLATFORM_DIR)/tools/find-tty.sh $(PROGRAMMER_SERIAL))
+ifeq ($(PORT),)
+  # try to find tty name by serial number, only works on Linux currently.
+  ifeq ($(OS),Linux)
+    ifneq ($(PROGRAMMER_SERIAL),)
+      PORT := $(shell $(PLATFORM_DIR)/tools/find-tty.sh '^$(PROGRAMMER_SERIAL)$$')
+    else
+      # find-tty.sh will return the first USB tty if no serial is given.
+      PORT := $(shell $(PLATFORM_DIR)/tools/find-tty.sh)
     endif
+  else ifeq ($(OS),Darwin)
+    PORT := $(firstword $(wildcard /dev/tty.usbserial*))
   endif
 endif
 
 ifeq ($(PORT),)
-  PORT=/dev/ttyUSB0
+  # fall back to a sensible default
+  PORT := /dev/ttyUSB0
+endif
+
+# Add serial matching command
+ifneq ($(PROGRAMMER_SERIAL),)
+  OOCD_BOARD_FLAGS += -c 'ftdi_serial $(PROGRAMMER_SERIAL)'
 endif
 
 
@@ -169,18 +208,12 @@ export DEBUGGER_FLAGS
 
 export TERMFLAGS += -b115200 "$(PORT)"
 
-
 OPENOCD ?= openocd
 export FLASHER ?= $(OPENOCD)
 export DEBUGGER ?= $(GDB)
 export DEBUGSERVER ?= $(OPENOCD)
 export RESET ?= $(OPENOCD)
 export TERMPROG ?= $(SERIALDUMP)
-
-
-# The CPU on the Mulle board does not have a floating point unit
-CFLAGS += -msoft-float -mfloat-abi=soft
-
 
 SERIALDUMP = $(CONTIKI)/tools/sky/serialdump-linux
 

@@ -1,20 +1,5 @@
 .SUFFIXES:
 
-### Optimization setting
-ifndef OPTI
-OPTI=s
-endif
-
-#### Debug settings
-# Light debugging info
-#DEBUG=-g
-# Include macro definitions etc in debugging info
-DEBUG=-g3 -gdwarf-4
-# Other interesting settings:
-# For using an ancient GDB version: -gdwarf-2 -gstrict-dwarf
-
-GDB_PORT ?= 3333
-
 ### Code common for all ARM CPUs
 
 CONTIKI_CPU_ARM=$(CONTIKI)/cpu/arm
@@ -22,7 +7,6 @@ CONTIKI_CPU_ARM_COMMON=$(CONTIKI_CPU_ARM)/common
 
 ### Define the CPU directory
 CONTIKI_CPU=$(CONTIKI_CPU_ARM)/k60
-
 
 ### Define the source files
 
@@ -56,79 +40,91 @@ CONTIKI_SOURCEFILES += $(CONTIKI_TARGET_SOURCEFILES)
 ### Compiler definitions
 
 # Target triple for the build. Use arm-none-eabi if you are unsure.
-TARGET_TRIPLE ?= arm-none-eabi
+export TARGET_TRIPLE ?= arm-none-eabi
 
+MCPU = cortex-m4
+
+# Use TOOLCHAIN environment variable to select the toolchain to use.
+# Default: gnu
+TOOLCHAIN ?= gnu
+
+# TOOLCHAIN = clang is an alias for TOOLCHAIN = llvm
+ifeq (clang,$(TOOLCHAIN))
+# use override so that we can redefine a variable set on the command line (as
+# opposed to one set in the environment)
+override TOOLCHAIN := llvm
+endif
+# TOOLCHAIN = gcc is an alias for TOOLCHAIN = gnu
+ifeq (gcc,$(TOOLCHAIN))
+# use override so that we can redefine a variable set on the command line (as
+# opposed to one set in the environment)
+override TOOLCHAIN := gnu
+endif
+
+ifeq (,$(TOOLCHAIN))
+override TOOLCHAIN := gnu
+endif
+
+export TOOLCHAIN
 
 # Toolchain prefix, composed of the path and target triple, you will most likely not need to touch this.
 TCPREFIX  ?= $(if $(GCCBIN),$(GCCBIN)/)$(if $(TARGET_TRIPLE),$(TARGET_TRIPLE)-)
 GDBPREFIX ?= $(TCPREFIX)
 
-CC       = $(TCPREFIX)gcc
-LD       = $(TCPREFIX)gcc
-AS       = $(TCPREFIX)as
-AR       = $(TCPREFIX)ar
-NM       = $(TCPREFIX)nm
-LINKER   = $(TCPREFIX)ld
-OBJCOPY  = $(TCPREFIX)objcopy
-OBJDUMP  = $(TCPREFIX)objdump
-STRIP    = $(TCPREFIX)strip
-SIZE     = $(TCPREFIX)size
-GDB      = $(GDBPREFIX)gdb
-CFLAGSNO = -I$(CONTIKI_CPU)/include \
-           -I$(CONTIKI_CPU_ARM_COMMON)/CMSIS \
-           -I$(CONTIKI)/platform/$(TARGET)/include \
-           ${addprefix -I,$(APPDIRS)} \
-           -I. -I$(CONTIKI)/core \
-           -Wall -mcpu=cortex-m4 \
-           -fno-common
+# define build specific options
+export CFLAGS_CPU    = -mcpu=$(MCPU) -mlittle-endian -mthumb $(CFLAGS_FPU)
+ifneq (llvm,$(TOOLCHAIN))
+# Clang (observed with v3.7) does not understand  -mno-thumb-interwork, only add if
+# not building with LLVM
+export CFLAGS_CPU   += -mno-thumb-interwork
+endif
+export CFLAGS_STYLE  = -Wall -Wstrict-prototypes -Werror=implicit-function-declaration
+export CFLAGS_STYLE += -fno-common
+export CFLAGS_STYLE += -std=gnu99
+# Remove when/if Contiki uIP is fixed wrt strict aliasing rules
+export CFLAGS_STYLE += -fno-strict-aliasing
+export CFLAGS_LINK   = -ffunction-sections -fdata-sections -fno-builtin -fshort-enums
+export CFLAGS_DBG    = -ggdb -g3
+export CFLAGS_OPT   ?= -Os
 
-#NEWLIB_INCLUDES = -nostdinc \
-#  -isystem /usr/lib/gcc/arm-none-eabi/4.8.3/include \
-#  -isystem /usr/lib/gcc/arm-none-eabi/4.8.3/include-fixed \
-#  -isystem /usr/arm-none-eabi/include \
-#  -isystem /usr/arm-none-eabi/usr/include \
-  #
+export CFLAGS += $(CFLAGS_CPU) $(CFLAGS_STYLE) $(CFLAGS_LINK) $(CFLAGS_DBG) $(CFLAGS_OPT)
 
-ifdef BUILD_WITH_CLANG
-ifneq ($(BUILD_WITH_CLANG),0)
-CFLAGSNO += -target $(TARGET_TRIPLE) -ffreestanding
-CC       = clang
-LD       = clang
-LLVMPREFIX ?= llvm-
-AS       = $(LLVMPREFIX)as
-AR       = $(LLVMPREFIX)ar
-NM       = $(LLVMPREFIX)nm
-# There is no LLVM linker yet, use binutils.
-#LINKER   = $(LLVMPREFIX)ld
-# objcopy does not have a clear substitute in LLVM
-#OBJCOPY  = $(LLVMPREFIX)objcopy
-OBJDUMP  = $(LLVMPREFIX)objdump
-# LLVM lacks a binutils strip tool as well...
-#STRIP    = $(LLVMPREFIX)strip
-SIZE     = $(LLVMPREFIX)size
+export ASFLAGS += $(CFLAGS_CPU) $(CFLAGS_DBG)
+export LDFLAGS += -L$(CONTIKI_CPU)/ldscripts
+export LDFLAGS += -T$(CONTIKI_CPU)/ldscripts/$(CPU_MODEL).ld -Wl,--fatal-warnings
+export LDFLAGS += $(CFLAGS_DBG) $(CFLAGS_CPU) $(CFLAGS_STYLE) $(CFLAGS_OPT) -static -lgcc -nostartfiles
+export LDFLAGS += -Wl,--gc-sections
+export LDFLAGS += -Wl,-Map=$@.map -Wl,--cref
+
+# CMSIS DSP needs to know about the CPU core
+export CFLAGS += -DARM_MATH_CM4
+
+# Import all toolchain settings
+include $(CONTIKI_CPU)/Makefile.include.$(TOOLCHAIN)
+
+export CFLAGS += $(INCLUDES)
+export CXXFLAGS += $(CXXINCLUDES)
+
+# use the nano-specs of Newlib when available
+ifeq ($(shell $(LD) -specs=nano.specs -E - 2>/dev/null >/dev/null </dev/null ; echo $$?),0)
+  export LDFLAGS += -specs=nano.specs -lc -lnosys
+endif
+
 # llvm-ar does not support the f modifier (anymore, since r186078) set in the
 # default Contiki Makefile.include
-AROPTS   = rcv
-
-# Since Clang is not installed as a separate instance for each crossdev target
-# we need to tell it where to look for platform specific includes (Newlib
-# headers instead of Linux/Glibc headers.)
-# On GCC this is done when building the cross compiler toolchain so we do not
-# actually need to specify the include paths for system includes.
-NEWLIB_INCLUDES = \
-  -isystem /usr/arm-none-eabi/include \
-  -isystem /usr/arm-none-eabi/usr/include \
-  #
-
-endif
-endif
-
+AROPTS   = rcs
 
 LINKERSCRIPTPATH = $(CONTIKI_CPU)/ldscripts
 LINKERSCRIPT = $(CPU_PART).ld
 #AROPTS   = rv
-CFLAGS   += $(CFLAGSNO)  $(DEBUG) -O$(OPTI) $(OPTFLAGS) -Wall -Werror=implicit-function-declaration -fno-common -fno-strict-aliasing -mcpu=cortex-m4 -mthumb -ffunction-sections -fdata-sections -fshort-enums -fsigned-char $(NEWLIB_INCLUDES)
-LDFLAGS  += $(CFLAGS) -nostartfiles -Wl,-L$(LINKERSCRIPTPATH) -T $(LINKERSCRIPT) -Wl,-Map=$@.map -Wl,--gc-sections
+#CFLAGS   += $(CFLAGSNO)  $(DEBUG) -O$(OPTI) $(OPTFLAGS) -Wall -Werror=implicit-function-declaration -fno-common -fno-strict-aliasing -mcpu=cortex-m4 -mthumb -ffunction-sections -fdata-sections -fshort-enums -fsigned-char $(NEWLIB_INCLUDES)
+#LDFLAGS  += $(CFLAGS) -nostartfiles -Wl,-L$(LINKERSCRIPTPATH) -T $(LINKERSCRIPT) -Wl,-Map=$@.map -Wl,--gc-sections
+CFLAGS += -I. -I$(CONTIKI)/core \
+          -I$(CONTIKI_CPU)/include \
+          -I$(CONTIKI_CPU_ARM_COMMON)/CMSIS \
+          -I$(CONTIKI)/platform/$(TARGET)/include \
+          ${addprefix -I,$(APPDIRS)} \
+          -DWITH_ASCII
 
 LD_START_GROUP ?= -Wl,--start-group
 LD_END_GROUP ?= -Wl,--end-group
@@ -171,7 +167,7 @@ CUSTOM_RULE_LINK = 1
 %.$(TARGET): %.co $(PROJECT_OBJECTFILES) $(PROJECT_LIBRARIES) contiki-$(TARGET).a $(CPU_STARTOBJ)
 	$(TRACE_LD)
 	$(Q)$(LD) $(LDFLAGS) $(TARGET_STARTFILES) $(LD_START_GROUP) ${filter-out %.a,$^} ${filter %.a,$^} $(TARGET_LIBFILES) $(LD_END_GROUP) -o $@
-	-@$(SIZE) -B -d $@ 2>/dev/null | tail -n 1 | awk -F' ' ' { ROM=($$1+$$2); RAM=($$2+$$3); printf "%16d bytes in ROM\n%16d bytes in RAM\n",ROM,RAM }'
+	-@$(SIZE) -B -d $@ 2>/dev/null
 
 #.SECONDARY:
 

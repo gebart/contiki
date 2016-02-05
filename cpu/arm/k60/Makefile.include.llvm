@@ -1,0 +1,87 @@
+export GDBPREFIX  ?= $(TCPREFIX)
+export LLVMPREFIX ?= llvm-
+export CC          = clang
+export CXX         = clang++
+export LINK        = $(CC)
+export AS          = $(LLVMPREFIX)as
+export AR          = $(LLVMPREFIX)ar
+export NM          = $(LLVMPREFIX)nm
+# There is no LLVM linker yet, use GNU binutils.
+#export LD          = $(LLVMPREFIX)ld
+export LD          = $(CC)
+# objcopy does not have a clear substitute in LLVM, use GNU binutils
+#export OBJCOPY     = $(LLVMPREFIX)objcopy
+export OBJCOPY     = $(TCPREFIX)objcopy
+export OBJDUMP     = $(LLVMPREFIX)objdump
+export SIZE        = $(LLVMPREFIX)size
+export GDB         = $(GDBPREFIX)gdb
+# LLVM lacks a binutils strip tool as well...
+#export STRIP      = $(LLVMPREFIX)strip
+export STRIP      = $(TCPREFIX)strip
+
+# Clang on Linux uses GCC's C++ headers and libstdc++ (installed with GCC)
+# Ubuntu and Debian use /etc/alternatives/gcc-$(TARGET_TRIPLE)-include/c++/$(GCC_VERSION)
+# Arch uses /usr/$(TARGET_TRIPLE)/include/c++/$(GCC_VERSION)
+# Gentoo uses /usr/lib/gcc/$(TARGET_TRIPLE)/$(GCC_VERSION)/include/g++-v5
+GCC_CXX_INCLUDE_PATTERNS ?= \
+  /etc/alternatives/gcc-$(TARGET_TRIPLE)-include/c++/*/ \
+  /usr/$(TARGET_TRIPLE)/include/c++/*/ \
+  /usr/lib/gcc/$(TARGET_TRIPLE)/*/include/g++-v5 \
+  #
+
+# Try to find the proper multilib directory using GCC, this may fail if a cross-
+# GCC is not installed.
+ifeq ($(GCC_MULTI_DIR),)
+  GCC_MULTI_DIR := $(shell $(TCPREFIX)gcc -print-multi-directory $(CFLAGS) 2>/dev/null)
+endif
+
+# Tell clang to cross compile
+export CFLAGS     += -target $(TARGET_TRIPLE)
+export CXXFLAGS   += -target $(TARGET_TRIPLE)
+export LDFLAGS    += -target $(TARGET_TRIPLE)
+
+# Use the wildcard Makefile function to search for existing directories matching
+# the patterns above. We use the -isystem gcc/clang argument to add the include
+# directories as system include directories, which means they will not be
+# searched until after all the project specific include directories (-I/path)
+# We sort the list of found directories and take the last one, it will likely be
+# the most recent GCC version. This avoids using old headers left over from
+# previous tool chain installations.
+GCC_CXX_INCLUDES ?= \
+    $(addprefix \
+        -isystem $(lastword $(sort \
+            $(foreach pat, $(GCC_CXX_INCLUDE_PATTERNS), $(wildcard $(pat))))), \
+        /. /$(TARGET_TRIPLE)/$(GCC_MULTI_DIR) /backward \
+    )
+
+export CXXINCLUDES += $(GCC_CXX_INCLUDES)
+
+# Since Clang is not installed as a separate instance for each crossdev target
+# we need to tell it where to look for platform specific includes (Newlib
+# headers instead of Linux/Glibc headers.)
+# On GCC this is done when building the cross compiler toolchain so we do not
+# actually need to specify the include paths for system includes.
+# Ubuntu gcc-arm-embedded toolchain (https://launchpad.net/gcc-arm-embedded)
+# places newlib headers in several places, but the primary source seem to be
+# /etc/alternatives/gcc-arm-none-eabi-include
+# Gentoo Linux crossdev place the newlib headers in /usr/arm-none-eabi/include
+# Arch Linux also place the newlib headers in /usr/arm-none-eabi/include
+# Ubuntu seem to put a copy of the newlib headers in the same place as
+# Gentoo crossdev, but we prefer to look at /etc/alternatives first.
+# On OSX, newlib includes are possibly located in
+# /usr/local/opt/arm-none-eabi*/arm-none-eabi/include
+NEWLIB_INCLUDE_PATTERNS ?= \
+  /etc/alternatives/gcc-$(TARGET_TRIPLE)-include \
+  /usr/$(TARGET_TRIPLE)/include \
+  /usr/local/opt/$(TARGET_TRIPLE)*/$(TARGET_TRIPLE)/include \
+  #
+# Use the wildcard Makefile function to search for existing directories matching
+# the patterns above. We use the -isystem gcc/clang argument to add the include
+# directories as system include directories, which means they will not be
+# searched until after all the project specific include directories (-I/path)
+NEWLIB_INCLUDES ?= \
+    $(foreach dir, \
+        $(foreach pat, $(NEWLIB_INCLUDE_PATTERNS), $(wildcard $(pat))), \
+        -isystem $(dir))
+
+export INCLUDES += $(NEWLIB_INCLUDES)
