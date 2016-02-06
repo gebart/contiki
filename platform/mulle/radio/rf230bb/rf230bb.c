@@ -811,7 +811,23 @@ rf230_warm_reset(void)
 /*---------------------------------------------------------------------------*/
 static uint8_t buffer[RF230_MAX_TX_FRAME_LENGTH + AUX_LEN];
 
-static int
+/* compiling rf230_transmit with optimizations turned on seem to cause
+ * communication problems. I have not further analyzed the generated code but
+ * the work-around is simple: Turn off optimizations for this particular
+ * function.
+ * Observed with: GCC (arm-none-eabi) 5.3.0, Clang 3.7.1
+ * The symptoms are dropped packets that need to be retransmitted.
+ * The problems are more prominent on the GCC-compiled binary than the Clang
+ * compiled one, but turning off optimizations make both binaries work as expected.
+ */
+#if __clang__
+/* Clang/LLVM */
+__attribute__((optnone))
+#elif __GNUC__
+/* GCC */
+__attribute__((optimize("O0")))
+#endif
+  static int
 rf230_transmit(unsigned short payload_len)
 {
   int txpower;
