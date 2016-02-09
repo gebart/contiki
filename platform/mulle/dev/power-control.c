@@ -40,58 +40,46 @@
  */
 
 #include "power-control.h"
-#include "power-control-board.h"
-#include "port.h"
+#include "board.h"
+#include "periph/gpio.h"
 
 void
 power_control_init(void)
 {
-  /* Enable clock gate on the hardware ports controlling the power switches */
-  port_module_enable(POWER_CONTROL_VPERIPH_PORT);
-  port_module_enable(POWER_CONTROL_VSEC_PORT);
-  port_module_enable(POWER_CONTROL_AVDD_PORT);
-
-  /* Power control pins */
-
-  /* PTD7 Vperiph control pin */
-
-  /* Select GPIO function in pin multiplexing */
-  POWER_CONTROL_VPERIPH_PORT->PCR[POWER_CONTROL_VPERIPH_PIN_NUMBER] =
-    PORT_PCR_MUX(POWER_CONTROL_GPIO_MUX_NUMBER);
-  /* Set as output */
-  POWER_CONTROL_VPERIPH_GPIO->PDDR |= GPIO_PDDR_PDD(1 << POWER_CONTROL_VPERIPH_PIN_NUMBER);
-
-  /* PTB16 Vsec control pin */
-
-  /* Select GPIO function in pin multiplexing */
-  POWER_CONTROL_VSEC_PORT->PCR[POWER_CONTROL_VSEC_PIN_NUMBER] =
-    PORT_PCR_MUX(POWER_CONTROL_GPIO_MUX_NUMBER);
-  /* Set as output */
-  POWER_CONTROL_VSEC_GPIO->PDDR |= GPIO_PDDR_PDD(1 << POWER_CONTROL_VSEC_PIN_NUMBER);
-
-  /* PTB17 AVDD control pin */
-
-  /* Select GPIO function in pin multiplexing */
-  POWER_CONTROL_AVDD_PORT->PCR[POWER_CONTROL_AVDD_PIN_NUMBER] =
-    PORT_PCR_MUX(POWER_CONTROL_GPIO_MUX_NUMBER);
-  /* Set as output */
-  POWER_CONTROL_AVDD_GPIO->PDDR |= GPIO_PDDR_PDD(1 << POWER_CONTROL_AVDD_PIN_NUMBER);
+  gpio_init(MULLE_POWER_VPERIPH, GPIO_DIR_OUT, GPIO_NOPULL);
+  gpio_init(MULLE_POWER_VSEC, GPIO_DIR_OUT, GPIO_NOPULL);
+  gpio_init(MULLE_POWER_AVDD, GPIO_DIR_OUT, GPIO_NOPULL);
 }
 
 void
 power_control_vperiph_set(bool state)
 {
-  BITBAND_REG32(POWER_CONTROL_VPERIPH_GPIO->PDOR, POWER_CONTROL_VPERIPH_PIN_NUMBER) = (state ? 1 : 0);
+  if (state) {
+    gpio_set(MULLE_POWER_VPERIPH);
+  }
+  else {
+    gpio_clear(MULLE_POWER_VPERIPH);
+  }
 }
 
 void
 power_control_vsec_set(bool state)
 {
-  BITBAND_REG32(POWER_CONTROL_VSEC_GPIO->PDOR, POWER_CONTROL_VSEC_PIN_NUMBER) = (state ? 1 : 0);
+  if (state) {
+    gpio_set(MULLE_POWER_VSEC);
+  }
+  else {
+    gpio_clear(MULLE_POWER_VSEC);
+  }
 }
 
 void
 power_control_avdd_set(bool state)
 {
-  BITBAND_REG32(POWER_CONTROL_AVDD_GPIO->PDOR, POWER_CONTROL_AVDD_PIN_NUMBER) = (state ? 1 : 0);
+  if (state) {
+    gpio_set(MULLE_POWER_AVDD);
+  }
+  else {
+    gpio_clear(MULLE_POWER_AVDD);
+  }
 }
