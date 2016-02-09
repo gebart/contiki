@@ -1,32 +1,43 @@
 #include "K60.h"
 
 #include "contiki-conf.h"
+#include "board.h"
+#include "periph/gpio.h"
 #include "dev/leds.h"
 /*---------------------------------------------------------------------------*/
 void
 leds_arch_init(void)
 {
-  SIM->SCGC5 |= SIM_SCGC5_PORTC_MASK;      /* Enable PORTC clock gate */
-  PORTC->PCR[13] |= 0x00100;                 /* Setup PTC13 as GPIO */
-  PORTC->PCR[14] |= 0x00100;                 /* Setup PTC14 as GPIO */
-  PORTC->PCR[15] |= 0x00100;                 /* Setup PTC15 as GPIO */
-  PTC->PDDR |= 0x0E000;                  /* Setup PTA14-PTA17 as outputs */
+  gpio_init(LED_RED_GPIO, GPIO_DIR_OUT, GPIO_NOPULL);
+  gpio_init(LED_YELLOW_GPIO, GPIO_DIR_OUT, GPIO_NOPULL);
+  gpio_init(LED_GREEN_GPIO, GPIO_DIR_OUT, GPIO_NOPULL);
 }
 /*---------------------------------------------------------------------------*/
 unsigned char
 leds_arch_get(void)
 {
-  return ((PTC->PDIR & LEDS_CONF_RED) ? LEDS_RED : 0)
-         | ((PTC->PDIR & LEDS_CONF_GREEN) ? LEDS_GREEN : 0)
-         | ((PTC->PDIR & LEDS_CONF_YELLOW) ? LEDS_YELLOW : 0);
+  unsigned char leds = 0;
+  if (gpio_read(LED_RED_GPIO) == 1) {
+    leds |= LEDS_RED;
+  }
+  if (gpio_read(LED_YELLOW_GPIO) == 1) {
+    leds |= LEDS_YELLOW;
+  }
+  if (gpio_read(LED_GREEN_GPIO) == 1) {
+    leds |= LEDS_GREEN;
+  }
+  return leds;
 }
 /*---------------------------------------------------------------------------*/
 void
 leds_arch_set(unsigned char leds)
 {
-  PTC->PDOR = (PTC->PDOR & ~(LEDS_CONF_RED | LEDS_CONF_GREEN | LEDS_CONF_YELLOW))
-    | ((leds & LEDS_RED) ? LEDS_CONF_RED : 0)
-    | ((leds & LEDS_GREEN) ? LEDS_CONF_GREEN : 0)
-    | ((leds & LEDS_YELLOW) ? LEDS_CONF_YELLOW : 0);
+  unsigned char value;
+  value = (((leds & LEDS_RED) != 0) ? 1 : 0);
+  gpio_write(LED_RED_GPIO, value);
+  value = (((leds & LEDS_YELLOW) != 0) ? 1 : 0);
+  gpio_write(LED_YELLOW_GPIO, value);
+  value = (((leds & LEDS_GREEN) != 0) ? 1 : 0);
+  gpio_write(LED_GREEN_GPIO, value);
 }
 /*---------------------------------------------------------------------------*/
