@@ -41,7 +41,7 @@
 #include "config-board.h"
 #include "config-clocks.h"
 #include "uart.h"
-#include "port.h"
+#include "periph/port.h"
 
 /**
  * Initialize debug UART used by printf.
@@ -51,19 +51,11 @@
 void
 dbg_uart_init(void)
 {
-#ifdef BOARD_DEBUG_UART_TX_PIN_PORT
-  /* Enable the clock gate to the TX pin PORT */
-  port_module_enable(BOARD_DEBUG_UART_TX_PIN_PORT);
-  /* Choose UART TX for the pin mux and disable PORT interrupts on the pin */
-  BOARD_DEBUG_UART_TX_PIN_PORT->PCR[BOARD_DEBUG_UART_TX_PIN_NUMBER] =
-    PORT_PCR_MUX(BOARD_DEBUG_UART_TX_PIN_MUX);
+#ifdef BOARD_DEBUG_UART_TX_GPIO
+  port_init(BOARD_DEBUG_UART_TX_GPIO, GPIO_NOPULL, BOARD_DEBUG_UART_TX_AF);
 #endif
-#ifdef BOARD_DEBUG_UART_RX_PIN_PORT
-  port_module_enable(BOARD_DEBUG_UART_RX_PIN_PORT);
-
-  /* Choose UART RX for the pin mux and disable PORT interrupts on the pin */
-  BOARD_DEBUG_UART_RX_PIN_PORT->PCR[BOARD_DEBUG_UART_RX_PIN_NUMBER] =
-    PORT_PCR_MUX(BOARD_DEBUG_UART_RX_PIN_MUX);
+#ifdef BOARD_DEBUG_UART_RX_GPIO
+  port_init(BOARD_DEBUG_UART_RX_GPIO, GPIO_NOPULL, BOARD_DEBUG_UART_RX_AF);
 #endif
 
   uart_init(BOARD_DEBUG_UART_NUM, 0, BOARD_DEBUG_UART_BAUD);

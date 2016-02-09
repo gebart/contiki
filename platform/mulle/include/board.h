@@ -23,7 +23,6 @@
 
 #include "cpu.h"
 #include "periph_conf.h"
-#include "mulle-nvram.h"
 
 /* Use the on board RTC 32kHz clock for LPTMR clocking. */
 #undef LPTIMER_CLKSRC

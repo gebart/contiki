@@ -5,7 +5,7 @@
 #include "dev/slip.h"
 
 #include "uart.h"
-#include "port.h"
+#include "periph/port.h"
 #include "config-board.h"
 #include "llwu.h"
 
@@ -16,13 +16,9 @@ void
 slip_arch_init(unsigned long ubr)
 {
   /* Turn on the hardware pins */
-  port_module_enable(BOARD_SLIP_TX_PORT);
-  port_module_enable(BOARD_SLIP_RX_PORT);
-  BOARD_SLIP_TX_PORT->PCR[BOARD_SLIP_TX_PIN] = PORT_PCR_MUX(BOARD_SLIP_TX_AF);
-  BOARD_SLIP_RX_PORT->PCR[BOARD_SLIP_RX_PIN] = PORT_PCR_MUX(BOARD_SLIP_RX_AF);
+  port_init(BOARD_SLIP_UART_RX_GPIO, GPIO_NOPULL, BOARD_SLIP_UART_RX_AF);
+  port_init(BOARD_SLIP_UART_TX_GPIO, GPIO_NOPULL, BOARD_SLIP_UART_TX_AF);
 
-  /* ubr is the desired baud rate, but the name comes from the msp430 platform
-   * where baud is converted to some platform specific "UBR" parameter. */
   /* (Re-)initialize the UART module */
   uart_init(BOARD_SLIP_UART_NUM, 0, ubr);
 

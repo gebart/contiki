@@ -103,34 +103,24 @@ extern "C" {
 #define BOARD_DEBUG_UART_BAUD 115200
 
 /**
- * PORT module containing the TX pin of the debug UART.
+ * @brief GPIO pin used for TX by the debug UART
  */
-#define BOARD_DEBUG_UART_TX_PIN_PORT PORTC
+#define BOARD_DEBUG_UART_TX_GPIO GPIO_PIN(PORT_C, 4)
 
 /**
- * PORT module containing the RX pin of the debug UART.
+ * @brief GPIO pin used for RX by the debug UART
  */
-#define BOARD_DEBUG_UART_RX_PIN_PORT PORTC
-
-/**
- * Pin number within the PORT module of the TX pin of the debug UART.
- */
-#define BOARD_DEBUG_UART_TX_PIN_NUMBER 4
-
-/**
- * Pin number within the PORT module of the RX pin of the debug UART.
- */
-#define BOARD_DEBUG_UART_RX_PIN_NUMBER 3
+#define BOARD_DEBUG_UART_RX_GPIO GPIO_PIN(PORT_C, 3)
 
 /**
  * Function number in the PORT mux for the TX pin of the debug UART.
  */
-#define BOARD_DEBUG_UART_TX_PIN_MUX 3
+#define BOARD_DEBUG_UART_TX_AF PORT_AF3
 
 /**
  * Function number in the PORT mux for the RX pin of the debug UART.
  */
-#define BOARD_DEBUG_UART_RX_PIN_MUX 3
+#define BOARD_DEBUG_UART_RX_AF PORT_AF3
 
 /**
  * Number of UART modules in CPU.
@@ -163,41 +153,30 @@ extern "C" {
 #define BOARD_SLIP_UART_NAME "UART0"
 
 /**
- * @brief PORT module used for SLIP UART TX pin
+ * @brief GPIO pin used for SLIP UART TX pin
  */
-#define BOARD_SLIP_TX_PORT PORTA
+#define BOARD_SLIP_UART_TX_GPIO GPIO_PIN(PORT_A, 14)
 /**
- * @brief PORT module used for SLIP UART RX pin
+ * @brief GPIO pin used for SLIP UART RX pin
  */
-#define BOARD_SLIP_RX_PORT PORTA
-
-/**
- * @brief SLIP UART TX pin
- */
-#define BOARD_SLIP_TX_PIN 14
-/**
- * @brief SLIP UART RX pin
- */
-#define BOARD_SLIP_RX_PIN 15
+#define BOARD_SLIP_UART_RX_GPIO GPIO_PIN(PORT_A, 15)
 
 /**
  * @brief SLIP UART TX pin alternate function number
  */
-#define BOARD_SLIP_TX_AF 3
+#define BOARD_SLIP_UART_TX_AF 3
 /**
  * @brief SLIP UART RX pin alternate function number
  */
-#define BOARD_SLIP_RX_AF 3
+#define BOARD_SLIP_UART_RX_AF 3
 
 #elif BOARD_SLIP_UART_NUM == 1
 
 #define BOARD_SLIP_UART_NAME "UART1"
-#define BOARD_SLIP_TX_PORT PORTC
-#define BOARD_SLIP_RX_PORT PORTC
-#define BOARD_SLIP_TX_PIN 3
-#define BOARD_SLIP_RX_PIN 4
-#define BOARD_SLIP_TX_AF 3
-#define BOARD_SLIP_RX_AF 3
+#define BOARD_SLIP_UART_TX_GPIO GPIO_PIN(PORT_C, 3)
+#define BOARD_SLIP_UART_RX_GPIO GPIO_PIN(PORT_C, 4)
+#define BOARD_SLIP_UART_TX_AF 3
+#define BOARD_SLIP_UART_RX_AF 3
 
 #endif /* BOARD_SLIP_UART_NUM */
 
