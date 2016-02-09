@@ -50,7 +50,7 @@
 
 #include "onewire.h"
 #include "onewire-crc-table.h"
-#include "interrupt.h"
+#include "irq.h"
 #include "K60.h"
 #include "config-board.h"
 #include "uart.h"
@@ -275,7 +275,7 @@ ow_reset(void)
 
   OW_BUSY_WAIT();
 
-  MK60_ENTER_CRITICAL_REGION();
+  unsigned int mask = disableIRQ();
 
   /*
    * The reset pulse must be a long zero, switch to slow timing to allow the reset
@@ -294,7 +294,7 @@ ow_reset(void)
   ONEWIRE_UART->CFIFO |= UART_CFIFO_RXFLUSH_MASK;
   /* Send a reset pulse */
   ONEWIRE_UART->D = ONEWIRE_D_RESET;
-  MK60_LEAVE_CRITICAL_REGION();
+  restoreIRQ(mask);
 
   /* Wait until the byte has been transferred to the shift register */
   while(!(ONEWIRE_UART->S1 & UART_S1_TC_MASK));
@@ -332,10 +332,10 @@ ow_write_bytes(const uint8_t *src, const uint8_t count)
   OW_WAIT_WRITE();
 
   /* Place the byte in the tx buffer */
-  MK60_ENTER_CRITICAL_REGION();
+  unsigned int mask = disableIRQ();
   ow_write_bytes_count = count;
   ow_write_bytes_buf = src;
-  MK60_LEAVE_CRITICAL_REGION();
+  restoreIRQ(mask);
 
   /* Enable TX interrupts, all bits will be pushed by the ISR */
   ONEWIRE_UART->C2 |= (UART_C2_TCIE_MASK);
@@ -368,10 +368,10 @@ ow_read_bytes(uint8_t *dest, const uint8_t count)
   OW_WAIT_READ();
 
   /* Compute where the received byte will be at */
-  MK60_ENTER_CRITICAL_REGION();
+  unsigned int mask = disableIRQ();
   ow_read_bytes_count = count;
   ow_read_bytes_buf = dest;
-  MK60_LEAVE_CRITICAL_REGION();
+  restoreIRQ(mask);
 
   /* Enable TX interrupts, all bits will be pushed by the ISR */
   ONEWIRE_UART->C2 |= (UART_C2_TCIE_MASK);

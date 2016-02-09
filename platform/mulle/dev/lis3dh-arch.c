@@ -43,7 +43,7 @@
 #include "lis3dh.h"
 #include "K60.h"
 #include "config-board.h"
-#include "interrupt.h"
+#include "irq.h"
 #include "power-control.h"
 #include "spi-k60.h"
 
@@ -70,11 +70,11 @@ lis3dh_write_byte(const lis3dh_reg_addr_t addr, const uint8_t value)
   spi_acquire_bus(LIS3DH_SPI_NUM);
   /* Workaround for a race condition between radio driver SPI communication
    * occurring from ISR context */
-  MK60_ENTER_CRITICAL_REGION();
+  unsigned int mask = disableIRQ();
   /* Perform the transaction */
   spi_transfer_blocking(LIS3DH_SPI_NUM, LIS3DH_CTAS, LIS3DH_CHIP_SELECT_PIN_MASK,
     SPI_TRANSFER_DONE, &data_out[0], NULL, sizeof(data_out)/sizeof(data_out[0]), 0);
-  MK60_LEAVE_CRITICAL_REGION();
+  restoreIRQ(mask);
   /* Release the bus for other threads. */
   spi_release_bus(LIS3DH_SPI_NUM);
 }
@@ -94,11 +94,11 @@ lis3dh_read_byte(const lis3dh_reg_addr_t addr)
   spi_acquire_bus(LIS3DH_SPI_NUM);
   /* Workaround for a race condition between radio driver SPI communication
    * occurring from ISR context */
-  MK60_ENTER_CRITICAL_REGION();
+  unsigned int mask = disableIRQ();
   /* Perform the transaction */
   spi_transfer_blocking(LIS3DH_SPI_NUM, LIS3DH_CTAS, LIS3DH_CHIP_SELECT_PIN_MASK,
     SPI_TRANSFER_DONE, &data_out, &data_in, 1, 1);
-  MK60_LEAVE_CRITICAL_REGION();
+  restoreIRQ(mask);
   /* Release the bus for other threads. */
   spi_release_bus(LIS3DH_SPI_NUM);
 
@@ -131,11 +131,11 @@ lis3dh_read_int16(const lis3dh_reg_addr_t lsb_addr)
   spi_acquire_bus(LIS3DH_SPI_NUM);
   /* Workaround for a race condition between radio driver SPI communication
    * occurring from ISR context */
-  MK60_ENTER_CRITICAL_REGION();
+  unsigned int mask = disableIRQ();
   /* Perform the transaction */
   spi_transfer_blocking(LIS3DH_SPI_NUM, LIS3DH_CTAS, LIS3DH_CHIP_SELECT_PIN_MASK,
     SPI_TRANSFER_DONE, &data_out, &data_in[0], 1, 2);
-  MK60_LEAVE_CRITICAL_REGION();
+  restoreIRQ(mask);
   /* Release the bus for other threads. */
   spi_release_bus(LIS3DH_SPI_NUM);
 
@@ -161,11 +161,11 @@ lis3dh_memcpy_from_device(const lis3dh_reg_addr_t start_address,
   spi_acquire_bus(LIS3DH_SPI_NUM);
   /* Workaround for a race condition between radio driver SPI communication
    * occurring from ISR context */
-  MK60_ENTER_CRITICAL_REGION();
+  unsigned int mask = disableIRQ();
   /* Perform the transaction */
   spi_transfer_blocking(LIS3DH_SPI_NUM, LIS3DH_CTAS, LIS3DH_CHIP_SELECT_PIN_MASK,
     SPI_TRANSFER_DONE, &data_out, buffer, 1, count);
-  MK60_LEAVE_CRITICAL_REGION();
+  restoreIRQ(mask);
   /* Release the bus for other threads. */
   spi_release_bus(LIS3DH_SPI_NUM);
 }
@@ -187,14 +187,14 @@ lis3dh_memcpy_to_device(const lis3dh_reg_addr_t start_address,
   spi_acquire_bus(LIS3DH_SPI_NUM);
   /* Workaround for a race condition between radio driver SPI communication
    * occurring from ISR context */
-  MK60_ENTER_CRITICAL_REGION();
+  unsigned int mask = disableIRQ();
   /* Send the address */
   spi_transfer_blocking(LIS3DH_SPI_NUM, LIS3DH_CTAS, LIS3DH_CHIP_SELECT_PIN_MASK,
     SPI_TRANSFER_CONT, &data_out, NULL, 1, 0);
   /* Send the data */
   spi_transfer_blocking(LIS3DH_SPI_NUM, LIS3DH_CTAS, LIS3DH_CHIP_SELECT_PIN_MASK,
     SPI_TRANSFER_DONE, buffer, NULL, count, 0);
-  MK60_LEAVE_CRITICAL_REGION();
+  restoreIRQ(mask);
   /* Release the bus for other threads. */
   spi_release_bus(LIS3DH_SPI_NUM);
 }

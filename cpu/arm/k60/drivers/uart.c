@@ -4,7 +4,7 @@
 #include "config-board.h"
 #include "config-clocks.h"
 #include "uart.h"
-#include "interrupt.h"
+#include "irq.h"
 #include "llwu.h"
 #include "ringbuf.h"
 

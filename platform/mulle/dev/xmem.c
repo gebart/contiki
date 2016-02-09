@@ -8,7 +8,6 @@
 
 #include "xmem.h"
 #include "flash.h"
-#include "interrupt.h"
 
 void
 xmem_init(void)

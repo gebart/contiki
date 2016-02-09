@@ -61,7 +61,7 @@
 #include "K60.h"
 /* #include <util/crc16.h> */
 #include "contiki-conf.h"
-#include "interrupt.h"
+#include "irq.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -116,8 +116,8 @@ extern "C" {
 #define HAL_ENABLE_OVERFLOW_INTERRUPT() ()
 #define HAL_DISABLE_OVERFLOW_INTERRUPT() ()
 
-#define HAL_ENTER_CRITICAL_REGION() MK60_ENTER_CRITICAL_REGION()
-#define HAL_LEAVE_CRITICAL_REGION() MK60_LEAVE_CRITICAL_REGION()
+#define HAL_ENTER_CRITICAL_REGION() unsigned int mask = disableIRQ()
+#define HAL_LEAVE_CRITICAL_REGION() restoreIRQ(mask)
 
 /** \brief  Enable the interrupt from the radio transceiver.
  */
