@@ -587,7 +587,7 @@ on(void)
 #ifdef IRQ_POLLING
     hal_disable_trx_interrupt();
     hal_set_slptr_low();
-    while(!NVIC_GetPendingIRQ(PORTB_IRQn));
+    while(hal_get_irq() == 0) {}
     hal_register_read(RG_IRQ_STATUS); // Clear interrupts
     hal_enable_trx_interrupt();
 #else
