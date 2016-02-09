@@ -41,7 +41,7 @@
 #include "udelay.h"
 #include "llwu.h"
 
-#define delay_us(us) { udelay(us); }
+#define delay_us(us) udelay(us)
 #define cli() MK60_DISABLE_INTERRUPT()
 #define sei() MK60_ENABLE_INTERRUPT()
 #define IRQ_POLLING 1
@@ -435,13 +435,18 @@ radio_set_trx_state(uint8_t new_state)
 {
   uint8_t original_state;
 
-  /*Check function paramter and current state of the radio transceiver.*/
-  if(!((new_state == TRX_OFF) ||
-       (new_state == RX_ON) ||
-       (new_state == PLL_ON) ||
-       (new_state == RX_AACK_ON) ||
-       (new_state == TX_ARET_ON))) {
-    return RADIO_INVALID_ARGUMENT;
+  /* Check function parameter and current state of the radio transceiver. */
+  switch (new_state) {
+    case TRX_OFF:
+    case RX_ON:
+    case PLL_ON:
+    case RX_AACK_ON:
+    case TX_ARET_ON:
+      /* OK */
+      break;
+    default:
+      /* Invalid new state */
+      return RADIO_INVALID_ARGUMENT;
   }
 
   if(hal_get_slptr()) {
@@ -496,7 +501,7 @@ radio_set_trx_state(uint8_t new_state)
     if(original_state == TRX_OFF) {
 #ifdef IRQ_POLLING
       hal_disable_trx_interrupt();
-      while(!NVIC_GetPendingIRQ(PORTB_IRQn));
+      while(hal_get_irq() == 0) {}
       hal_register_read(RG_IRQ_STATUS); // Clear interrupts
       //printf("ir %X\n", hal_register_read(RG_IRQ_STATUS));
       //delay_us(2 * TIME_SLEEP_TO_TRX_OFF);
@@ -509,7 +514,7 @@ radio_set_trx_state(uint8_t new_state)
     }
   }   /*  end: if(new_state == TRX_OFF) ... */
 
-  /*Verify state transition.*/
+  /* Verify state transition. */
   radio_status_t set_state_status = RADIO_TIMED_OUT;
 
   if(radio_get_trx_state() == new_state) {

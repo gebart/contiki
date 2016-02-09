@@ -62,6 +62,7 @@
 /* #include <util/crc16.h> */
 #include "contiki-conf.h"
 #include "irq.h"
+#include "periph/gpio.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -75,43 +76,39 @@ extern "C" {
  *       that the source code can directly use.
  * \{
  */
-#define SLPTR_PORT PORTE
-#define SLPTR_GPIO PTE
-#define SLPTR_PIN 6
+#define SLPTR_GPIO GPIO_PIN(PORT_E,  6)
+#define RST_GPIO   GPIO_PIN(PORT_C, 12)
+#define PWR_GPIO   GPIO_PIN(PORT_D,  7)
+#define IRQ_GPIO   GPIO_PIN(PORT_B,  9)
 
-#define RST_PORT PORTC
-#define RST_GPIO PTC
-#define RST_PIN 12
-
-#define hal_set_slptr_high() do { SLPTR_GPIO->PSOR = (1 << SLPTR_PIN); } while(0) /**< This macro pulls the SLP_TR pin high. */
-#define hal_set_slptr_low()  do { SLPTR_GPIO->PCOR = (1 << SLPTR_PIN); } while(0) /**< This macro pulls the SLP_TR pin low. */
-#define hal_get_slptr()      (BITBAND_REG32(SLPTR_GPIO->PDOR, SLPTR_PIN))    /**< Read current state of the SLP_TR pin (High/Low). */
+#define hal_set_slptr_high() gpio_set(SLPTR_GPIO)   /**< This macro pulls the SLP_TR pin high. */
+#define hal_set_slptr_low()  gpio_clear(SLPTR_GPIO) /**< This macro pulls the SLP_TR pin low. */
+#define hal_get_slptr()      gpio_read(SLPTR_GPIO)  /**< Read current state of the SLP_TR pin (High/Low). */
 /* rst and pwr is the same */
 /* fixed in mulle v0.81, RST pin is connected to PTC12 */
 #define hal_set_rst_high()   do { \
-  PTD->PSOR = (1 << 7); delay_us(0xFFFF); /* Turn on power */ \
-  RST_GPIO->PSOR = (1 << RST_PIN); \
+  gpio_set(PWR_GPIO); delay_us(0xFFFF); /* Turn on power */ \
+  gpio_set(RST_GPIO); \
   } while(0)  /**< This macro pulls the RST pin high. */
 #define hal_set_rst_low()   do { \
-  PTD->PCOR = (1 << 7); /* Turn off power */ \
-  RST_GPIO->PCOR = (1 << RST_PIN); \
+  gpio_clear(PWR_GPIO); /* Turn off power */ \
+  gpio_clear(RST_GPIO); \
   } while(0)  /**< This macro pulls the RST pin low. */
-#define hal_get_rst()        (BITBAND_REG32(RST_GPIO->PDOR, RST_PIN))    /**< Read current state of the RST pin (High/Low). */
-#define hal_set_pwr_high()   do { PTD->PSOR = (1 << 7); } while(0)       /**< This macro pulls the power pin high. */
-#define hal_set_pwr_low()    do { PTD->PCOR = (1 << 7); } while(0)       /**< This macro pulls the power pin low. */
-#define hal_get_pwr()        (BITBAND_REG32(PTD->PDOR, 7) /**< Read current state of the RST pin (High/Low). */
-#define HAL_SS_PIN            1                           /**< The slave select pin. */
+#define hal_get_rst()        gpio_read(RST_GPIO)    /**< Read current state of the RST pin (High/Low). */
+
+#define hal_set_pwr_high()   gpio_set(PWR_GPIO)     /**< This macro pulls the power pin high. */
+#define hal_set_pwr_low()    gpio_clear(PWR_GPIO)   /**< This macro pulls the power pin low. */
+#define hal_get_pwr()        gpio_read(PWR_GPIO)    /**< Read current state of the RST pin (High/Low). */
+#define hal_get_irq()        gpio_read(IRQ_GPIO)    /**< Read current state of the INT pin (High/Low). */
+#define HAL_SS_PIN           1                      /**< The slave select pin. */
 
 /** \} */
 
 #define HAL_SS_HIGH()  /* Done in HW on K60 */
 #define HAL_SS_LOW()   /* Done in HW on K60 */
 
-#define HAL_ENABLE_RADIO_INTERRUPT() { PORTB->PCR[9] |= (1 << 24); \
-  BITBAND_REG32(PORTB->PCR[9], PORT_PCR_ISF_SHIFT) = 1; \
-  NVIC_ClearPendingIRQ(PORTB_IRQn); \
-  NVIC_EnableIRQ(PORTB_IRQn); }
-#define HAL_DISABLE_RADIO_INTERRUPT() (NVIC_DisableIRQ(PORTB_IRQn))
+#define HAL_ENABLE_RADIO_INTERRUPT() gpio_irq_enable(IRQ_GPIO)
+#define HAL_DISABLE_RADIO_INTERRUPT() gpio_irq_disable(IRQ_GPIO)
 
 #define HAL_ENABLE_OVERFLOW_INTERRUPT() ()
 #define HAL_DISABLE_OVERFLOW_INTERRUPT() ()

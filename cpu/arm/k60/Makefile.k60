@@ -39,6 +39,7 @@ CONTIKI_SOURCEFILES += $(CONTIKI_TARGET_SOURCEFILES)
 PERIPH_SOURCEFILES += \
   gpio.c \
   i2c.c \
+  port.c \
   #
 
 ### Compiler definitions
@@ -174,6 +175,10 @@ periph-$(TARGET).a: $(PERIPH_OBJECTFILES)
 	$(Q)$(AR) $(AROPTS) $@ $^
 
 $(PERIPH_OBJECTFILES): | $(OBJECTDIR)/periph
+
+ifneq ($(MAKECMDGOALS),clean)
+-include $(addprefix $(OBJECTDIR)/,$(PERIPH_SOURCEFILES:.c=.d))
+endif
 
 $(OBJECTDIR)/periph:
 	mkdir -p $@

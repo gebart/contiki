@@ -117,14 +117,14 @@ typedef enum {
  * @brief   Available MUX values for configuring a pin's alternate function
  */
 typedef enum {
-    PORT_AF0 = PORT_PCR_MUX(0), /**< use alternate function 0 */
-    PORT_AF1 = PORT_PCR_MUX(1), /**< use alternate function 1 */
-    PORT_AF2 = PORT_PCR_MUX(2), /**< use alternate function 2 */
-    PORT_AF3 = PORT_PCR_MUX(3), /**< use alternate function 3 */
-    PORT_AF4 = PORT_PCR_MUX(4), /**< use alternate function 4 */
-    PORT_AF5 = PORT_PCR_MUX(5), /**< use alternate function 5 */
-    PORT_AF6 = PORT_PCR_MUX(6), /**< use alternate function 6 */
-    PORT_AF7 = PORT_PCR_MUX(7), /**< use alternate function 7 */
+    PORT_AF0 = 0, /**< use alternate function 0 */
+    PORT_AF1 = 1, /**< use alternate function 1 */
+    PORT_AF2 = 2, /**< use alternate function 2 */
+    PORT_AF3 = 3, /**< use alternate function 3 */
+    PORT_AF4 = 4, /**< use alternate function 4 */
+    PORT_AF5 = 5, /**< use alternate function 5 */
+    PORT_AF6 = 6, /**< use alternate function 6 */
+    PORT_AF7 = 7, /**< use alternate function 7 */
 } port_af_t;
 
 #ifndef PORT_AF_ANALOG

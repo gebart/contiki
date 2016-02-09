@@ -179,7 +179,7 @@ hal_spi_receive(int cont)
   return 0xFF & SPI0->POPR;
 }
 
-#define HAL_RF230_ISR() void isr_portb(void)
+static void hal_rf230_isr(void* arg);
 
 /** \brief  This function initializes the Hardware Abstraction Layer.
  */
@@ -188,22 +188,10 @@ hal_init(void)
 {
   /*** IO Specific Initialization.****/
 
-  /* Enable PORTE clock gate */
-  SIM->SCGC5 |= SIM_SCGC5_PORTE_MASK;
-
-  SLPTR_PORT->PCR[SLPTR_PIN] |= 0x0100;     /* Sleep */
-
-  SLPTR_GPIO->PDDR |= (1 << SLPTR_PIN); /* Setup PTE6 (Sleep) as output */
-
-  /* Enable PORTC clock gate */
-  SIM->SCGC5 |= SIM_SCGC5_PORTC_MASK;
-
-  RST_PORT->PCR[RST_PIN] |= 0x0100;     /* RESET */
-
-  RST_GPIO->PDDR |= (1 << RST_PIN); /* Setup RST as output */
-
-  SIM->SCGC5 |= SIM_SCGC5_PORTB_MASK;
-  PORTB->PCR[9] |= 0x000c0100;       /* Set PTB9 (IRQ) as GPIO with active high interrupt */
+  gpio_init(SLPTR_GPIO, GPIO_DIR_OUT, GPIO_NOPULL);
+  gpio_init(RST_GPIO, GPIO_DIR_OUT, GPIO_NOPULL);
+  gpio_init(PWR_GPIO, GPIO_DIR_OUT, GPIO_NOPULL);
+  gpio_init_int(IRQ_GPIO, GPIO_NOPULL, GPIO_LOGIC_ONE, hal_rf230_isr, NULL);
 
   /* Enable power switch to radio */
   hal_set_pwr_high();
@@ -441,8 +429,9 @@ volatile char rf230interruptflag;
 #endif
 
 /* Separate RF230 has a single radio interrupt and the source must be read from the IRQ_STATUS register */
-HAL_RF230_ISR()
+static void hal_rf230_isr(void* arg)
 {
+  (void) arg; /* unused */
   volatile uint8_t state;
   uint8_t interrupt_source;
 
