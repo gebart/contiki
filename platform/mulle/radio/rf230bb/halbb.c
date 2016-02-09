@@ -440,10 +440,6 @@ static void hal_rf230_isr(void* arg)
   /* Read Interrupt source. */
   interrupt_source = hal_register_read(RG_IRQ_STATUS);   /* K60: OK, tested */
 
-  /* Clear Interrupt Status Flag */
-  BITBAND_REG32(PORTB->PCR[9], PORT_PCR_ISF_SHIFT) = 1;    /* Clear interrupt */
-  NVIC_ClearPendingIRQ(PORTB_IRQn);
-
   /* Handle the incoming interrupt. Prioritized. */
   if((interrupt_source & HAL_RX_START_MASK)) {
     INTERRUPTDEBUG(10);
