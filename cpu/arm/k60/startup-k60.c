@@ -48,24 +48,7 @@ clear_bss(void)
     ++p;
   }
 }
-/* Start of .ramcode section in RAM */
-extern uint32_t _ramcode_start[];
-/* End of .ramcode section in RAM */
-extern uint32_t _ramcode_end[];
-/* Start of .ramcode section in flash */
-extern uint32_t _ramcode_load[];
-/*
- * Copy the ramcode section to RAM.
- */
-static void
-copy_ramcode(void)
-{
-  uint32_t *ram = _ramcode_start;
-  uint32_t *rom = _ramcode_load;
-  while(ram < _ramcode_end) {
-    *(ram++) = *(rom++);
-  }
-}
+
 /* Initialize all data used by the C runtime. */
 static void __attribute__((unused))
 init_data(void)
@@ -73,8 +56,6 @@ init_data(void)
   copy_initialized();
 
   clear_bss();
-
-  copy_ramcode();
 }
 /* newlib's initialization function */
 extern void __libc_init_array(void);

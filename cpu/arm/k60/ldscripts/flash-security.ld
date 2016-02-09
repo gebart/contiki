@@ -1,5 +1,8 @@
-    /* Flash security 0x400-0x40f. */
-    .security 0x400 :
+SECTIONS
+{
+    /* Flash configuration field, very important in order to not accidentally lock the device */
+    /* Flash configuration field 0x400-0x40f. */
+    .fcfield 0x400 :
     {
         /* Backdoor key. */
         LONG (0x01234567) LONG (0x89abcdef)
@@ -18,6 +21,8 @@
 
         /* FDPROT: default. */
         BYTE (0xff)
-    } >flash
-    ASSERT (SIZEOF(.security) == 0x10, "Flash security sector of invalid size (linker-script error?).")
-    ASSERT (. == 0x410, "Flash security sector of invalid size or position (linker-script error?).")
+    } >flashsec
+    ASSERT (SIZEOF(.fcfield) == 0x10, "Flash security sector of invalid size (linker-script error?).")
+    ASSERT (ADDR(.fcfield) == 0x400, "Flash configuration field at invalid position (linker-script error?)")
+    ASSERT (LOADADDR(.fcfield) == 0x400, "Flash configuration field at invalid position (linker-script error?)")
+}

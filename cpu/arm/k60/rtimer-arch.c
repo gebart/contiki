@@ -158,7 +158,7 @@ rtimer_arch_now(void) {
 void rt_do_clock(struct rtimer *t, void *ptr);
 /* Interrupt handler for rtimer triggers */
 void
-_isr_lpt(void)
+isr_lptmr0(void)
 {
   rtimer_clock_t now = rtimer_arch_now();
 

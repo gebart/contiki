@@ -1,3 +1,5 @@
+SECTIONS
+{
     /* Program code 0x410-. */
     .text :
     {
@@ -67,27 +69,18 @@
         . = ALIGN(4);
         _rodata_end = .;
         _text_end = .;
-    } >flash
-
-    .ramcode :
-    {
-        . = ALIGN(4);
-        _ramcode_load = LOADADDR(.ramcode);
-        _ramcode_start = .;
-        *(.ramcode*)
-        . = ALIGN(4);
-        _ramcode_end = .;
-    } > sram_l AT>flash
+    } > rom
 
     /* The .extab, .exidx sections are used for C++ exception handling */
     .ARM.extab :
     {
         *(.ARM.extab* .gnu.linkonce.armextab.*)
-    } >flash
+    } > rom
 
     PROVIDE_HIDDEN (__exidx_start = .);
     .ARM.exidx :
     {
         *(.ARM.exidx* .gnu.linkonce.armexidx.*)
-    } >flash
+    } > rom
     PROVIDE_HIDDEN (__exidx_end = .);
+}

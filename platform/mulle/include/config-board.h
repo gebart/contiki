@@ -220,7 +220,7 @@ extern "C" {
  */
 #define BOARD_DELAY_PIT_CHANNEL 1
 
-#define PIT_ISR_GLUE2(CHANNEL) (_isr_pit ## CHANNEL)
+#define PIT_ISR_GLUE2(CHANNEL) (isr_pit ## CHANNEL)
 #define PIT_ISR_GLUE(CHANNEL) PIT_ISR_GLUE2(CHANNEL)
 /**
  * PIT channel interrupt used by clock_delay_usec and clock_delay_msec.
@@ -308,7 +308,7 @@ extern "C" {
 #define ONEWIRE_UART_MODULE_FREQUENCY F_BUS
 
 /** 1-wire ISR function name. This should be the IRQ handler for the UARTx STATUS IRQ. */
-#define ONEWIRE_ISR_FUNC _isr_uart0_status
+#define ONEWIRE_ISR_FUNC isr_uart0_status
 /** 1-wire IRQ number. This should be the IRQn for the UARTx STATUS IRQ, see MK60D10.h */
 #define ONEWIRE_IRQn UART0_RX_TX_IRQn
 /** 1-wire TX pin port module. */

@@ -43,7 +43,7 @@ void isr_reserved(void) UNHANDLED_ALIAS;
 /* void isr_reserved(void) UNHANDLED_ALIAS; */
 /* void isr_reserved(void) UNHANDLED_ALIAS; */
 /* void isr_reserved(void) UNHANDLED_ALIAS; */
-void isr_svcall(void) UNHANDLED_ALIAS;
+void isr_svc(void) UNHANDLED_ALIAS;
 void isr_debugmonitor(void) UNHANDLED_ALIAS;
 /* void isr_reserved(void) UNHANDLED_ALIAS; */
 void isr_pendsv(void) UNHANDLED_ALIAS;
@@ -135,13 +135,13 @@ void isr_dac0(void) UNHANDLED_ALIAS;
 /* void isr_reserved(void) UNHANDLED_ALIAS; */
 void isr_tsi(void) UNHANDLED_ALIAS;
 void isr_mcg(void) UNHANDLED_ALIAS;
-void isr_lpt(void) UNHANDLED_ALIAS;
+void isr_lptmr0(void) UNHANDLED_ALIAS;
 /* void isr_reserved(void) UNHANDLED_ALIAS; */
-void isr_porta_pin_detect(void) UNHANDLED_ALIAS;
-void isr_portb_pin_detect(void) UNHANDLED_ALIAS;
-void isr_portc_pin_detect(void) UNHANDLED_ALIAS;
-void isr_portd_pin_detect(void) UNHANDLED_ALIAS;
-void isr_porte_pin_detect(void) UNHANDLED_ALIAS;
+void isr_porta(void) UNHANDLED_ALIAS;
+void isr_portb(void) UNHANDLED_ALIAS;
+void isr_portc(void) UNHANDLED_ALIAS;
+void isr_portd(void) UNHANDLED_ALIAS;
+void isr_porte(void) UNHANDLED_ALIAS;
 /* void isr_reserved(void) UNHANDLED_ALIAS; */
 /* void isr_reserved(void) UNHANDLED_ALIAS; */
 void isr_software(void) UNHANDLED_ALIAS;
@@ -151,7 +151,7 @@ void __stack_top(void);
 
 typedef void (*ISR_func)(void);
 
-const ISR_func isr_vector[111] __attribute__((used)) ISR_VECTOR_SECTION =
+const ISR_func isr_vector[256] __attribute__((used)) ISR_VECTOR_SECTION =
 {
   /* ARM Cortex defined interrupt vectors */
   __stack_top,

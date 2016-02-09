@@ -1,3 +1,5 @@
+SECTIONS
+{
     /* Program data, values stored in flash and loaded upon init. */
     .data :
     {
@@ -11,7 +13,7 @@
         _data_end = .;
         /* edata is used instead of _data_end by some RTOSes startup code (e.g. ChibiOS) */
         PROVIDE(edata = .);
-    } >sram_u AT >flash
+    } >ram AT >rom
 
     /* Program bss, zeroed out during init. */
     .bss :
@@ -29,10 +31,11 @@
         . = ALIGN(4);
         _heap_start = .;
         __heap_start = .;
-    } >sram_u
+    } >ram
 
     /* Make sure we set _end, in case we want dynamic memory management... */
     _end = .;
     __end = .;
     __end__ = .;
     PROVIDE(end = .);
+}

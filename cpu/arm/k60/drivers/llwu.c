@@ -150,7 +150,7 @@ llwu_set_wakeup_pin(const llwu_wakeup_pin_t pin, const llwu_wakeup_edge_t edge)
 }
 
 void __attribute__((interrupt))
-_isr_llwu(void)
+isr_llwu(void)
 {
   /* TODO(henrik) Dont know if this is really the correct way to handle the flags. */
   /* Clear LLWU flags */

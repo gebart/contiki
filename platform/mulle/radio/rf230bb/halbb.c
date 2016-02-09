@@ -179,7 +179,7 @@ hal_spi_receive(int cont)
   return 0xFF & SPI0->POPR;
 }
 
-#define HAL_RF230_ISR() void _isr_portb_pin_detect(void)
+#define HAL_RF230_ISR() void isr_portb(void)
 
 /** \brief  This function initializes the Hardware Abstraction Layer.
  */

@@ -1,3 +1,5 @@
+SECTIONS
+{
     .stack :
     {
         _heap_end = .;
@@ -11,3 +13,4 @@
         /* Startup code want to know where the stack should begin... */
         __stack_top = .;
     } >stack
+}

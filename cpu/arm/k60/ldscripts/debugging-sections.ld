@@ -1,3 +1,5 @@
+SECTIONS
+{
     /* Stabs debugging sections.  */
     .stab          0 : { *(.stab) }
     .stabstr       0 : { *(.stabstr) }
@@ -36,3 +38,4 @@
     .debug_ranges   0 : { *(.debug_ranges) }
     /* DWARF Extension.  */
     .debug_macro    0 : { *(.debug_macro) }
+}
