@@ -102,6 +102,13 @@ main(void)
 
   /* Turn on power to the on board peripherals */
   power_control_vperiph_set(1);
+  /* Turn on AVDD */
+  /* Board errata: Power consumption in fact increases because of leakage
+   * currents from floating transistor gates if AVDD is turned off when nothing
+   * is connected to AVDD other than AREF. */
+  /* voltage_read_vbat, voltage_read_vchr won't give correct values with avdd
+   * turned off either. */
+  power_control_avdd_set(1);
 
   udelay_init();
 
