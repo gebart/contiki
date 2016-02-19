@@ -112,7 +112,7 @@ export CXXFLAGS += $(CXXINCLUDES)
 
 # use the nano-specs of Newlib when available
 ifeq ($(shell $(LD) -specs=nano.specs -E - 2>/dev/null >/dev/null </dev/null ; echo $$?),0)
-  export LDFLAGS += -specs=nano.specs -lc -lnosys
+  export LDFLAGS += -specs=nano.specs -lc -lnosys -u _printf_float
 endif
 
 # llvm-ar does not support the f modifier (anymore, since r186078) set in the
