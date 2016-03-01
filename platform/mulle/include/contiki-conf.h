@@ -225,7 +225,12 @@ typedef uint32_t rtimer_clock_t;
 #ifndef NETSTACK_CONF_RDC
 #define NETSTACK_CONF_RDC           nullrdc_driver
 #endif /* NETSTACK_CONF_RDC */
-#define RF230_CONF_AUTOACK          0
+#define RDC_CONF_HARDWARE_ACK     1
+/* TX routine does automatic cca and optional backoffs */
+#define RDC_CONF_HARDWARE_CSMA    1
+#define RF230_CONF_AUTOACK        1
+#define RF230_CONF_FRAME_RETRIES  1
+#define RF230_CONF_CSMA_RETRIES   0
 #define RF230_CONF_AUTORETRIES      3
 #endif /* CONTIKIMAC */
 
