@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2014 Freie Universität Berlin
  * Copyright (C) 2014 PHYTEC Messtechnik GmbH
- * Copyright (C) 2015-2016 Eistec AB
+ * Copyright (C) 2015 Eistec AB
  *
  * This file is subject to the terms and conditions of the GNU Lesser
  * General Public License v2.1. See the file LICENSE in the top level
@@ -28,18 +28,12 @@
 
 #include "cpu.h"
 #include "irq.h"
-#if CONTIKI
-/* Contiki doesn't do threads */
-typedef uint8_t mutex_t;
-#define MUTEX_INIT 0
-#define mutex_lock(x)
-#define mutex_unlock(x)
-#else
 #include "mutex.h"
-#endif
 #include "periph_conf.h"
 #include "periph/i2c.h"
-#include "periph/port.h"
+
+#define ENABLE_DEBUG    (0)
+#include "debug.h"
 
 /* guard file in case no I2C device is defined */
 #if I2C_NUMOF
@@ -47,7 +41,7 @@ typedef uint8_t mutex_t;
 /**
  * @brief Array holding one pre-initialized mutex for each I2C device
  */
-__attribute__((unused)) static mutex_t locks[] =  {
+static mutex_t locks[] =  {
 #if I2C_0_EN
     [I2C_0] = MUTEX_INIT,
 #endif
@@ -83,6 +77,9 @@ int i2c_release(i2c_t dev)
 int i2c_init_master(i2c_t dev, i2c_speed_t speed)
 {
     I2C_Type *i2c;
+    PORT_Type *i2c_port;
+    int pin_scl = 0;
+    int pin_sda = 0;
     uint32_t baudrate_flags = 0;
 
     /** @todo Kinetis I2C: Add automatic baud rate flags selection function */
@@ -132,15 +129,21 @@ int i2c_init_master(i2c_t dev, i2c_speed_t speed)
 
         case I2C_0:
             i2c = I2C_0_DEV;
+            i2c_port = I2C_0_PORT;
+            pin_scl = I2C_0_SCL_PIN;
+            pin_sda = I2C_0_SDA_PIN;
             I2C_0_CLKEN();
-            port_init(I2C_0_SDA_GPIO, GPIO_OPEN_DRAIN, I2C_0_SDA_AF);
-            port_init(I2C_0_SCL_GPIO, GPIO_OPEN_DRAIN, I2C_0_SCL_AF);
+            I2C_0_PORT_CLKEN();
             break;
 #endif
 
         default:
             return -1;
     }
+
+    /* configure pins, alternate output */
+    i2c_port->PCR[pin_scl] = I2C_0_PORT_CFG;
+    i2c_port->PCR[pin_sda] = I2C_0_PORT_CFG;
 
     i2c->F = baudrate_flags;
 

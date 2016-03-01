@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Eistec AB.
+ * Copyright (c) 2016, Eistec AB.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -32,31 +32,12 @@
 
 /**
  * \file
- *         Debug port initialization for the Mulle platform.
+ *         No-op debug compatibility definitions
  * \author
- *         Joakim Gebart <joakim.gebart@eistec.se>
+ *         Joakim Nohlgård <joakim.nohlgard@eistec.se>
  */
+#ifndef K60_DEBUG_H_
+#define K60_DEBUG_H_
 
-#include "dbg-uart.h"
-#include "config-board.h"
-#include "config-clocks.h"
-#include "uart.h"
-#include "periph_conf.h"
 
-/**
- * Initialize debug UART used by printf.
- *
- * \note Undefining BOARD_DEBUG_UART_TX_PIN_PORT will disable printf.
- */
-void
-dbg_uart_init(void)
-{
-#ifdef BOARD_DEBUG_UART_TX_GPIO
-  gpio_init_port(BOARD_DEBUG_UART_TX_GPIO, BOARD_DEBUG_UART_TX_AF);
-#endif
-#ifdef BOARD_DEBUG_UART_RX_GPIO
-  gpio_init_port(BOARD_DEBUG_UART_RX_GPIO, BOARD_DEBUG_UART_RX_AF);
-#endif
-
-  uart_init(BOARD_DEBUG_UART_NUM, 0, BOARD_DEBUG_UART_BAUD);
-}
+#endif /* K60_MUTEX_H_ */

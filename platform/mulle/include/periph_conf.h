@@ -1,10 +1,11 @@
 /*
- * Copyright (C) 2015-2016 Eistec AB
+ * Copyright (C) 2015 Eistec AB
  *
  * This file is subject to the terms and conditions of the GNU Lesser General
  * Public License v2.1. See the file LICENSE in the top level directory for more
  * details.
  */
+
 
 /**
  * @ingroup     board_mulle
@@ -18,6 +19,8 @@
 
 #ifndef MULLE_PERIPH_CONF_H_
 #define MULLE_PERIPH_CONF_H_
+
+#include "periph_cpu.h" /* for GPIO_PIN() */
 
 #ifdef __cplusplus
 extern "C"
@@ -78,6 +81,7 @@ extern "C"
 
 /** @} */
 
+
 /**
  * @name UART configuration
  * @{
@@ -98,10 +102,15 @@ extern "C"
 #define UART_0_IRQ_CHAN     UART1_RX_TX_IRQn
 #define UART_0_ISR          isr_uart1_status
 /* UART 0 pin configuration */
-#define UART_0_TX_GPIO      GPIO_PIN(PORT_C, 4)
-#define UART_0_TX_AF        3
-#define UART_0_RX_GPIO      GPIO_PIN(PORT_C, 3)
-#define UART_0_RX_AF        3
+#define UART_0_PORT_CLKEN() (BITBAND_REG32(SIM->SCGC5, SIM_SCGC5_PORTC_SHIFT) = 1)
+#define UART_0_PORT         PORTC
+#define UART_0_TX_PIN       4
+#define UART_0_RX_PIN       3
+/* Function number in pin multiplex, see K60 Sub-Family Reference Manual,
+ * section 10.3.1 K60 Signal Multiplexing and Pin Assignments */
+#define UART_0_AF           3
+#define UART_0_TX_PCR_MUX   3
+#define UART_0_RX_PCR_MUX   3
 
 /* UART 1 device configuration */
 #define UART_1_DEV          UART0
@@ -111,12 +120,18 @@ extern "C"
 #define UART_1_IRQ_CHAN     UART0_RX_TX_IRQn
 #define UART_1_ISR          isr_uart0_status
 /* UART 1 pin configuration */
-#define UART_1_TX_GPIO      GPIO_PIN(PORT_A, 14)
-#define UART_1_TX_AF        3
-#define UART_1_RX_GPIO      GPIO_PIN(PORT_A, 15)
-#define UART_1_RX_AF        3
+#define UART_1_PORT_CLKEN() (BITBAND_REG32(SIM->SCGC5, SIM_SCGC5_PORTA_SHIFT) = 1)
+#define UART_1_PORT         PORTA
+#define UART_1_TX_PIN       14
+#define UART_1_RX_PIN       15
+/* Function number in pin multiplex, see K60 Sub-Family Reference Manual,
+ * section 10.3.1 K60 Signal Multiplexing and Pin Assignments */
+#define UART_1_AF           3
+#define UART_1_TX_PCR_MUX   3
+#define UART_1_RX_PCR_MUX   3
 
 /** @} */
+
 
 /**
  * @name ADC configuration
@@ -132,33 +147,78 @@ extern "C"
 #define ADC_0_CHANNELS      4
 #define ADC_0_CLKEN()       (BITBAND_REG32(SIM->SCGC6, SIM_SCGC6_ADC0_SHIFT) = 1)
 #define ADC_0_CLKDIS()      (BITBAND_REG32(SIM->SCGC6, SIM_SCGC6_ADC0_SHIFT) = 0)
+#define ADC_0_PORT_CLKEN()  /* no PORT pins configured */
 #define ADC_0_MODULE_CLOCK  SystemBusClock
 /* ADC 0 channel 0 pin config */
 #define ADC_0_CH0           26 /* Temp sensor channel */
-#define ADC_0_CH0_GPIO      GPIO_UNDEF /* this channel is not part of the pin mux on this CPU */
+#define ADC_0_CH0_PORT      0 /* this channel is not part of the pin mux on this CPU */
+#define ADC_0_CH0_PIN       0
+#define ADC_0_CH0_PIN_AF    0
 /* ADC 0 channel 1 pin config */
 #define ADC_0_CH1           27 /* Band gap channel */
-#define ADC_0_CH1_GPIO      GPIO_UNDEF /* this channel is not part of the pin mux on this CPU */
+#define ADC_0_CH1_PORT      0 /* this channel is not part of the pin mux on this CPU */
+#define ADC_0_CH1_PIN       0
+#define ADC_0_CH1_PIN_AF    0
 /* ADC 0 channel 2 pin config */
 #define ADC_0_CH2           29 /* V_REFSH */
-#define ADC_0_CH2_GPIO      GPIO_UNDEF /* this channel is not part of the pin mux on this CPU */
+#define ADC_0_CH2_PORT      0 /* this channel is not part of the pin mux on this CPU */
+#define ADC_0_CH2_PIN       0
+#define ADC_0_CH2_PIN_AF    0
 /* ADC 0 channel 3 pin config */
 #define ADC_0_CH3           30 /* V_REFSL */
-#define ADC_0_CH3_GPIO      GPIO_UNDEF /* this channel is not part of the pin mux on this CPU */
+#define ADC_0_CH3_PORT      0 /* this channel is not part of the pin mux on this CPU */
+#define ADC_0_CH3_PIN       0
+#define ADC_0_CH3_PIN_AF    0
+/* ADC 0 channel 4 pin config */
+#define ADC_0_CH4           4
+#define ADC_0_CH4_PORT      0
+#define ADC_0_CH4_PIN       0
+#define ADC_0_CH4_PIN_AF    0
+/* ADC 0 channel 5 pin config */
+#define ADC_0_CH5           5
+#define ADC_0_CH5_PORT      0
+#define ADC_0_CH5_PIN       0
+#define ADC_0_CH5_PIN_AF    0
 
 /* ADC 1 configuration */
 #define ADC_1_DEV           ADC1
 #define ADC_1_CHANNELS      2
 #define ADC_1_CLKEN()       (BITBAND_REG32(SIM->SCGC3, SIM_SCGC3_ADC1_SHIFT) = 1)
 #define ADC_1_CLKDIS()      (BITBAND_REG32(SIM->SCGC3, SIM_SCGC3_ADC1_SHIFT) = 0)
+#define ADC_1_PORT_CLKEN()  /* no PORT pins configured */
 #define ADC_1_MODULE_CLOCK  SystemBusClock
 /* ADC 1 channel 0 pin config */
 #define ADC_1_CH0           0 /* DADP0, connected externally to Mulle Vbat/2 on PGA1_DP */
-#define ADC_1_CH0_GPIO      GPIO_UNDEF /* this channel is not part of the pin mux on this CPU */
+#define ADC_1_CH0_PORT      0 /* this channel is not part of the pin mux on this CPU */
+#define ADC_1_CH0_PIN       0
+#define ADC_1_CH0_PIN_AF    0
 /* ADC 1 channel 1 pin config */
 #define ADC_1_CH1           19 /* AD19, connected externally to Mulle Vchr/2 on PGA1_DM */
-#define ADC_1_CH1_GPIO      GPIO_UNDEF /* this channel is not part of the pin mux on this CPU */
+#define ADC_1_CH1_PORT      0  /* this channel is not part of the pin mux on this CPU */
+#define ADC_1_CH1_PIN       0
+#define ADC_1_CH1_PIN_AF    0
+/* ADC 1 channel 2 pin config */
+#define ADC_1_CH2           12
+#define ADC_1_CH2_PIN       0
+#define ADC_1_CH2_PIN_AF    0
+#define ADC_1_CH2_PORT      0
+/* ADC 1 channel 3 pin config */
+#define ADC_1_CH3           13
+#define ADC_1_CH3_PIN       0
+#define ADC_1_CH3_PIN_AF    0
+#define ADC_1_CH3_PORT      0
+/* ADC 1 channel 4 pin config */
+#define ADC_1_CH4           14
+#define ADC_1_CH4_PIN       0
+#define ADC_1_CH4_PIN_AF    0
+#define ADC_1_CH4_PORT      0
+/* ADC 1 channel 5 pin config */
+#define ADC_1_CH5           15
+#define ADC_1_CH5_PIN       0
+#define ADC_1_CH5_PIN_AF    0
+#define ADC_1_CH5_PORT      0
 /** @} */
+
 
 /**
  * @name PWM configuration
@@ -178,13 +238,17 @@ extern "C"
 #define PWM_0_CLKDIS()      (BITBAND_REG32(SIM->SCGC6, SIM_SCGC6_FTM0_SHIFT) = 0)
 
 /* PWM 0 pin configuration */
-#define PWM_0_CH0_GPIO      GPIO_PIN(PORT_C, 1)
-#define PWM_0_CH0_FTMCHAN   0
-#define PWM_0_CH0_AF        4
+#define PWM_0_PORT_CLKEN()  (BITBAND_REG32(SIM->SCGC5, SIM_SCGC5_PORTC_SHIFT) = 1)
 
-#define PWM_0_CH1_GPIO      GPIO_PIN(PORT_C, 2)
-#define PWM_0_CH1_FTMCHAN   1
-#define PWM_0_CH1_AF        4
+#define PWM_0_PIN_CH0       1
+#define PWM_0_FTMCHAN_CH0   0
+#define PWM_0_PORT_CH0      PORTC
+#define PWM_0_PIN_AF_CH0    4
+
+#define PWM_0_PIN_CH1       2
+#define PWM_0_FTMCHAN_CH1   1
+#define PWM_0_PORT_CH1      PORTC
+#define PWM_0_PIN_AF_CH1    4
 
 /* PWM 1 device configuration */
 #define PWM_1_DEV           FTM1
@@ -194,15 +258,20 @@ extern "C"
 #define PWM_1_CLKDIS()      (BITBAND_REG32(SIM->SCGC6, SIM_SCGC6_FTM1_SHIFT) = 0)
 
 /* PWM 1 pin configuration */
-#define PWM_1_CH0_GPIO      GPIO_PIN(PORT_A, 12)
-#define PWM_1_CH0_FTMCHAN   0
-#define PWM_1_CH0_AF        3
+#define PWM_1_PORT_CLKEN()  (BITBAND_REG32(SIM->SCGC5, SIM_SCGC5_PORTA_SHIFT) = 1)
 
-#define PWM_1_CH1_GPIO      GPIO_PIN(PORT_A, 13)
-#define PWM_1_CH1_FTMCHAN   1
-#define PWM_1_CH1_AF        3
+#define PWM_1_PIN_CH0       12
+#define PWM_1_FTMCHAN_CH0   0
+#define PWM_1_PORT_CH0      PORTA
+#define PWM_1_PIN_AF_CH0    3
+
+#define PWM_1_PIN_CH1       13
+#define PWM_1_FTMCHAN_CH1   1
+#define PWM_1_PORT_CH1      PORTA
+#define PWM_1_PIN_AF_CH1    3
 
 /** @} */
+
 
 /**
  * @name SPI configuration
@@ -233,13 +302,21 @@ extern "C"
 #define SPI_0_IRQ_PRIO          CPU_DEFAULT_IRQ_PRIO
 #define SPI_0_FREQ              SystemBusClock
 /* SPI 0 pin configuration */
-#define SPI_0_SCK_GPIO          GPIO_PIN(PORT_D, 1)
+#define SPI_0_SCK_PORT          PORTD
+#define SPI_0_SCK_PIN           1
+#define SPI_0_SCK_PORT_CLKEN()  (BITBAND_REG32(SIM->SCGC5, SIM_SCGC5_PORTD_SHIFT) = 1)
 #define SPI_0_SCK_AF            2
-#define SPI_0_SIN_GPIO          GPIO_PIN(PORT_D, 3)
+#define SPI_0_SIN_PORT          PORTD
+#define SPI_0_SIN_PIN           3
+#define SPI_0_SIN_PORT_CLKEN()  (BITBAND_REG32(SIM->SCGC5, SIM_SCGC5_PORTD_SHIFT) = 1)
 #define SPI_0_SIN_AF            2
-#define SPI_0_SOUT_GPIO         GPIO_PIN(PORT_D, 2)
-#define SPI_0_SOUT_AF           2
-#define SPI_0_PCS0_GPIO         GPIO_PIN(PORT_D, 0)
+#define SPI_0_SOUT_PORT         PORTD
+#define SPI_0_SOUT_PIN          2
+#define SPI_0_SOUT_PORT_CLKEN() (BITBAND_REG32(SIM->SCGC5, SIM_SCGC5_PORTD_SHIFT) = 1)
+#define SPI_0_SOUT_AF  2
+#define SPI_0_PCS0_PORT         PORTD
+#define SPI_0_PCS0_PIN          0
+#define SPI_0_PCS0_PORT_CLKEN() (BITBAND_REG32(SIM->SCGC5, SIM_SCGC5_PORTD_SHIFT) = 1)
 #define SPI_0_PCS0_AF           2
 /* SPI chip select polarity */
 #define SPI_0_PCS0_ACTIVE_LOW   1
@@ -258,14 +335,22 @@ extern "C"
 #define SPI_1_IRQ_HANDLER       MULLE_PASTE_PARTS(isr_spi, SPI_1_INDEX, )
 #define SPI_1_IRQ_PRIO          CPU_DEFAULT_IRQ_PRIO
 #define SPI_1_FREQ              SystemBusClock
-/* SPI 1 pin configuration */
-#define SPI_1_SCK_GPIO          GPIO_PIN(PORT_E, 2)
+/* SPI 0 pin configuration */
+#define SPI_1_SCK_PORT          PORTE
+#define SPI_1_SCK_PIN           2
+#define SPI_1_SCK_PORT_CLKEN()  (BITBAND_REG32(SIM->SCGC5, SIM_SCGC5_PORTE_SHIFT) = 1)
 #define SPI_1_SCK_AF            2
-#define SPI_1_SIN_GPIO          GPIO_PIN(PORT_E, 3)
+#define SPI_1_SIN_PORT          PORTE
+#define SPI_1_SIN_PIN           3
+#define SPI_1_SIN_PORT_CLKEN()  (BITBAND_REG32(SIM->SCGC5, SIM_SCGC5_PORTE_SHIFT) = 1)
 #define SPI_1_SIN_AF            2
-#define SPI_1_SOUT_GPIO         GPIO_PIN(PORT_E, 1)
-#define SPI_1_SOUT_AF           2
-#define SPI_1_PCS0_GPIO         GPIO_PIN(PORT_E, 4)
+#define SPI_1_SOUT_PORT         PORTE
+#define SPI_1_SOUT_PIN          1
+#define SPI_1_SOUT_PORT_CLKEN() (BITBAND_REG32(SIM->SCGC5, SIM_SCGC5_PORTE_SHIFT) = 1)
+#define SPI_1_SOUT_AF  2
+#define SPI_1_PCS0_PORT         PORTE
+#define SPI_1_PCS0_PIN          4
+#define SPI_1_PCS0_PORT_CLKEN() (BITBAND_REG32(SIM->SCGC5, SIM_SCGC5_PORTE_SHIFT) = 1)
 #define SPI_1_PCS0_AF           2
 /* SPI chip select polarity */
 #define SPI_1_PCS0_ACTIVE_LOW   1
@@ -286,13 +371,21 @@ extern "C"
 #define SPI_2_FREQ              SystemBusClock
 /* SPI 2 pin configuration, must be the same as the other RIOT device using this
  * hardware module */
-#define SPI_2_SCK_GPIO          GPIO_PIN(PORT_D, 1)
+#define SPI_2_SCK_PORT          PORTD
+#define SPI_2_SCK_PIN           1
+#define SPI_2_SCK_PORT_CLKEN()  (BITBAND_REG32(SIM->SCGC5, SIM_SCGC5_PORTD_SHIFT) = 1)
 #define SPI_2_SCK_AF            2
-#define SPI_2_SIN_GPIO          GPIO_PIN(PORT_D, 3)
+#define SPI_2_SIN_PORT          PORTD
+#define SPI_2_SIN_PIN           3
+#define SPI_2_SIN_PORT_CLKEN()  (BITBAND_REG32(SIM->SCGC5, SIM_SCGC5_PORTD_SHIFT) = 1)
 #define SPI_2_SIN_AF            2
-#define SPI_2_SOUT_GPIO         GPIO_PIN(PORT_D, 2)
-#define SPI_2_SOUT_AF           2
-#define SPI_2_PCS0_GPIO         GPIO_PIN(PORT_D, 0)
+#define SPI_2_SOUT_PORT         PORTD
+#define SPI_2_SOUT_PIN          2
+#define SPI_2_SOUT_PORT_CLKEN() (BITBAND_REG32(SIM->SCGC5, SIM_SCGC5_PORTD_SHIFT) = 1)
+#define SPI_2_SOUT_AF  2
+#define SPI_2_PCS0_PORT         PORTD
+#define SPI_2_PCS0_PIN          0
+#define SPI_2_PCS0_PORT_CLKEN() (BITBAND_REG32(SIM->SCGC5, SIM_SCGC5_PORTD_SHIFT) = 1)
 #define SPI_2_PCS0_AF           2
 /* SPI chip select polarity */
 #define SPI_2_PCS0_ACTIVE_LOW   1
@@ -324,6 +417,7 @@ extern "C"
 /** @} */
 
 /** @} */
+
 
 /**
  * @name I2C configuration
@@ -359,11 +453,14 @@ extern "C"
 #define I2C_0_IRQ               I2C0_IRQn
 #define I2C_0_IRQ_HANDLER       isr_i2c0
 /* I2C 0 pin configuration */
-#define I2C_0_SDA_GPIO          GPIO_PIN(PORT_B, 1)
-#define I2C_0_SDA_AF            2
-#define I2C_0_SCL_GPIO          GPIO_PIN(PORT_B, 2)
-#define I2C_0_SCL_AF            2
+#define I2C_0_PORT              PORTB
+#define I2C_0_PORT_CLKEN()      (BITBAND_REG32(SIM->SCGC5, SIM_SCGC5_PORTB_SHIFT) = 1)
+#define I2C_0_PIN_AF            2
+#define I2C_0_SDA_PIN           1
+#define I2C_0_SCL_PIN           2
+#define I2C_0_PORT_CFG          (PORT_PCR_MUX(I2C_0_PIN_AF) | PORT_PCR_ODE_MASK)
 /** @} */
+
 
 /**
  * @name GPIO configuration
@@ -371,6 +468,7 @@ extern "C"
  */
 #define GPIO_IRQ_PRIO       CPU_DEFAULT_IRQ_PRIO
 /** @} */
+
 
 /**
  * @name RTC configuration
@@ -409,9 +507,8 @@ extern "C"
  * @name Random Number Generator configuration
  * @{
  */
-#define RANDOM_NUMOF            (1U)
-#define RANDOM_CLKEN()          (BITBAND_REG32(SIM->SCGC3, SIM_SCGC3_RNGA_SHIFT) = 1)
-#define RANDOM_CLKDIS()         (BITBAND_REG32(SIM->SCGC3, SIM_SCGC3_RNGA_SHIFT) = 0)
+#define HWRNG_CLKEN()       (BITBAND_REG32(SIM->SCGC3, SIM_SCGC3_RNGA_SHIFT) = 1)
+#define HWRNG_CLKDIS()      (BITBAND_REG32(SIM->SCGC3, SIM_SCGC3_RNGA_SHIFT) = 0)
 /** @} */
 
 #ifdef __cplusplus

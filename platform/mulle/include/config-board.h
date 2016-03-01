@@ -115,12 +115,12 @@ extern "C" {
 /**
  * Function number in the PORT mux for the TX pin of the debug UART.
  */
-#define BOARD_DEBUG_UART_TX_AF PORT_AF3
+#define BOARD_DEBUG_UART_TX_AF GPIO_AF_3
 
 /**
  * Function number in the PORT mux for the RX pin of the debug UART.
  */
-#define BOARD_DEBUG_UART_RX_AF PORT_AF3
+#define BOARD_DEBUG_UART_RX_AF GPIO_AF_3
 
 /**
  * Number of UART modules in CPU.
@@ -164,19 +164,19 @@ extern "C" {
 /**
  * @brief SLIP UART TX pin alternate function number
  */
-#define BOARD_SLIP_UART_TX_AF 3
+#define BOARD_SLIP_UART_TX_AF GPIO_AF_3
 /**
  * @brief SLIP UART RX pin alternate function number
  */
-#define BOARD_SLIP_UART_RX_AF 3
+#define BOARD_SLIP_UART_RX_AF GPIO_AF_3
 
 #elif BOARD_SLIP_UART_NUM == 1
 
 #define BOARD_SLIP_UART_NAME "UART1"
 #define BOARD_SLIP_UART_TX_GPIO GPIO_PIN(PORT_C, 3)
 #define BOARD_SLIP_UART_RX_GPIO GPIO_PIN(PORT_C, 4)
-#define BOARD_SLIP_UART_TX_AF 3
-#define BOARD_SLIP_UART_RX_AF 3
+#define BOARD_SLIP_UART_TX_AF GPIO_AF_3
+#define BOARD_SLIP_UART_RX_AF GPIO_AF_3
 
 #endif /* BOARD_SLIP_UART_NUM */
 

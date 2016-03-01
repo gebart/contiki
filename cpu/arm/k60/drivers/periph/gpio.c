@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2014 Freie Universität Berlin
  * Copyright (C) 2014 PHYTEC Messtechnik GmbH
- * Copyright (C) 2014-2016 Eistec AB
+ * Copyright (C) 2014 Eistec AB
  *
  * This file is subject to the terms and conditions of the GNU Lesser General
  * Public License v2.1. See the file LICENSE in the top level directory for more
@@ -16,7 +16,7 @@
  * @file
  * @brief       Low-level GPIO driver implementation
  *
- * @author      Hauke Petersen <mail@haukepetersen.de>
+ * @author      Hauke Petersen <hauke.petersen@fu-berlin.de>
  * @author      Johann Fischer <j.fischer@phytec.de>
  * @author      Jonas Remmert <j.remmert@phytec.de>
  * @author      Joakim Nohlgård <joakim.nohlgard@eistec.se>
@@ -26,306 +26,262 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "cpu.h"
-#if CONTIKI
-/* Contiki doesn't do threads */
-#define sched_context_switch_request 0
-#define thread_yield()
-typedef uint8_t mutex_t;
-#define MUTEX_INIT 0
-#define mutex_lock(x)
-#define mutex_unlock(x)
-#else
 #include "sched.h"
 #include "thread.h"
-#include "mutex.h"
-#endif
-#include "utlist.h"
+#include "cpu.h"
 #include "periph/gpio.h"
-#include "periph_conf.h"
-#include "periph/port.h"
-
-#ifndef PORT_AF_GPIO
-#define PORT_AF_GPIO       PORT_AF1
-#endif
 
 /**
- * @brief Linked list entry for interrupt configurations.
+ * @brief   Shifting a gpio_t value by this number of bit we can extract the
+ *          port number from the GPIO base address
  */
-typedef struct gpio_int_config_entry {
-    struct gpio_int_config_entry* next; /**< pointer to next entry */
-    gpio_cb_t cb;    /**< callback called from GPIO interrupt */
-    void *arg;       /**< argument passed to the callback */
-    uint32_t irqc;   /**< remember interrupt configuration between disable/enable */
-    uint8_t pin;     /**< pin number within the port */
-} gpio_int_config_entry_t;
-
-/* Linked list of interrupt handlers for each port.
- * Using a linked list saves memory when less than 80% of all GPIO pins on the
- * CPU are configured for interrupts, which is true for (almost) all real world
- * applications. */
-static gpio_int_config_entry_t* gpio_interrupts[PORT_NUMOF];
-
-__attribute__((unused)) static mutex_t int_config_lock = MUTEX_INIT;
-
-/* Maximum number of simultaneously enabled GPIO interrupts. Each pool entry
- * uses 20 bytes of RAM.
- */
-#ifndef GPIO_INT_POOL_SIZE
-#define GPIO_INT_POOL_SIZE 16
-#endif
-
-/* Pool of linked list entries which can be used by any port configuration.
- * Rationale: Avoid dynamic memory inside low level periph drivers. */
-gpio_int_config_entry_t config_pool[GPIO_INT_POOL_SIZE];
+#define GPIO_SHIFT          (6)
 
 /**
- * @brief Array of all GPIO module base pointers
+ * @brief   Mask used to extract the PORT base address from the gpio_t value
  */
-static GPIO_Type * const _gpio_ptrs[] = GPIO_BASE_PTRS;
+#define PORT_ADDR_MASK      (0x00007000)
 
-static inline GPIO_Type *_gpio(gpio_t dev) {
-    return _gpio_ptrs[gpio_port_num(dev)];
+/**
+ * @brief   Mask used to extract the GPIO base address from the gpio_t value
+ */
+#define GPIO_ADDR_MASK      (0x000001c0)
+
+/**
+ * @brief   Cleaned up PORT base address
+ */
+#define PORT_ADDR_BASE      (PORTA_BASE & ~(PORT_ADDR_MASK))
+
+/**
+ * @brief   Cleaned up GPIO base address
+ */
+#define GPIO_ADDR_BASE      (GPIOA_BASE & ~(GPIO_ADDR_MASK))
+
+/**
+ * @brief   Kinetis CPUs have 32 pins per port
+ */
+#define PINS_PER_PORT       (32)
+
+/**
+ * @brief   Calculate the needed memory (in byte) needed to save 4 bits per MCU
+ *          pin
+ */
+#define ISR_MAP_SIZE        (GPIO_PORTS_NUMOF * PINS_PER_PORT * 4 / 8)
+
+/**
+ * @brief   Define the number of simultaneously configurable interrupt channels
+ *
+ * We have configured 4-bits per pin, so we can go up to 16 simultaneous active
+ * extern interrupt sources.
+ */
+#define CTX_NUMOF           (8U)
+
+/**
+ * @brief   Interrupt context data
+ */
+typedef struct {
+    gpio_cb_t cb;
+    void *arg;
+    uint32_t state;
+} isr_ctx_t;
+
+/**
+ * @brief   Allocation of memory for each independent interrupt slot
+ *
+ * We trust the start-up code here to initialize all bytes of this array to
+ * zero.
+ */
+static isr_ctx_t isr_ctx[CTX_NUMOF];
+
+/**
+ * @brief   Allocation of 4 bit per pin to map a pin to an interrupt context
+ */
+static uint32_t isr_map[ISR_MAP_SIZE];
+
+
+static inline PORT_Type *port(gpio_t pin)
+{
+    return (PORT_Type *)(PORT_ADDR_BASE | (pin & PORT_ADDR_MASK));
 }
 
-static void _clear_interrupt_config(gpio_t dev) {
-    gpio_int_config_entry_t* entry = NULL;
-    uint8_t pin_number = gpio_pin_num(dev);
-    mutex_lock(&int_config_lock);
-    /* Search for the given pin in the port's interrupt configuration */
-    LL_SEARCH_SCALAR(gpio_interrupts[gpio_port_num(dev)], entry, pin, pin_number);
-    if (entry != NULL) {
-        LL_DELETE(gpio_interrupts[gpio_port_num(dev)], entry);
-        /* pin == 0 means the entry is available */
-        entry->pin = 0;
-    }
-    mutex_unlock(&int_config_lock);
+static inline GPIO_Type *gpio(gpio_t pin)
+{
+    return (GPIO_Type *)(GPIO_ADDR_BASE | (pin & GPIO_ADDR_MASK));
 }
 
-static gpio_int_config_entry_t* _allocate_interrupt_config(uint8_t port) {
-    gpio_int_config_entry_t* ret = NULL;
+static inline int port_num(gpio_t pin)
+{
+    return (int)((pin >> GPIO_SHIFT) & 0x7);
+}
 
-    mutex_lock(&int_config_lock);
-    for (uint8_t i = 0; i < GPIO_INT_POOL_SIZE; ++i) {
-        if (config_pool[i].pin == 0) {
-            /* temporarily set pin to something non-zero until the proper pin
-             * number is set by the init code */
-            config_pool[i].pin = 200;
-            ret = &config_pool[i];
-            LL_PREPEND(gpio_interrupts[port], ret);
-            break;
+static inline int pin_num(gpio_t pin)
+{
+    return (int)(pin & 0x3f);
+}
+
+static inline void clk_en(gpio_t pin)
+{
+    BITBAND_REG32(SIM->SCGC5, SIM_SCGC5_PORTA_SHIFT + port_num(pin)) = 1;
+}
+
+/**
+ * @brief   Get context for a specific pin
+ */
+static inline int get_ctx(int port, int pin)
+{
+    return (isr_map[(port * 4) + (pin >> 3)] >> ((pin & 0x7) * 4)) & 0xf;
+}
+
+/**
+ * @brief   Find a free spot in the array containing the interrupt contexts
+ */
+static int get_free_ctx(void)
+{
+    for (int i = 0; i < CTX_NUMOF; i++) {
+        if (isr_ctx[i].cb == NULL) {
+            return i;
         }
     }
-    mutex_unlock(&int_config_lock);
-
-    return ret;
+    return -1;
 }
 
-int gpio_init(gpio_t dev, gpio_dir_t dir, gpio_pp_t pushpull)
+/**
+ * @brief   Write an entry to the context map array
+ */
+static void write_map(int port, int pin, int ctx)
 {
-    _clear_interrupt_config(dev);
+    isr_map[(port * 4) + (pin >> 3)] &= ~(0xf << ((pin & 0x7) * 4));
+    isr_map[(port * 4) + (pin >> 3)] |=  (ctx << ((pin & 0x7) * 4));
+}
 
-    port_init(dev, pushpull, PORT_AF_GPIO);
-    uint8_t pin = gpio_pin_num(dev);
-    GPIO_Type *gpio = _gpio(dev);
+/**
+ * @brief   Clear the context for the given pin
+ */
+static void ctx_clear(int port, int pin)
+{
+    int ctx = get_ctx(port, pin);
+    write_map(port, pin, ctx);
+}
 
+int gpio_init(gpio_t pin, gpio_dir_t dir, gpio_pp_t pullup)
+{
+    /* set pin to analog mode while configuring it */
+    gpio_init_port(pin, GPIO_AF_ANALOG);
+    /* set pin direction */
+    gpio(pin)->PDDR &= ~(1 << pin_num(pin));
+    gpio(pin)->PDDR |=  (dir << pin_num(pin));
     if (dir == GPIO_DIR_OUT) {
-        BITBAND_REG32(gpio->PDDR, pin) = 1;    /* set pin to output mode */
-        gpio->PCOR = GPIO_PCOR_PTCO(1 << pin); /* set output to low */
+        gpio(pin)->PCOR = (1 << pin_num(pin));
     }
-    else {
-        BITBAND_REG32(gpio->PDDR, pin) = 0;    /* set pin to input mode */
-    }
-
+    /* enable GPIO function */
+    port(pin)->PCR[pin_num(pin)] = (GPIO_AF_GPIO | pullup);
     return 0;
 }
 
-int gpio_init_int(gpio_t dev, gpio_pp_t pushpull, gpio_flank_t flank, gpio_cb_t cb, void *arg)
+int gpio_init_int(gpio_t pin, gpio_pp_t pullup, gpio_flank_t flank, gpio_cb_t cb, void *arg)
 {
-    int res;
-    IRQn_Type irqn;
-
-    res = gpio_init(dev, GPIO_DIR_IN, pushpull);
-
-    if (res < 0) {
-        return res;
-    }
-
-    switch (gpio_port_num(dev)) {
-#ifdef PORTA_BASE
-        case PORT_A:
-            irqn = PORTA_IRQn;
-            break;
-#endif
-
-#ifdef PORTB_BASE
-        case PORT_B:
-            irqn = PORTB_IRQn;
-            break;
-#endif
-
-#ifdef PORTC_BASE
-        case PORT_C:
-            irqn = PORTC_IRQn;
-            break;
-#endif
-
-#ifdef PORTD_BASE
-        case PORT_D:
-            irqn = PORTD_IRQn;
-            break;
-#endif
-
-#ifdef PORTE_BASE
-        case PORT_E:
-            irqn = PORTE_IRQn;
-            break;
-#endif
-
-#ifdef PORTF_BASE
-        case PORT_F:
-            irqn = PORTF_IRQn;
-            break;
-#endif
-
-#ifdef PORTG_BASE
-        case PORT_G:
-            irqn = PORTG_IRQn;
-            break;
-#endif
-
-        default:
-            return -1;
-    }
-
-    uint32_t irqc;
-    /* configure the active edges */
-    switch (flank) {
-        case GPIO_LOGIC_ZERO:
-        case GPIO_RISING:
-        case GPIO_FALLING:
-        case GPIO_BOTH:
-        case GPIO_LOGIC_ONE:
-            irqc = PORT_PCR_IRQC(flank);
-            break;
-
-        default:
-            /* Unknown setting */
-            return -1;
-    }
-
-    gpio_int_config_entry_t* config = _allocate_interrupt_config(gpio_port_num(dev));
-    if (config == NULL) {
-        /* No free interrupt config entries */
+    if (gpio_init(pin, GPIO_DIR_IN, pullup) < 0) {
         return -1;
     }
 
-    /* Enable port interrupts in the NVIC */
-    NVIC_SetPriority(irqn, GPIO_IRQ_PRIO);
-    NVIC_EnableIRQ(irqn);
+    /* try go grab a free spot in the context array */
+    int ctx_num = get_free_ctx();
+    if (ctx_num < 0) {
+        return -1;
+    }
 
-    uint8_t pin = gpio_pin_num(dev);
-    PORT_Type *port = gpio_port(dev);
+    /* save interrupt context */
+    isr_ctx[ctx_num].cb = cb;
+    isr_ctx[ctx_num].arg = arg;
+    isr_ctx[ctx_num].state = flank;
+    write_map(port_num(pin), pin_num(pin), ctx_num);
 
-    config->cb = cb;
-    config->arg = arg;
-    config->irqc = irqc;
-    /* Allow the callback to be found by the IRQ handler by setting the proper
-     * pin number */
-    config->pin = pin;
-
-    port->PCR[pin] &= ~(PORT_PCR_IRQC_MASK); /* Disable interrupt */
-    BITBAND_REG32(port->PCR[pin], PORT_PCR_ISF_SHIFT) = 1; /* Clear interrupt flag */
-    port->PCR[pin] |= config->irqc; /* Enable interrupt */
-
+    /* clear interrupt flags */
+    port(pin)->ISFR &= ~(1 << pin_num(pin));
+    /* enable global port interrupts in the NVIC */
+    NVIC_EnableIRQ(PORTA_IRQn + port_num(pin));
+    /* finally, enable the interrupt for the select pin */
+    port(pin)->PCR[pin_num(pin)] |= flank;
     return 0;
 }
 
-void gpio_irq_enable(gpio_t dev)
+void gpio_init_port(gpio_t pin, uint32_t pcr)
 {
-    /* Restore saved state */
-    PORT_Type *port = gpio_port(dev);
-    gpio_int_config_entry_t* entry = NULL;
-    uint8_t pin_number = gpio_pin_num(dev);
-    mutex_lock(&int_config_lock);
-    /* Search for the given pin in the port's interrupt configuration */
-    LL_SEARCH_SCALAR(gpio_interrupts[gpio_port_num(dev)], entry, pin, pin_number);
-    mutex_unlock(&int_config_lock);
-    if (entry == NULL) {
-        /* Pin has not been configured for interrupts */
-        return;
+    /* enable PORT clock in case it was not active before */
+    clk_en(pin);
+
+    /* if the given interrupt was previously configured as interrupt source, we
+     * need to free its interrupt context. We to this only after we
+     * re-configured the pin in case an event is happening just in between... */
+    uint32_t isr_state = port(pin)->PCR[pin_num(pin)];
+    /* set new PCR value */
+    port(pin)->PCR[pin_num(pin)] = pcr;
+    /* and clear the interrupt context if needed */
+    if (isr_state & PORT_PCR_IRQC_MASK) {
+        ctx_clear(port_num(pin), pin_num(pin));
     }
-    uint32_t irqc = entry->irqc;
-    port->PCR[pin_number] &= ~(PORT_PCR_IRQC_MASK);
-    port->PCR[pin_number] |= irqc;
 }
 
-void gpio_irq_disable(gpio_t dev)
+void gpio_irq_enable(gpio_t pin)
 {
-    /* Save irqc state before disabling to allow enabling with the same trigger
-     * settings later. */
-    PORT_Type *port = gpio_port(dev);
-    uint8_t pin_number = gpio_pin_num(dev);
-    uint32_t irqc = PORT_PCR_IRQC_MASK & port->PCR[pin_number];
-    gpio_int_config_entry_t* entry = NULL;
-    mutex_lock(&int_config_lock);
-    /* Search for the given pin in the port's interrupt configuration */
-    LL_SEARCH_SCALAR(gpio_interrupts[gpio_port_num(dev)], entry, pin, pin_number);
-    if (entry == NULL) {
-        /* Pin has not been configured for interrupts */
-        mutex_unlock(&int_config_lock);
-        return;
-    }
-    entry->irqc = irqc;
-    mutex_unlock(&int_config_lock);
-    port->PCR[pin_number] &= ~(PORT_PCR_IRQC_MASK);
+    int ctx = get_ctx(port_num(pin), pin_num(pin));
+    port(pin)->PCR[pin_num(pin)] |= isr_ctx[ctx].state;
 }
 
-int gpio_read(gpio_t dev)
+void gpio_irq_disable(gpio_t pin)
 {
-    return ((_gpio(dev)->PDIR & GPIO_PDIR_PDI(1 << gpio_pin_num(dev))) ? 1 : 0);
+    int ctx = get_ctx(port_num(pin), pin_num(pin));
+    isr_ctx[ctx].state = port(pin)->PCR[pin_num(pin)] & PORT_PCR_IRQC_MASK;
+    port(pin)->PCR[pin_num(pin)] &= ~(PORT_PCR_IRQC_MASK);
 }
 
-void gpio_set(gpio_t dev)
+int gpio_read(gpio_t pin)
 {
-    _gpio(dev)->PSOR = (1 << gpio_pin_num(dev));
-}
-
-void gpio_clear(gpio_t dev)
-{
-    _gpio(dev)->PCOR = (1 << gpio_pin_num(dev));
-}
-
-void gpio_toggle(gpio_t dev)
-{
-    _gpio(dev)->PTOR = (1 << gpio_pin_num(dev));
-}
-
-void gpio_write(gpio_t dev, int value)
-{
-    if (value) {
-        _gpio(dev)->PSOR = (1 << gpio_pin_num(dev));
+    if (gpio(pin)->PDDR & (1 << pin_num(pin))) {
+        return (gpio(pin)->PDOR & (1 << pin_num(pin))) ? 1 : 0;
     }
     else {
-        _gpio(dev)->PCOR = (1 << gpio_pin_num(dev));
+        return (gpio(pin)->PDIR & (1 << pin_num(pin))) ? 1 : 0;
     }
 }
 
-static inline void irq_handler(uint8_t port_num)
+void gpio_set(gpio_t pin)
 {
-    gpio_int_config_entry_t *entry;
-    PORT_Type *port = kinetis_port_ptrs[port_num];
-    uint32_t isf = port->ISFR; /* Interrupt status flags */
-    LL_FOREACH(gpio_interrupts[port_num], entry) {
-        if (isf & (1 << entry->pin)) {
-            if (entry->cb != NULL) {
-                entry->cb(entry->arg);
-            }
+    gpio(pin)->PSOR = (1 << pin_num(pin));
+}
+
+void gpio_clear(gpio_t pin)
+{
+    gpio(pin)->PCOR = (1 << pin_num(pin));
+}
+
+void gpio_toggle(gpio_t pin)
+{
+    gpio(pin)->PTOR = (1 << pin_num(pin));
+}
+
+void gpio_write(gpio_t pin, int value)
+{
+    if (value) {
+        gpio(pin)->PSOR = (1 << pin_num(pin));
+    }
+    else {
+        gpio(pin)->PCOR = (1 << pin_num(pin));
+    }
+}
+
+static inline void irq_handler(PORT_Type *port, int port_num)
+{
+    /* take interrupt flags only from pins which interrupt is enabled */
+    uint32_t status = port->ISFR;
+
+    for (int i = 0; i < 32; i++) {
+        if ((status & (1 << i)) && (port->PCR[i] & PORT_PCR_IRQC_MASK)) {
+            port->ISFR = (1 << i);
+            int ctx = get_ctx(port_num, i);
+            isr_ctx[ctx].cb(isr_ctx[ctx].arg);
         }
     }
-    /* Clear interrupt flags */
-    port->ISFR = isf;
-
     if (sched_context_switch_request) {
         thread_yield();
     }
@@ -334,48 +290,48 @@ static inline void irq_handler(uint8_t port_num)
 #ifdef PORTA_BASE
 void isr_porta(void)
 {
-    irq_handler(PORT_A);
+    irq_handler(PORTA, 0);
 }
 #endif /* PORTA_BASE */
 
 #ifdef PORTB_BASE
 void isr_portb(void)
 {
-    irq_handler(PORT_B);
+    irq_handler(PORTB, 1);
 }
 #endif /* ISR_PORT_B */
 
 #ifdef PORTC_BASE
 void isr_portc(void)
 {
-    irq_handler(PORT_C);
+    irq_handler(PORTC, 2);
 }
 #endif /* ISR_PORT_C */
 
 #ifdef PORTD_BASE
 void isr_portd(void)
 {
-    irq_handler(PORT_D);
+    irq_handler(PORTD, 3);
 }
 #endif /* ISR_PORT_D */
 
 #ifdef PORTE_BASE
 void isr_porte(void)
 {
-    irq_handler(PORT_E);
+    irq_handler(PORTE, 4);
 }
 #endif /* ISR_PORT_E */
 
 #ifdef PORTF_BASE
 void isr_portf(void)
 {
-    irq_handler(PORT_F);
+    irq_handler(PORTF, 5);
 }
 #endif /* ISR_PORT_F */
 
 #ifdef PORTG_BASE
 void isr_portg(void)
 {
-    irq_handler(PORT_G);
+    irq_handler(PORTG, 6);
 }
 #endif /* ISR_PORT_G */

@@ -5,8 +5,7 @@
 #include "dev/slip.h"
 
 #include "uart.h"
-#include "periph/port.h"
-#include "config-board.h"
+#include "periph_conf.h"
 #include "llwu.h"
 
 static int slip_fd = -1;
@@ -16,8 +15,8 @@ void
 slip_arch_init(unsigned long ubr)
 {
   /* Turn on the hardware pins */
-  port_init(BOARD_SLIP_UART_RX_GPIO, GPIO_NOPULL, BOARD_SLIP_UART_RX_AF);
-  port_init(BOARD_SLIP_UART_TX_GPIO, GPIO_NOPULL, BOARD_SLIP_UART_TX_AF);
+  gpio_init_port(BOARD_SLIP_UART_RX_GPIO, BOARD_SLIP_UART_RX_AF);
+  gpio_init_port(BOARD_SLIP_UART_TX_GPIO, BOARD_SLIP_UART_TX_AF);
 
   /* (Re-)initialize the UART module */
   uart_init(BOARD_SLIP_UART_NUM, 0, ubr);
