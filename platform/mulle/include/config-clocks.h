@@ -49,7 +49,7 @@ extern "C" {
 #define CPU_XTAL32k_CLK_HZ              32768u   /**< Value of the external 32k crystal or oscillator clock frequency in Hz */
 #define CPU_INT_SLOW_CLK_HZ             32768u   /**< Value of the slow internal oscillator clock frequency in Hz  */
 #define CPU_INT_FAST_CLK_HZ             4000000u /**< Value of the fast internal oscillator clock frequency in Hz  */
-#define DEFAULT_SYSTEM_CLOCK            96000000u /**< Default System clock value */
+#define DEFAULT_SYSTEM_CLOCK            (CPU_XTAL32k_CLK_HZ * 2929u) /**< Default System clock value */
 
 /**
  * System clock divider setting, the actual hardware register value, see reference manual for details.
