@@ -37,6 +37,10 @@
 
 /* #define CONTIKIMAC 1 */
 
+/* RIOT compatibility, currently missing MRHOF and HBH option support */
+#define RPL_CONF_OF rpl_of0
+#define RPL_CONF_INSERT_HBH_OPTION 0
+
 #ifndef UIP_FALLBACK_INTERFACE
 #define UIP_FALLBACK_INTERFACE rpl_interface
 #endif
