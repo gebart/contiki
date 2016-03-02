@@ -32,7 +32,7 @@ static volatile unsigned long second_countdown = CLOCK_SECOND;
 
 static volatile uint8_t waiting_flag = 0;
 
-static struct rtimer rt_clock;
+//static struct rtimer rt_clock;
 
 /* This is based on the MC1322x clock module rtimer implementation. */
 /* the typical clock things like incrementing current_tick and etimer checks */
