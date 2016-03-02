@@ -1,5 +1,5 @@
 CONTIKI_PROJECT=border-router
-all: $(CONTIKI_PROJECT) 
+all: $(CONTIKI_PROJECT)
 
 CONTIKI=../../..
 
@@ -33,17 +33,26 @@ CFLAGS += -DWEBSERVER=2
 endif
 
 ifeq ($(PREFIX),)
- PREFIX = aaaa::1/64
+ PREFIX = fdfd::ff/64
 endif
 
 CONTIKI_WITH_IPV6 = 1
 include $(CONTIKI)/Makefile.include
 
+BAUDRATE ?= 115200
+IFACE_NAME ?= contiki0
+
 $(CONTIKI)/tools/tunslip6:	$(CONTIKI)/tools/tunslip6.c
 	(cd $(CONTIKI)/tools && $(MAKE) tunslip6)
 
 connect-router:	$(CONTIKI)/tools/tunslip6
-	sudo $(CONTIKI)/tools/tunslip6 $(PREFIX)
+	@#sudo $(CONTIKI)/tools/tunslip6 $(PREFIX)
+	@echo 'Starting tunslip6 program in a loop to handle crashes, press CTRL-C twice to exit'
+	@echo 'Baud rate is configured to $(BAUDRATE)'
+	@echo 'Remember: export BAUDRATE=xxx to run at a different baud rate'
+	@echo 'The slip tunnel interface will be named $(IFACE_NAME), export IFACE_NAME=xyz to change this'
+	sudo /bin/sh -c 'while true; do "$(CONTIKI)/tools/tunslip6" -B "$(BAUDRATE)" -t "$(IFACE_NAME)" -L -v2 -s \
+		"$$($(CONTIKI)/platform/mulle/tools/find-tty.sh $(PROGRAMMER_SERIAL))" "$(PREFIX)"; sleep 1; done'
 
 connect-router-cooja:	$(CONTIKI)/tools/tunslip6
 	sudo $(CONTIKI)/tools/tunslip6 -a 127.0.0.1 $(PREFIX)
