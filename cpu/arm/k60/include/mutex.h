@@ -43,7 +43,7 @@
 /* Contiki doesn't do threads */
 typedef uint8_t mutex_t;
 #define MUTEX_INIT 0
-#define mutex_lock(x)
-#define mutex_unlock(x)
+#define mutex_lock(x) (void)(x)
+#define mutex_unlock(x) (void)(x)
 
 #endif /* K60_MUTEX_H_ */
