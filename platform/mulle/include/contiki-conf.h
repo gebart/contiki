@@ -345,6 +345,10 @@ typedef uint32_t rtimer_clock_t;
 /* Tell Contiki that we are not using PETSCII (retarded default) */
 #define WITH_ASCII 1
 
+/* RIOT compatibility, currently missing MRHOF and HBH option support */
+#define RPL_CONF_OF rpl_of0
+#define RPL_CONF_INSERT_HBH_OPTION 0
+
 #ifdef __cplusplus
 }
 #endif
