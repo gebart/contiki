@@ -83,6 +83,10 @@ extern "C" {
 #define MULLE_ADC_LINE_VBAT ADC_LINE(4)
 /** @brief ADC line connected to Vchr */
 #define MULLE_ADC_LINE_VCHR ADC_LINE(5)
+/** @brief ADC line connected to 1 V band gap */
+#define MULLE_ADC_LINE_BANDGAP ADC_LINE(1)
+/** @brief Band gap voltage */
+#define MULLE_BAND_GAP_MILLIVOLTS 1000
 
 /**
  * UART module used for debug printf.

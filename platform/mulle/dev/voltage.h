@@ -47,9 +47,10 @@ extern "C" {
 #endif
 
 void voltage_init(void);
-uint16_t voltage_from_raw_adc(uint16_t adc_raw);
-uint16_t voltage_read_vbat(void);
-uint16_t voltage_read_vchr(void);
+uint32_t voltage_from_raw_adc(uint32_t adc_raw);
+uint32_t voltage_read_vbat(void);
+uint32_t voltage_read_vchr(void);
+uint32_t voltage_read_avdd(void);
 
 #ifdef __cplusplus
 } /* extern "C" */

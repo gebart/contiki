@@ -42,9 +42,42 @@
 #include "K60.h"
 #include "config-board.h"
 
+static uint32_t _vref_millivolts = 0;
+
+/**
+ * @brief Compute VREFH voltage by measuring the 1 V band gap voltage
+ */
+static void _update_vref_millivolts(void)
+{
+  uint32_t raw;
+  uint32_t millivolts;
+
+  /* Turn on 1 V band gap reference */
+  BITBAND_REG8(PMC->REGSC, PMC_REGSC_BGBE_SHIFT) = 1;
+
+  /* empiric evidence suggests that the band gap voltage target is not reached
+   * for a long time, we busy wait for that time to avoid going to power save
+   * modes as well. */
+  static unsigned int delay = 20000000;
+  for (unsigned int i = 0; i < delay; i++) {
+    asm volatile ("nop\n");
+  }
+
+  /* read the raw value (0..65535) */
+  raw = adc_sample(MULLE_ADC_LINE_BANDGAP, ADC_RES_16BIT);
+
+  /* Turn off 1 V band gap reference to save power */
+  BITBAND_REG8(PMC->REGSC, PMC_REGSC_BGBE_SHIFT) = 0;
+
+  millivolts = (MULLE_BAND_GAP_MILLIVOLTS << 16) / raw;
+  _vref_millivolts = millivolts;
+}
+
 void
 voltage_init(void)
 {
+  adc_init(MULLE_ADC_LINE_BANDGAP);
+  _update_vref_millivolts();
   adc_init(MULLE_ADC_LINE_VCHR);
   adc_init(MULLE_ADC_LINE_VBAT);
 }
@@ -52,44 +85,45 @@ voltage_init(void)
  * Scale a raw ADC reading from 0..65535 to millivolts depending on the board's
  * VREFH, VREFL reference voltages.
  */
-uint16_t
-voltage_from_raw_adc(uint16_t adc_raw)
+uint32_t
+voltage_from_raw_adc(uint32_t adc_raw)
 {
   uint32_t millivolts;
-  millivolts = adc_raw;
-  /* convert to millivolts */
-  millivolts *= MULLE_ADC_VREFHL_SCALE_MILLIVOLTS;
-  millivolts /= 65536; /** \todo Nitpick: Should we divide by 65535 or 65536 in the ADC conversion? */
-  millivolts += MULLE_ADC_VREFL_MILLIVOLTS;
+  millivolts = (adc_raw * _vref_millivolts) >> 16;
 
   return millivolts;
 }
 /** \todo Use interrupts to handle AD conversions of Vbat/Vchr */
-uint16_t
+uint32_t
 voltage_read_vbat(void)
 {
-  uint16_t raw;
-  uint16_t millivolts;
+  uint32_t raw;
+  uint32_t millivolts;
 
   /* read the raw value (0..65535) */
   raw = adc_sample(MULLE_ADC_LINE_VBAT, ADC_RES_16BIT);
-  millivolts = voltage_from_raw_adc(raw);
   /* The ADC inputs on Vbat and Vchr are connected to a voltage divider in order
-   * to be able to measure voltages greater than 3.3V */
-  millivolts *= 2;
+   * to be able to measure voltages greater than AVDD */
+  millivolts = voltage_from_raw_adc(raw * 2);
   return millivolts;
 }
-uint16_t
+uint32_t
 voltage_read_vchr(void)
 {
-  uint16_t raw;
+  uint32_t raw;
   uint32_t millivolts;
 
   /* read the raw value (0..65535) */
   raw = adc_sample(MULLE_ADC_LINE_VCHR, ADC_RES_16BIT);
-  millivolts = voltage_from_raw_adc(raw);
   /* The ADC inputs on Vbat and Vchr are connected to a voltage divider in order
-   * to be able to measure voltages greater than 3.3V */
-  millivolts *= 2;
+   * to be able to measure voltages greater than AVDD */
+  millivolts = voltage_from_raw_adc(raw * 2);
+
   return millivolts;
+}
+
+uint32_t
+voltage_read_avdd(void)
+{
+  return _vref_millivolts;
 }
