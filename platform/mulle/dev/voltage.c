@@ -69,7 +69,7 @@ static void _update_vref_millivolts(void)
   /* Turn off 1 V band gap reference to save power */
   BITBAND_REG8(PMC->REGSC, PMC_REGSC_BGBE_SHIFT) = 0;
 
-  millivolts = (MULLE_BAND_GAP_MILLIVOLTS << 16) / raw;
+  millivolts = ((MULLE_BAND_GAP_MILLIVOLTS << 16) + (raw / 2)) / raw;
   _vref_millivolts = millivolts;
 }
 
