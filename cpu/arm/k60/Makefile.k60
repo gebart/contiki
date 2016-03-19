@@ -28,8 +28,6 @@ CONTIKI_TARGET_SOURCEFILES += \
   power-modes.c \
   onewire.c \
   fault-handlers.c \
-  adc.c \
-  dac.c \
   ds18b20.c \
   system_MK60D10.c
 
@@ -37,6 +35,8 @@ CONTIKI_TARGET_SOURCEFILES += \
 CONTIKI_SOURCEFILES += $(CONTIKI_TARGET_SOURCEFILES)
 
 PERIPH_SOURCEFILES += \
+  adc.c \
+  dac.c \
   gpio.c \
   i2c.c \
   #

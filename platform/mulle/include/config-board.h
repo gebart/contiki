@@ -40,8 +40,6 @@
 #ifndef MULLE_CONFIG_BOARD_H_
 #define MULLE_CONFIG_BOARD_H_
 
-#include "adc.h"
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -81,16 +79,10 @@ extern "C" {
  */
 #define MULLE_ADC_VREFHL_SCALE_MILLIVOLTS ((MULLE_ADC_VREFH_MILLIVOLTS) - (MULLE_ADC_VREFL_MILLIVOLTS))
 
-/**
- * Which channel should perform Vbat measurements
- */
-#define MULLE_ADC_VBAT_ADC_NUM 1
-
-#define MULLE_ADC_VBAT_CHANNEL ADC_CH_DAD0
-
-#define MULLE_ADC_VCHR_ADC_NUM 1
-
-#define MULLE_ADC_VCHR_CHANNEL ADC_CH_AD19
+/** @brief ADC line connected to Vbat */
+#define MULLE_ADC_LINE_VBAT ADC_LINE(4)
+/** @brief ADC line connected to Vchr */
+#define MULLE_ADC_LINE_VCHR ADC_LINE(5)
 
 /**
  * UART module used for debug printf.

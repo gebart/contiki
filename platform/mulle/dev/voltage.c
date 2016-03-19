@@ -38,26 +38,15 @@
  */
 
 #include "voltage.h"
-#include "adc.h"
+#include "periph/adc.h"
 #include "K60.h"
 #include "config-board.h"
 
 void
 voltage_init(void)
 {
-  SIM->SCGC3 |= SIM_SCGC3_ADC1_MASK; /* Enable ADC1 clock gate */
-
-  /* ADC clock = Bus clock / 16 ( == 3MHz when F_BUS = 48 MHz) */
-  /* For the calibration it is important that the ADC clock is <= 4 MHz */
-  ADC1->CFG1 = ADC_CFG1_ADICLK(1) | ADC_CFG1_MODE(0b11) | ADC_CFG1_ADIV(0b11) |
-    ADC_CFG1_ADLPC_MASK | ADC_CFG1_ADLSMP_MASK;
-
-  ADC1->CFG2 = ADC_CFG2_MUXSEL_MASK | ADC_CFG2_ADLSTS(0); /* Add 20 extra cycles per sample */
-  ADC1->SC2 = 0; /* Software trigger */
-  ADC1->SC3 = ADC_SC3_AVGE_MASK | ADC_SC3_AVGS(0b11); /* Hardware average 32 samples */
-
-  /* Run a calibration for the new settings. */
-  adc_calibrate(MULLE_ADC_VBAT_ADC_NUM);
+  adc_init(MULLE_ADC_LINE_VCHR);
+  adc_init(MULLE_ADC_LINE_VBAT);
 }
 /**
  * Scale a raw ADC reading from 0..65535 to millivolts depending on the board's
@@ -83,7 +72,7 @@ voltage_read_vbat(void)
   uint16_t millivolts;
 
   /* read the raw value (0..65535) */
-  raw = adc_read_raw(MULLE_ADC_VBAT_ADC_NUM, MULLE_ADC_VBAT_CHANNEL);
+  raw = adc_sample(MULLE_ADC_LINE_VBAT, ADC_RES_16BIT);
   millivolts = voltage_from_raw_adc(raw);
   /* The ADC inputs on Vbat and Vchr are connected to a voltage divider in order
    * to be able to measure voltages greater than 3.3V */
@@ -97,7 +86,7 @@ voltage_read_vchr(void)
   uint32_t millivolts;
 
   /* read the raw value (0..65535) */
-  raw = adc_read_raw(MULLE_ADC_VCHR_ADC_NUM, MULLE_ADC_VCHR_CHANNEL);
+  raw = adc_sample(MULLE_ADC_LINE_VCHR, ADC_RES_16BIT);
   millivolts = voltage_from_raw_adc(raw);
   /* The ADC inputs on Vbat and Vchr are connected to a voltage divider in order
    * to be able to measure voltages greater than 3.3V */
