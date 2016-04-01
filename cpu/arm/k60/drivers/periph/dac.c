@@ -28,6 +28,8 @@
 #include "periph/dac.h"
 #include "periph_conf.h"
 
+static const dac_conf_t dac_config[] = DAC_CONFIG;
+
 int8_t dac_init(dac_t line)
 {
     DAC_Type *dac;
