@@ -80,9 +80,9 @@ extern "C" {
 #define MULLE_ADC_VREFHL_SCALE_MILLIVOLTS ((MULLE_ADC_VREFH_MILLIVOLTS) - (MULLE_ADC_VREFL_MILLIVOLTS))
 
 /** @brief ADC line connected to Vbat */
-#define MULLE_ADC_LINE_VBAT ADC_LINE(4)
+#define MULLE_ADC_LINE_VBAT ADC_LINE(6)
 /** @brief ADC line connected to Vchr */
-#define MULLE_ADC_LINE_VCHR ADC_LINE(5)
+#define MULLE_ADC_LINE_VCHR ADC_LINE(7)
 /** @brief ADC line connected to 1 V band gap */
 #define MULLE_ADC_LINE_BANDGAP ADC_LINE(1)
 /** @brief Band gap voltage */
