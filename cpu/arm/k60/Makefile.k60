@@ -37,6 +37,7 @@ CONTIKI_SOURCEFILES += $(CONTIKI_TARGET_SOURCEFILES)
 PERIPH_SOURCEFILES += \
   adc.c \
   dac.c \
+  dma.c \
   gpio.c \
   i2c.c \
   #
