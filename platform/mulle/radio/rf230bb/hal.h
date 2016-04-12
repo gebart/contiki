@@ -113,8 +113,8 @@ extern "C" {
 #define HAL_ENABLE_OVERFLOW_INTERRUPT() ()
 #define HAL_DISABLE_OVERFLOW_INTERRUPT() ()
 
-#define HAL_ENTER_CRITICAL_REGION() unsigned int mask = disableIRQ()
-#define HAL_LEAVE_CRITICAL_REGION() restoreIRQ(mask)
+#define HAL_ENTER_CRITICAL_REGION() unsigned int mask = irq_disable()
+#define HAL_LEAVE_CRITICAL_REGION() irq_restore(mask)
 
 /** \brief  Enable the interrupt from the radio transceiver.
  */

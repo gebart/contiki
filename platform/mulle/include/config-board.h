@@ -188,25 +188,6 @@ extern "C" {
 /* enable 6pF load capacitance, might need adjusting.. */
 #define BOARD_RTC_LOAD_CAP_BITS (RTC_CR_SC4P_MASK | RTC_CR_SC2P_MASK)
 
-/**
- * PIT channel to use for clock_delay_usec and clock_delay_msec.
- *
- * Note: Make sure this channel is not used elsewhere (asynchronously).
- */
-#define BOARD_DELAY_PIT_CHANNEL 1
-
-#define PIT_ISR_GLUE2(CHANNEL) (isr_pit ## CHANNEL)
-#define PIT_ISR_GLUE(CHANNEL) PIT_ISR_GLUE2(CHANNEL)
-/**
- * PIT channel interrupt used by clock_delay_usec and clock_delay_msec.
- */
-#define BOARD_DELAY_PIT_ISR PIT_ISR_GLUE(BOARD_DELAY_PIT_CHANNEL)
-
-#define PIT_IRQn_GLUE2(CHANNEL) (PIT ## CHANNEL ## _IRQn)
-#define PIT_IRQn_GLUE(CHANNEL) PIT_IRQn_GLUE2(CHANNEL)
-
-#define BOARD_DELAY_PIT_IRQn PIT_IRQn_GLUE(BOARD_DELAY_PIT_CHANNEL)
-
 /*
  * The onboard LIS3DH is connected to SPI0.
  * SPI0_PCS0 is the active low CS signal.

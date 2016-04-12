@@ -40,6 +40,7 @@ PERIPH_SOURCEFILES += \
   dma.c \
   gpio.c \
   i2c.c \
+  timer.c \
   #
 
 ### Compiler definitions

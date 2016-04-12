@@ -39,5 +39,8 @@
 #ifndef K60_DEBUG_H_
 #define K60_DEBUG_H_
 
+#ifndef DEBUG
+#define DEBUG(...)
+#endif
 
 #endif /* K60_MUTEX_H_ */

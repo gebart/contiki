@@ -32,24 +32,29 @@
 
 #include "cpu.h"
 
-static inline unsigned int disableIRQ(void)
+#ifndef K60_IRQ_H
+#define K60_IRQ_H
+
+static inline unsigned int irq_disable(void)
 {
     uint32_t mask = __get_PRIMASK();
     __disable_irq();
     return mask;
 }
 
-static inline void enableIRQ(void)
+static inline void irq_enable(void)
 {
     __enable_irq();
 }
 
-static inline void restoreIRQ(unsigned int state)
+static inline void irq_restore(unsigned int state)
 {
     __set_PRIMASK(state);
 }
 
-static inline unsigned int inISR(void)
+static inline unsigned int irq_is_in(void)
 {
     return (__get_IPSR() & 0xFF);
 }
+
+#endif
