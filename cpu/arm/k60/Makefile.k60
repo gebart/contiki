@@ -188,7 +188,7 @@ $(OBJECTDIR)/periph:
 CUSTOM_RULE_LINK = 1
 %.$(TARGET): %.co $(PROJECT_OBJECTFILES) $(PROJECT_LIBRARIES) periph-$(TARGET).a contiki-$(TARGET).a $(CPU_STARTOBJ)
 	$(TRACE_LD)
-	$(Q)$(LD) $(LDFLAGS) $(TARGET_STARTFILES) $(LD_START_GROUP) ${filter-out %.a,$^} ${filter %.a,$^} $(TARGET_LIBFILES) $(LD_END_GROUP) -o $@
+	$(Q)$(LD) $(TARGET_STARTFILES) $(LD_START_GROUP) ${filter-out %.a,$^} ${filter %.a,$^} $(TARGET_LIBFILES) $(LD_END_GROUP) $(LDFLAGS) -o $@
 	-@$(SIZE) -B -d $@ 2>/dev/null
 
 #.SECONDARY:
