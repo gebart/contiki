@@ -72,21 +72,14 @@ extern "C"
             .count_ch = 3,           \
         },                           \
     }
-#define LPTMR_NUMOF             (1U)
-#define LPTMR_CONFIG { \
-        { \
-            .dev = LPTMR0, \
-            .clk_gate = (uint32_t volatile *)BITBAND_REGADDR(SIM->SCGC5, SIM_SCGC5_LPTIMER_SHIFT), \
-            .index = 0, \
-        } \
-    }
+#define LPTMR_NUMOF             (0U)
+#define LPTMR_CONFIG {}
 #define TIMER_NUMOF             ((PIT_NUMOF) + (LPTMR_NUMOF))
 
 #define PIT_BASECLOCK           (CLOCK_BUSCLOCK)
 #define PIT_CLOCKGATE           (BITBAND_REG32(SIM->SCGC6, SIM_SCGC6_PIT_SHIFT))
 #define PIT_ISR_0               isr_pit1
 #define PIT_ISR_1               isr_pit3
-#define LPTMR_ISR_0             isr_lptmr0
 
 /** @} */
 

@@ -5,9 +5,10 @@
  *         Joakim Gebart <joakim.gebart@eistec.se>
  */
 
-#include "periph/timer.h"
 /* Conflicting names timer_set in Contiki and RIOT */
-#define timer_set contiki_timer_set
+#define timer_set periph_timer_set
+#include "periph/timer.h"
+#undef timer_set
 #include "contiki.h"
 #include "contiki-conf.h"
 #include "sys/clock.h"
@@ -15,7 +16,6 @@
 
 #include "sys/etimer.h"
 #include "sys/rtimer.h"
-#undef timer_set
 
 #include "K60.h"
 #include "power-modes.h"
@@ -130,7 +130,7 @@ clock_delay_usec(uint16_t delay_us) {
   /* Set flag, will be cleared by ISR when timer fires. */
   waiting_flag = 1;
 
-  timer_set(TIMER_PIT_DEV(0), 0, delay_us);
+  periph_timer_set(TIMER_PIT_DEV(0), 0, delay_us);
 
   while(waiting_flag) {
     /* Don't go to deeper sleep modes as that will stop the PIT module clock. */

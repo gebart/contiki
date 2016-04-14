@@ -160,10 +160,11 @@ int adc_init(adc_t line)
     uint32_t adiv;
     int i = 4;
     if (CLOCK_BUSCLOCK > (ADC_MAX_CLK * 8)) {
+        /* Maximum clock division */
         adiv = ADC_CFG1_ADIV(3) | ADC_CFG1_ADICLK(1);
     }
     else {
-        while ((i > 0) && (CLOCK_BUSCLOCK < (ADC_MAX_CLK * i))) {
+        while ((i > 0) && (CLOCK_BUSCLOCK < (ADC_MAX_CLK << i))) {
             i--;
         }
         adiv = ADC_CFG1_ADIV(i - 1);

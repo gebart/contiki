@@ -30,6 +30,7 @@
 #include "sched.h"
 #include "thread.h"
 #include "periph_conf.h"
+#define timer_set periph_timer_set
 #include "periph/timer.h"
 
 #define ENABLE_DEBUG (0)
