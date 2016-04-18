@@ -34,7 +34,7 @@ CONTIKI_TARGET_SOURCEFILES += \
 
 CONTIKI_SOURCEFILES += $(CONTIKI_TARGET_SOURCEFILES)
 
-PERIPH_SOURCEFILES += \
+RIOT_SOURCEFILES += \
   adc.c \
   dac.c \
   dma.c \
@@ -43,6 +43,7 @@ PERIPH_SOURCEFILES += \
   pdb.c \
   pwm.c \
   timer.c \
+  servo.c \
   #
 
 ### Compiler definitions
@@ -129,6 +130,7 @@ LINKERSCRIPT = $(CPU_PART).ld
 #LDFLAGS  += $(CFLAGS) -nostartfiles -Wl,-L$(LINKERSCRIPTPATH) -T $(LINKERSCRIPT) -Wl,-Map=$@.map -Wl,--gc-sections
 CFLAGS += -I. -I$(CONTIKI)/core \
           -I$(CONTIKI_CPU)/include \
+          -I$(CONTIKI_CPU)/include/RIOT \
           -I$(CONTIKI_CPU_ARM_COMMON)/CMSIS \
           -I$(CONTIKI)/platform/$(TARGET)/include \
           ${addprefix -I,$(APPDIRS)} \
@@ -162,7 +164,7 @@ CPU_STARTOBJ=${addprefix $(OBJECTDIR)/,$(CPU_STARTC:.c=.o)}
 
 PROJECT_OBJECTFILES += ${addprefix $(OBJECTDIR)/,$(CONTIKI_TARGET_MAIN:.c=.o)}
 
-PERIPH_OBJECTFILES += $(addprefix $(OBJECTDIR)/,$(addprefix periph/, $(PERIPH_SOURCEFILES:.c=.o)))
+RIOT_OBJECTFILES += $(addprefix $(OBJECTDIR)/,$(addprefix RIOT/, $(RIOT_SOURCEFILES:.c=.o)))
 
 ### Compilation rules
 all:
@@ -172,25 +174,25 @@ all:
 	$(Q)$(CC) $(CFLAGS) -c $< -o $@
 	$(STRIP) --strip-unneeded -g -x $@
 
-# Build the periph drivers as a separate library for easier relinking
-periph-$(TARGET).a: $(PERIPH_OBJECTFILES)
+# Build the RIOT periph drivers as a separate library for easier relinking
+RIOT-$(TARGET).a: $(RIOT_OBJECTFILES)
 	$(TRACE_AR)
 	$(Q)$(AR) $(AROPTS) $@ $^
 
-CLEAN += periph-$(TARGET).a
+CLEAN += RIOT-$(TARGET).a
 
-$(PERIPH_OBJECTFILES): | $(OBJECTDIR)/periph
+$(RIOT_OBJECTFILES): | $(OBJECTDIR)/RIOT
 
 ifneq ($(MAKECMDGOALS),clean)
--include $(addprefix $(OBJECTDIR)/,$(PERIPH_SOURCEFILES:.c=.d))
+-include $(addprefix $(OBJECTDIR)/,$(RIOT_SOURCEFILES:.c=.d))
 endif
 
-$(OBJECTDIR)/periph:
+$(OBJECTDIR)/RIOT:
 	mkdir -p $@
 
 # Link the final binary and display the size
 CUSTOM_RULE_LINK = 1
-%.$(TARGET): %.co $(PROJECT_OBJECTFILES) $(PROJECT_LIBRARIES) periph-$(TARGET).a contiki-$(TARGET).a $(CPU_STARTOBJ)
+%.$(TARGET): %.co $(PROJECT_OBJECTFILES) $(PROJECT_LIBRARIES) RIOT-$(TARGET).a contiki-$(TARGET).a $(CPU_STARTOBJ)
 	$(TRACE_LD)
 	$(Q)$(LD) $(TARGET_STARTFILES) $(LD_START_GROUP) ${filter-out %.a,$^} ${filter %.a,$^} $(TARGET_LIBFILES) $(LD_END_GROUP) $(LDFLAGS) -o $@
 	-@$(SIZE) -B -d $@ 2>/dev/null
