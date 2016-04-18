@@ -41,6 +41,7 @@ PERIPH_SOURCEFILES += \
   gpio.c \
   i2c.c \
   pdb.c \
+  pwm.c \
   timer.c \
   #
 
