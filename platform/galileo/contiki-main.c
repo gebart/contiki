@@ -37,6 +37,7 @@
 #include "galileo-pinmux.h"
 #include "gpio.h"
 #include "i2c.h"
+#include "imr-conf.h"
 #include "interrupt.h"
 #include "shared-isr.h"
 #include "uart.h"
@@ -52,6 +53,9 @@ int
 main(void)
 {
   cpu_init();
+#ifdef X86_CONF_RESTRICT_DMA
+  quarkX1000_imr_conf();
+#endif
   /* Initialize UART connected to Galileo Gen2 FTDI header */
   quarkX1000_uart_init(QUARK_X1000_UART_1);
   clock_init();
