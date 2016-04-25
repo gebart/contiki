@@ -112,7 +112,6 @@ void
 init_net(void)
 {
 #ifndef WITH_SLIP
-  uint8_t i;
   id.u32[0] = djb2_hash((const uint8_t *)&(SIM->UIDH), 8); /* Use SIM_UIDH, SIM_UIDMH for first half */
   id.u32[1] = djb2_hash((const uint8_t *)&(SIM->UIDML), 8); /* Use SIM_UIDML, SIM_UIDL for second half */
   id.u8[0] |= 0x02; /* Set the Local/Universal bit to Local */
@@ -126,7 +125,7 @@ init_net(void)
 #if NETSTACK_CONF_WITH_IPV6
   set_rime_addr();
   NETSTACK_RADIO.init();
-  {
+  do {
     uint8_t longaddr[8];
     uint16_t shortaddr;
 
@@ -135,7 +134,13 @@ init_net(void)
     memset(longaddr, 0, sizeof(longaddr));
     linkaddr_copy((linkaddr_t *)&longaddr, &linkaddr_node_addr);
     rf230_set_pan_addr(IEEE802154_CONF_PANID, shortaddr, longaddr);
-  }
+    PRINTF("PAN ID: 0x%04X\n", IEEE802154_CONF_PANID);
+    PRINTF("longaddr: ");
+    for(int i = 0; i < 7; ++i) {
+      PRINTF("%02x-", longaddr[i]);
+    }
+    PRINTF("%02x\n", longaddr[7]);
+  } while(0);
   rf230_set_channel(RF_CHANNEL);
 
   memcpy(&uip_lladdr.addr, id.u8, sizeof(uip_lladdr.addr));
@@ -154,8 +159,23 @@ init_net(void)
 
   process_start(&tcpip_process, NULL);
 
+  PRINTF("Radio PHY mode: 0x%02x", RF230_CONF_PHY_MODE);
+  switch (RF230_CONF_PHY_MODE) {
+    case RF230_PHY_MODE_OQPSK_SIN_RC_100:
+    case RF230_PHY_MODE_OQPSK_SIN_250:
+      PRINTF(" (page 2)\n");
+      break;
+    case RF230_PHY_MODE_BPSK_20:
+    case RF230_PHY_MODE_BPSK_40:
+      PRINTF(" (page 0)\n");
+      break;
+    default:
+      PRINTF("\n");
+      break;
+  }
+
   PRINTF("Tentative link-local IPv6 address ");
-  {
+  do {
     uip_ds6_addr_t *lladdr;
     int i;
     lladdr = uip_ds6_get_link_local(-1);
@@ -164,7 +184,7 @@ init_net(void)
              lladdr->ipaddr.u8[i * 2 + 1]);
     }
     PRINTF("%04x\n", lladdr->ipaddr.u8[14] * 256 + lladdr->ipaddr.u8[15]);
-  }
+  } while(0);
 
   if(!UIP_CONF_IPV6_RPL) {
     uip_ipaddr_t ipaddr;
