@@ -419,11 +419,85 @@ void rf230_interrupt(void);
 extern hal_rx_frame_t rxframe[RF230_CONF_RX_BUFFERS];
 extern uint8_t rxframe_head, rxframe_tail;
 
+/* rf230interruptflag can be printed in the main idle loop for debugging */
+#define DEBUG 0
+#if DEBUG
+volatile char rf230interruptflag;
+#define INTERRUPTDEBUG(arg) rf230interruptflag = arg
+#else
+#define INTERRUPTDEBUG(arg)
+#endif
+
 /* Separate RF230 has a single radio interrupt and the source must be read from the IRQ_STATUS register */
 static void hal_rf230_isr(void* arg)
 {
   (void) arg; /* unused */
-  rf230_interrupt();
+  volatile uint8_t state;
+  uint8_t interrupt_source;
+
+  INTERRUPTDEBUG(1);
+
+  /* Read Interrupt source. */
+  interrupt_source = hal_register_read(RG_IRQ_STATUS);   /* K60: OK, tested */
+
+  /* Handle the incoming interrupt. Prioritized. */
+  if((interrupt_source & HAL_RX_START_MASK)) {
+    INTERRUPTDEBUG(10);
+    /* Save RSSI for this packet if not in extended mode, scaling to 1dB resolution */
+#if !RF230_CONF_AUTOACK
+    rf230_last_rssi = 3 * hal_subregister_read(SR_RSSI);
+#endif
+  }
+  if(interrupt_source & HAL_TRX_END_MASK) {
+    INTERRUPTDEBUG(11);
+
+    state = hal_subregister_read(SR_TRX_STATUS);
+    if((state == BUSY_RX_AACK) || (state == RX_ON) || (state == BUSY_RX) || (state == RX_AACK_ON)) {
+      /* Received packet interrupt */
+      /* Buffer the frame and call rf230_interrupt to schedule poll for rf230 receive process */
+      if(rxframe[rxframe_tail].length) {
+        INTERRUPTDEBUG(42);
+      } else { INTERRUPTDEBUG(12);
+      }
+
+#ifdef RF230_MIN_RX_POWER
+      /* Discard packets weaker than the minimum if defined. This is for testing miniature meshes.*/
+      /* Save the rssi for printing in the main loop */
+#if RF230_CONF_AUTOACK
+      rf230_last_rssi = hal_register_read(RG_PHY_ED_LEVEL);
+#endif
+      if(rf230_last_rssi >= RF230_MIN_RX_POWER) {
+#endif
+      hal_frame_read(&rxframe[rxframe_tail]);
+      rxframe[rxframe_tail].rssi = rf230_last_rssi;
+      rxframe_tail++;
+      if(rxframe_tail >= RF230_CONF_RX_BUFFERS) {
+        rxframe_tail = 0;
+      }
+      rf230_interrupt();
+#ifdef RF230_MIN_RX_POWER
+    }
+#endif
+    }
+  }
+  if(interrupt_source & HAL_TRX_UR_MASK) {
+    INTERRUPTDEBUG(13);
+  }
+  if(interrupt_source & HAL_PLL_UNLOCK_MASK) {
+    INTERRUPTDEBUG(14);
+  }
+  if(interrupt_source & HAL_PLL_LOCK_MASK) {
+    INTERRUPTDEBUG(15);
+  }
+  if(interrupt_source & HAL_BAT_LOW_MASK) {
+    /*  Disable BAT_LOW interrupt to prevent endless interrupts. The interrupt */
+    /*  will continously be asserted while the supply voltage is less than the */
+    /*  user-defined voltage threshold. */
+    uint8_t trx_isr_mask = hal_register_read(RG_IRQ_MASK);
+    trx_isr_mask &= ~HAL_BAT_LOW_MASK;
+    hal_register_write(RG_IRQ_MASK, trx_isr_mask);
+    INTERRUPTDEBUG(16);
+  }
 }
 
 #endif /* defined(DOXYGEN) */
