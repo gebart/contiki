@@ -349,15 +349,20 @@ typedef uint32_t rtimer_clock_t;
 #define RPL_CONF_OF rpl_of0
 #define RPL_CONF_INSERT_HBH_OPTION 0
 
-/* LWM2M default settings */
+#ifndef BOARD_STRING
+#define BOARD_STRING "Mulle"
+#endif
 
-#define _stringify2(x) #x
-#define _stringify_macro(x) _stringify2(x)
+/* LWM2M default settings */
 #ifndef LWM2M_DEVICE_MODEL_NUMBER
-#define LWM2M_DEVICE_MODEL_NUMBER "Mulle"
+#define LWM2M_DEVICE_MODEL_NUMBER BOARD_STRING
+#endif
+#ifndef LWM2M_DEVICE_MANUFACTURER
 #define LWM2M_DEVICE_MANUFACTURER "Eistec AB"
 #endif
 #ifndef LWM2M_DEVICE_SERIAL_NO
+#define _stringify2(x) #x
+#define _stringify_macro(x) _stringify2(x)
 #define LWM2M_DEVICE_SERIAL_NO    _stringify_macro(MULLE_SERIAL)
 #endif
 

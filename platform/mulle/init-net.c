@@ -47,6 +47,8 @@
 #include "rf230bb.h"
 #include "net/netstack.h"
 #include "net/mac/frame802154.h"
+#include "lwm2m-engine.h"
+#include "ipso-objects.h"
 
 #define DEBUG 1
 #if DEBUG
@@ -200,6 +202,32 @@ init_net(void)
     PRINTF("%04x\n",
            ipaddr.u8[7 * 2] * 256 + ipaddr.u8[7 * 2 + 1]);
   }
+
+#if WITH_IPSO
+  PRINTF("Running with IPSO object support\n");
+  /* Initialize the OMA LWM2M engine */
+  lwm2m_engine_init();
+
+  /* Register default LWM2M objects */
+  lwm2m_engine_register_default_objects();
+
+  /* Register default IPSO objects */
+  ipso_objects_init();
+
+  /* Defer registration until user application approves */
+  lwm2m_engine_use_bootstrap_server(0);
+  lwm2m_engine_use_registration_server(0);
+
+#ifdef LWM2M_SERVER_ADDRESS
+  do {
+    uip_ipaddr_t addr;
+    if(uiplib_ipaddrconv(LWM2M_SERVER_ADDRESS, &addr)) {
+      lwm2m_engine_register_with_bootstrap_server(&addr, 0);
+      lwm2m_engine_register_with_server(&addr, 0);
+    }
+  } while(0);
+#endif /* LWM2M_SERVER_ADDRESS */
+#endif /* WITH_IPSO */
 
 #else /* If no radio stack should be used only turn on radio and set it to sleep for minimal power consumption */
   rf230_init();
