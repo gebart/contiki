@@ -61,19 +61,12 @@
 #include "net/ipv6/uip-ds6.h"
 #endif /* NETSTACK_CONF_WITH_IPV6 */
 
-#ifndef NODE_ID
-#define NODE_ID 1
-#warning Node id = 1
-#else
-#warning Using user defined node id
-#endif
-
 static union {
   uint64_t u64;
   uint32_t u32[sizeof(uint64_t) / sizeof(uint32_t)];
   uint16_t u16[sizeof(uint64_t) / sizeof(uint16_t)];
   uint8_t u8[sizeof(uint64_t) / sizeof(uint8_t)];
-} id = { .u8 = {0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, NODE_ID } };
+} id;
 
 /** @brief Simple hash function used for generating link-local IPv6 and EUI64
  *         (64 bit) from CPUID (128 bit)
@@ -113,17 +106,16 @@ set_rime_addr(void)
 void
 init_net(void)
 {
-#ifndef WITH_SLIP
-  id.u32[0] = djb2_hash((const uint8_t *)&(SIM->UIDH), 8); /* Use SIM_UIDH, SIM_UIDMH for first half */
-  id.u32[1] = djb2_hash((const uint8_t *)&(SIM->UIDML), 8); /* Use SIM_UIDML, SIM_UIDL for second half */
-  id.u8[0] |= 0x02; /* Set the Local/Universal bit to Local */
-#else
-  /* Use fixed address for border router. */
+#if WITH_SLIP
+  /* Use fixed address for the border router. */
   id.u32[0] = 0x00000000;
   id.u32[1] = 0x00000000;
-  id.u8[0] = 0x02;
   id.u8[7] = 0x01;
+#else
+  id.u32[0] = djb2_hash((const uint8_t *)&(SIM->UIDH), 8); /* Use SIM_UIDH, SIM_UIDMH for first half */
+  id.u32[1] = djb2_hash((const uint8_t *)&(SIM->UIDML), 8); /* Use SIM_UIDML, SIM_UIDL for second half */
 #endif
+  id.u8[0] |= 0x02; /* Set the Local/Universal bit to Local */
 #if NETSTACK_CONF_WITH_IPV6
   set_rime_addr();
   NETSTACK_RADIO.init();
