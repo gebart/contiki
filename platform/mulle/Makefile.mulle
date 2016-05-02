@@ -85,17 +85,6 @@ CONTIKI_TARGET_SOURCEFILES += contiki-main.c \
   battery-sensor.c \
   button-sensor.c
 
-ifdef MULLEAPPS
-  APPDS += ${wildcard ${addprefix $(CONTIKI)/../apps/, $(MULLEAPPS)} \
-       ${addprefix $(CONTIKI)/platform/$(TARGET)/../apps/, $(MULLEAPPS)} \
-       $(MULLEAPPS)}
-  APPINCLUDES += ${foreach APP, $(MULLEAPPS), ${wildcard ${foreach DIR, $(APPDS), $(DIR)/Makefile.$(APP)}}}
-  -include $(APPINCLUDES)
-  APP_SOURCES = ${foreach APP, $(MULLEAPPS), $($(APP)_src)}
-  DSC_SOURCES = ${foreach APP, $(MULLEAPPS), $($(APP)_dsc)}
-  CONTIKI_SOURCEFILES += $(APP_SOURCES) $(DSC_SOURCES)
-endif
-
 include $(PLATFORM_DIR)/radio/rf230bb/Makefile.rf230bb
 CFLAGS += -DRF230BB
 
@@ -243,7 +232,6 @@ debug-server:
 
 reset:
 	$(RESET) $(RESET_FLAGS)
-
 
 MODULES += \
   core/net \
