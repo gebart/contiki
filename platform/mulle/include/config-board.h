@@ -85,7 +85,11 @@ extern "C" {
 #define MULLE_ADC_LINE_VCHR ADC_LINE(7)
 /** @brief ADC line connected to 1 V band gap */
 #define MULLE_ADC_LINE_BANDGAP ADC_LINE(1)
-/** @brief Band gap voltage */
+/**
+ * @brief Internal 1 volt band gap reference measurement
+ *
+ * This will affect the scale of voltage_from_raw_adc().
+ */
 #define MULLE_BAND_GAP_MILLIVOLTS 1000
 
 /**
