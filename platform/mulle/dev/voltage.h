@@ -46,11 +46,40 @@
 extern "C" {
 #endif
 
+extern uint32_t voltage_vref_raw;
+extern uint32_t voltage_vref_millivolts;
+
+
 void voltage_init(void);
+/**
+ * @brief Scale a raw ADC reading from 0..65535 to millivolts depending on the board's
+ * VREFH, VREFL reference voltages.
+ */
 uint32_t voltage_from_raw_adc(uint32_t adc_raw);
 uint32_t voltage_read_vbat(void);
 uint32_t voltage_read_vchr(void);
 uint32_t voltage_read_avdd(void);
+
+/**
+ * @brief Convert a raw ADC reading to voltage in Qn fixed point format
+ *
+ * @param[in] adc_raw   raw ADC reading, left adjusted (Q0.16)
+ * @param[in] frac_bits number of fractional bits in the result, n in Qx.n
+ *
+ * @return Voltage as a Qx.n fixed point number
+ */
+static inline uint32_t voltage_adc_as_fixpoint(uint16_t adc_raw, uint8_t frac_bits)
+{
+    /* Q/dq = A/da * dr/R, da=dr => Q = A/R * dq */
+    uint32_t res = adc_raw;
+    /* Scale to Qx.n (pre-multiply dq) */
+    res <<= frac_bits;
+    /* add rounding factor */
+    res += voltage_vref_raw / 2;
+    /* divide by reference measurement */
+    res /= voltage_vref_raw;
+    return res;
+}
 
 #ifdef __cplusplus
 } /* extern "C" */
