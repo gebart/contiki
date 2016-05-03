@@ -129,6 +129,7 @@ init_net(void)
     linkaddr_copy((linkaddr_t *)&longaddr, &linkaddr_node_addr);
     rf230_set_pan_addr(IEEE802154_CONF_PANID, shortaddr, longaddr);
     PRINTF("PAN ID: 0x%04X\n", IEEE802154_CONF_PANID);
+    PRINTF("RF channel: %u\n", RF_CHANNEL);
     PRINTF("longaddr: ");
     for(int i = 0; i < 7; ++i) {
       PRINTF("%02x-", longaddr[i]);
