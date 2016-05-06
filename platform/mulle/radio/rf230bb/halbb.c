@@ -75,6 +75,8 @@ extern uint8_t debugflowsize, debugflow[DEBUGFLOWSIZE];
 
 #include "stdio.h"
 
+#include "rtimer.h"
+
 /*============================ MACROS ========================================*/
 
 /*
@@ -106,7 +108,12 @@ extern uint8_t debugflowsize, debugflow[DEBUGFLOWSIZE];
  *
  *  \see hal_get_system_time
  */
-volatile extern signed char rf230_last_rssi;
+volatile static signed char rf230_last_rssi;
+
+/**
+ * SFD timestamp.
+ */
+volatile extern rtimer_clock_t rf230_sfd_start_time;
 
 /*============================ CALLBACKS =====================================*/
 
@@ -434,6 +441,7 @@ static void hal_rf230_isr(void* arg)
   (void) arg; /* unused */
   volatile uint8_t state;
   uint8_t interrupt_source;
+  rtimer_clock_t time = RTIMER_NOW();
 
   INTERRUPTDEBUG(1);
 
@@ -443,6 +451,7 @@ static void hal_rf230_isr(void* arg)
   /* Handle the incoming interrupt. Prioritized. */
   if((interrupt_source & HAL_RX_START_MASK)) {
     INTERRUPTDEBUG(10);
+    rf230_sfd_start_time = time;
     /* Save RSSI for this packet if not in extended mode, scaling to 1dB resolution */
 #if !RF230_CONF_AUTOACK
     rf230_last_rssi = 3 * hal_subregister_read(SR_RSSI);

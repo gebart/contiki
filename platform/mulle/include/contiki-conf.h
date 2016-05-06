@@ -45,6 +45,10 @@
 #include <stdint.h>
 #include "at86rf230_registermap.h"
 
+#ifdef PROJECT_CONF_H
+#include PROJECT_CONF_H
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -121,6 +125,26 @@ typedef uint32_t rtimer_clock_t;
 #ifndef NETSTACK_CONF_MAC
 #define NETSTACK_CONF_MAC           csma_driver
 #endif /* NETSTACK_CONF_MAC */
+
+
+#ifndef TSCH_CONF_DEFAULT_TIMESLOT_LENGTH
+#define TSCH_CONF_DEFAULT_TIMESLOT_LENGTH 65000
+#endif
+// TODO(henrik) Do we really start at sleep??
+
+/* Delay between GO signal and SFD */
+// time to tx from sleep + 4 bytes preamble => (380+200+40)+(2*40*4)=940 uS
+#define RADIO_DELAY_BEFORE_TX ((unsigned)US_TO_RTIMERTICKS(940))
+
+/* Delay between GO signal and start listening */
+// time to rx from sleep + 4 bytes preamble => (380+200) + 2*40*4 = 520
+#define RADIO_DELAY_BEFORE_RX ((unsigned)US_TO_RTIMERTICKS(520))
+
+/* Delay between the SFD finishes arriving and it is detected in software */
+#define RADIO_DELAY_BEFORE_DETECT 0
+
+#define TSCH_CONF_DEFAULT_HOPPING_SEQUENCE (uint8_t[]){ 1, 3, 2, 4 }
+
 
 /**
  * BPSQ: 1 Symbol = 1 Bit => 8 Symbols = 1 Byte
