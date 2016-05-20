@@ -51,11 +51,7 @@
 #include "ipso-objects.h"
 
 #define DEBUG 1
-#if DEBUG
-#define PRINTF(...) printf(__VA_ARGS__)
-#else
-#define PRINTF(...)
-#endif
+#include "net/ip/uip-debug.h"
 
 #if NETSTACK_CONF_WITH_IPV6
 #include "net/ipv6/uip-ds6.h"
@@ -172,28 +168,19 @@ init_net(void)
   PRINTF("Tentative link-local IPv6 address ");
   do {
     uip_ds6_addr_t *lladdr;
-    int i;
     lladdr = uip_ds6_get_link_local(-1);
-    for(i = 0; i < 7; ++i) {
-      PRINTF("%04x:", lladdr->ipaddr.u8[i * 2] * 256 +
-             lladdr->ipaddr.u8[i * 2 + 1]);
-    }
-    PRINTF("%04x\n", lladdr->ipaddr.u8[14] * 256 + lladdr->ipaddr.u8[15]);
+    PRINT6ADDR(&lladdr->ipaddr);
   } while(0);
+  PRINTF("\n");
 
   if(!UIP_CONF_IPV6_RPL) {
     uip_ipaddr_t ipaddr;
-    int i;
     uip_ip6addr(&ipaddr, 0xfdfd, 0, 0, 0, 0, 0, 0, 0);
     uip_ds6_set_addr_iid(&ipaddr, &uip_lladdr);
     uip_ds6_addr_add(&ipaddr, 0, ADDR_TENTATIVE);
     PRINTF("Tentative global IPv6 address ");
-    for(i = 0; i < 7; ++i) {
-      PRINTF("%04x:",
-             ipaddr.u8[i * 2] * 256 + ipaddr.u8[i * 2 + 1]);
-    }
-    PRINTF("%04x\n",
-           ipaddr.u8[7 * 2] * 256 + ipaddr.u8[7 * 2 + 1]);
+    PRINT6ADDR(&ipaddr);
+    PRINTF("\n");
   }
 
 #if WITH_IPSO
