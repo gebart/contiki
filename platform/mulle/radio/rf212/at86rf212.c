@@ -1,9 +1,23 @@
 #include "at86rf212.h"
+#include "at86rf212_hal.h"
 #include "at86rf212_registermap.h"
+
+#include "radio.h"
+#include "rtimer.h"
 
 #include <stddef.h>
 #include <stdbool.h>
 
+/* Interrupt sources */
+enum
+{
+  HAL_BAT_LOW_MASK =      (0x80),   /**< Mask for the BAT_LOW interrupt. */
+  HAL_TRX_UR_MASK =       (0x40),   /**< Mask for the TRX_UR interrupt. */
+  HAL_TRX_END_MASK =      (0x08),   /**< Mask for the TRX_END interrupt. */
+  HAL_RX_START_MASK =     (0x04),   /**< Mask for the RX_START interrupt. */
+  HAL_PLL_UNLOCK_MASK =   (0x02),   /**< Mask for the PLL_UNLOCK interrupt. */
+  HAL_PLL_LOCK_MASK =     (0x01),   /**< Mask for the PLL_LOCK interrupt. */
+};
 
 
 /* RF212 hardware delay times, from datasheet */
@@ -39,9 +53,26 @@ hal_rx_frame_t rxframe[RF212_RX_BUFFERS];
 static bool receive_on = false;
 static bool auto_ack = false;
 static bool send_on_cca = false;
+static bool poll_mode = false;
+rtimer_clock_t rf212_sfd_start_time;
+
+
+static void on();
+static void off();
+static bool is_receive_on();
+static bool is_sleeping();
+static void wakeup();
+static bool is_idle(void);
+static void wait_idle(void);
+static void flushrx(void);
+static uint8_t get_trx_state(void);
+static void reset_state_machine(void);
+static radio_status_t radio_set_trx_state(uint8_t new_state);
+static void set_frame_filtering(uint8_t enable);
+static void set_poll_mode(uint8_t enable);
+static void set_send_on_cca(bool enable);
 
 PROCESS(rf212_process, "RF212 driver");
-
 /*---------------------------------------------------------------------------*/
 PROCESS_THREAD(rf212_process, ev, data)
 {
@@ -357,24 +388,114 @@ at86rf212_read(void *buf, unsigned short bufsize)
 static void
 at86rf212_poll()
 {
-   process_poll(&rf212_process);
+  process_poll(&rf212_process);
+}
+/*---------------------------------------------------------------------------*/
+/* Set or unset frame autoack */
+static void
+set_auto_ack(uint8_t enable)
+{
+  HAL_ENTER_CRITICAL_REGION();
+  hal_subregister_write(RG_CSMA_SEED_1, 0x10, 4, enable);
+  HAL_LEAVE_CRITICAL_REGION();
 }
 /*---------------------------------------------------------------------------*/
 static radio_result_t
 at86rf212_get_value(radio_param_t param, radio_value_t *value)
 {
-  return RADIO_RESULT_NOT_SUPPORTED;
+  int i, v;
+
+  if(value == NULL) {
+    return RADIO_RESULT_INVALID_VALUE;
+  }
+
+  switch(param) {
+    case RADIO_PARAM_RSSI:
+      *value = rf230_get_raw_rssi();
+      return RADIO_RESULT_OK;
+
+    case RADIO_PARAM_LAST_RSSI:
+      *value = rf230_last_rssi;
+      return RADIO_RESULT_OK;
+
+    case RADIO_PARAM_RX_MODE:
+      *value = 0;
+      // TODO(henrik): Masks for positions.
+      if(hal_register_read(RG_XAH_CTRL_1) & 0x2) {
+        *value |= RADIO_RX_MODE_ADDRESS_FILTER;
+      }
+      if (hal_register_read(RG_CSMA_SEED_1) & 0x10) {
+        *value |= RADIO_RX_MODE_AUTOACK;
+      }
+      if(poll_mode) {
+        *value |= RADIO_RX_MODE_POLL_MODE;
+      }
+      return RADIO_RESULT_OK;
+
+    case RADIO_CONST_CHANNEL_MIN:
+      *value = 0;
+      return RADIO_RESULT_OK;
+
+    case RADIO_CONST_CHANNEL_MAX:
+      *value = 10;
+      return RADIO_RESULT_OK;
+
+    case RADIO_PARAM_CHANNEL:
+      *value = rf230_get_channel();
+      return RADIO_RESULT_OK;
+
+    case RADIO_PARAM_TX_MODE:
+      *value = 0;
+      if(send_on_cca) {
+        *value |= RADIO_TX_MODE_SEND_ON_CCA;
+      }
+      return RADIO_RESULT_OK;
+
+    default:
+      return RADIO_RESULT_NOT_SUPPORTED;
+  }
 }
 /*---------------------------------------------------------------------------*/
 static radio_result_t
 at86rf212_set_value(radio_param_t param, radio_value_t value)
 {
+  switch(param)
+  {
+    case RADIO_PARAM_RX_MODE:
+      if(value & ~(RADIO_RX_MODE_ADDRESS_FILTER |
+          RADIO_RX_MODE_AUTOACK | RADIO_RX_MODE_POLL_MODE)) {
+        return RADIO_RESULT_INVALID_VALUE;
+      }
+      set_frame_filtering((value & RADIO_RX_MODE_ADDRESS_FILTER) != 0);
+      set_auto_ack((value & RADIO_RX_MODE_AUTOACK) != 0);
+      set_poll_mode((value & RADIO_RX_MODE_POLL_MODE) != 0);
+      return RADIO_RESULT_OK;
+
+    case RADIO_PARAM_CHANNEL:
+      rf230_set_channel(value);
+      return RADIO_RESULT_OK;
+
+    case RADIO_PARAM_TX_MODE:
+      if(value & ~(RADIO_TX_MODE_SEND_ON_CCA)) {
+        return RADIO_RESULT_INVALID_VALUE;
+      }
+      set_send_on_cca((value & RADIO_TX_MODE_SEND_ON_CCA) != 0);
+      return RADIO_RESULT_OK;
+  }
   return RADIO_RESULT_NOT_SUPPORTED;
 }
 /*---------------------------------------------------------------------------*/
 static radio_result_t
 at86rf212_get_object(radio_param_t param, void *dest, size_t size)
 {
+  if(param == RADIO_PARAM_LAST_PACKET_TIMESTAMP)
+  {
+    if(size != sizeof(rtimer_clock_t) || !dest) {
+      return RADIO_RESULT_INVALID_VALUE;
+    }
+    *(rtimer_clock_t*)dest = rf230_sfd_start_time;
+    return RADIO_RESULT_OK;
+  }
   return RADIO_RESULT_NOT_SUPPORTED;
 }
 /*---------------------------------------------------------------------------*/
@@ -502,6 +623,269 @@ flushrx(void)
   if (at86rf212_pending_packet())
   {
     at86rf212_poll();
+  }
+}
+/*----------------------------------------------------------------------------*/
+/** \brief  This function will change the current state of the radio
+ *          transceiver's internal state machine.
+ *
+ *  \param     new_state        Here is a list of possible states:
+ *             - RX_ON        Requested transition to RX_ON state.
+ *             - TRX_OFF      Requested transition to TRX_OFF state.
+ *             - PLL_ON       Requested transition to PLL_ON state.
+ *             - RX_AACK_ON   Requested transition to RX_AACK_ON state.
+ *             - TX_ARET_ON   Requested transition to TX_ARET_ON state.
+ *
+ *  \retval    RADIO_SUCCESS          Requested state transition completed
+ *                                  successfully.
+ *  \retval    RADIO_INVALID_ARGUMENT Supplied function parameter out of bounds.
+ *  \retval    RADIO_WRONG_STATE      Illegal state to do transition from.
+ *  \retval    RADIO_BUSY_STATE       The radio transceiver is busy.
+ *  \retval    RADIO_TIMED_OUT        The state transition could not be completed
+ *                                  within resonable time.
+ */
+static radio_status_t
+radio_set_trx_state(uint8_t new_state)
+{
+  uint8_t original_state;
+
+  /* Check function parameter and current state of the radio transceiver. */
+  switch (new_state)
+  {
+    case TRX_OFF:
+    case RX_ON:
+    case PLL_ON:
+    case RX_AACK_ON:
+    case TX_ARET_ON:
+      /* OK */
+      break;
+    default:
+      /* Invalid new state */
+      return RADIO_INVALID_ARGUMENT;
+  }
+
+  if(is_sleeping())
+  {
+    return RADIO_WRONG_STATE;
+  }
+
+  /* Wait for radio to finish previous operation */
+  wait_idle();
+
+  original_state = get_trx_state();
+
+  if(new_state == original_state)
+  {
+    return RADIO_SUCCESS;
+  }
+
+  /*
+   *  At this point it is clear that the requested new_state is:
+   * TRX_OFF, RX_ON, PLL_ON, RX_AACK_ON or TX_ARET_ON.
+   */
+
+  /*
+   *  The radio transceiver can be in one of the following states:
+   * TRX_OFF, RX_ON, PLL_ON, RX_AACK_ON, TX_ARET_ON.
+   */
+  if(new_state == TRX_OFF)
+  {
+    reset_state_machine();     /* Go to TRX_OFF from any state. */
+  }
+  else
+  {
+    /*
+     * It is not allowed to go from RX_AACK_ON or TX_AACK_ON and directly to
+     * TX_AACK_ON or RX_AACK_ON respectively. Need to go via RX_ON or PLL_ON.
+     */
+    if( (new_state == TX_ARET_ON) && (original_state == RX_AACK_ON) )
+    {
+      /*
+       * First do intermediate state transition to PLL_ON, then to TX_ARET_ON.
+       * The final state transition to TX_ARET_ON is handled after the if-else if.
+       */
+      hal_subregister_write(SR_TRX_CMD, PLL_ON);
+      delay_us(TIME_STATE_TRANSITION_PLL_ACTIVE);
+    }
+    else if( (new_state == RX_AACK_ON) && (original_state == TX_ARET_ON) )
+    {
+      /*
+       * First do intermediate state transition to RX_ON, then to RX_AACK_ON.
+       * The final state transition to RX_AACK_ON is handled after the if-else if.
+       */
+      hal_subregister_write(SR_TRX_CMD, RX_ON);
+      delay_us(TIME_STATE_TRANSITION_PLL_ACTIVE);
+    }
+
+    /* Any other state transition can be done directly. */
+    hal_subregister_write(SR_TRX_CMD, new_state);
+
+    /*
+     * When the PLL is active most states can be reached in 1us. However, from
+     * TRX_OFF the PLL needs time to activate.
+     */
+    if(original_state == TRX_OFF)
+    {
+      hal_disable_trx_interrupt();
+      while(hal_get_irq() == 0) {}
+      hal_register_read(RG_IRQ_STATUS); // Clear interrupts
+      hal_enable_trx_interrupt();
+    }
+    else
+    {
+      delay_us(TIME_STATE_TRANSITION_PLL_ACTIVE);
+    }
+  }
+
+  /* Verify state transition. */
+  radio_status_t set_state_status = RADIO_TIMED_OUT;
+
+  if(get_trx_state() == new_state)
+  {
+    set_state_status = RADIO_SUCCESS;
+  }
+
+  return set_state_status;
+}
+/*----------------------------------------------------------------------------*/
+/** \brief  This function return the Radio Transceivers current state.
+ *
+ *  \retval     P_ON               When the external supply voltage (VDD) is
+ *                                 first supplied to the transceiver IC, the
+ *                                 system is in the P_ON (Poweron) mode.
+ *  \retval     BUSY_RX            The radio transceiver is busy receiving a
+ *                                 frame.
+ *  \retval     BUSY_TX            The radio transceiver is busy transmitting a
+ *                                 frame.
+ *  \retval     RX_ON              The RX_ON mode enables the analog and digital
+ *                                 receiver blocks and the PLL frequency
+ *                                 synthesizer.
+ *  \retval     TRX_OFF            In this mode, the SPI module and crystal
+ *                                 oscillator are active.
+ *  \retval     PLL_ON             Entering the PLL_ON mode from TRX_OFF will
+ *                                 first enable the analog voltage regulator. The
+ *                                 transceiver is ready to transmit a frame.
+ *  \retval     BUSY_RX_AACK       The radio was in RX_AACK_ON mode and received
+ *                                 the Start of Frame Delimiter (SFD). State
+ *                                 transition to BUSY_RX_AACK is done if the SFD
+ *                                 is valid.
+ *  \retval     BUSY_TX_ARET       The radio transceiver is busy handling the
+ *                                 auto retry mechanism.
+ *  \retval     RX_AACK_ON         The auto acknowledge mode of the radio is
+ *                                 enabled and it is waiting for an incomming
+ *                                 frame.
+ *  \retval     TX_ARET_ON         The auto retry mechanism is enabled and the
+ *                                 radio transceiver is waiting for the user to
+ *                                 send the TX_START command.
+ *  \retval     RX_ON_NOCLK        The radio transceiver is listening for
+ *                                 incomming frames, but the CLKM is disabled so
+ *                                 that the controller could be sleeping.
+ *                                 However, this is only true if the controller
+ *                                 is run from the clock output of the radio.
+ *  \retval     RX_AACK_ON_NOCLK   Same as the RX_ON_NOCLK state, but with the
+ *                                 auto acknowledge module turned on.
+ *  \retval     BUSY_RX_AACK_NOCLK Same as BUSY_RX_AACK, but the controller
+ *                                 could be sleeping since the CLKM pin is
+ *                                 disabled.
+ *  \retval     STATE_TRANSITION   The radio transceiver's state machine is in
+ *                                 transition between two states.
+ */
+/* static uint8_t */
+static uint8_t
+get_trx_state(void)
+{
+  return hal_subregister_read(SR_TRX_STATUS);
+}
+/*----------------------------------------------------------------------------*/
+/** \brief  This function will reset the state machine (to TRX_OFF) from any of
+ *          its states.
+ */
+static void
+reset_state_machine(void)
+{
+  wakeup();
+  delay_us(TIME_NOCLK_TO_WAKE);
+  hal_subregister_write(SR_TRX_CMD, CMD_FORCE_TRX_OFF);
+  delay_us(TIME_CMD_FORCE_TRX_OFF);
+}
+/*---------------------------------------------------------------------------*/
+/* Set or unset frame filtering */
+static void
+set_frame_filtering(uint8_t enable)
+{
+  HAL_ENTER_CRITICAL_REGION();
+  hal_subregister_write(RG_XAH_CTRL_1, 0x2, 1, enable);
+  HAL_LEAVE_CRITICAL_REGION();
+}
+/*---------------------------------------------------------------------------*/
+/* Enable or disable packet signaling */
+static void
+set_poll_mode(uint8_t enable)
+{
+  HAL_ENTER_CRITICAL_REGION();
+  poll_mode = enable;
+  HAL_LEAVE_CRITICAL_REGION();
+}
+/*---------------------------------------------------------------------------*/
+/* Enable or disable CCA before sending */
+static void
+set_send_on_cca(uint8_t enable)
+{
+  send_on_cca = enable;
+}
+/*---------------------------------------------------------------------------*/
+void
+at86rf212_interrupt(rtimer_clock_t time)
+{
+  /* Separate RF230 has a single radio interrupt and the source must be read from the IRQ_STATUS register */
+  (void) arg; /* unused */
+  volatile uint8_t state;
+  uint8_t interrupt_source;
+
+  /* Read Interrupt source. */
+  interrupt_source = hal_register_read(RG_IRQ_STATUS);
+
+  /* Handle the incoming interrupt. Prioritized. */
+  if((interrupt_source & HAL_RX_START_MASK))
+  {
+  }
+  if(interrupt_source & HAL_TRX_END_MASK)
+  {
+    state = hal_subregister_read(SR_TRX_STATUS);
+    if((state == BUSY_RX_AACK) || (state == RX_ON) || (state == BUSY_RX) || (state == RX_AACK_ON))
+    {
+      /* Received packet interrupt */
+      /* Buffer the frame and call poll the radio process */
+      if(rxframe[rxframe_tail].length == 0)
+      {
+        hal_frame_read(&rxframe[rxframe_tail]);
+        rxframe_tail++;
+        if(rxframe_tail >= RF212_RX_BUFFERS)
+        {
+          rxframe_tail = 0;
+        }
+        at86rf212_poll();
+      }
+    }
+  }
+  if(interrupt_source & HAL_TRX_UR_MASK)
+  {
+  }
+  if(interrupt_source & HAL_PLL_UNLOCK_MASK)
+  {
+  }
+  if(interrupt_source & HAL_PLL_LOCK_MASK)
+  {
+  }
+  if(interrupt_source & HAL_BAT_LOW_MASK)
+  {
+    /*  Disable BAT_LOW interrupt to prevent endless interrupts. The interrupt */
+    /*  will continously be asserted while the supply voltage is less than the */
+    /*  user-defined voltage threshold. */
+    uint8_t trx_isr_mask = hal_register_read(RG_IRQ_MASK);
+    trx_isr_mask &= ~HAL_BAT_LOW_MASK;
+    hal_register_write(RG_IRQ_MASK, trx_isr_mask);
+    INTERRUPTDEBUG(16);
   }
 }
 /*---------------------------------------------------------------------------*/
