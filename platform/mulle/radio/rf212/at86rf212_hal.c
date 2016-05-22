@@ -1,4 +1,5 @@
 #include "at86rf212_hal.h"
+#include "at86rf212.h"
 
 #include "at86rf212_registermap.h"
 #include "stdio.h"
@@ -29,6 +30,8 @@
 
 #include "K60.h"
 #include "llwu.h"
+
+static void hal_isr(void* arg);
 
 static inline void
 hal_spi_send(uint8_t data, int cont)
@@ -81,7 +84,7 @@ hal_init(void)
   gpio_init(SLPTR_GPIO, GPIO_DIR_OUT, GPIO_NOPULL);
   gpio_init(RST_GPIO, GPIO_DIR_OUT, GPIO_NOPULL);
   gpio_init(PWR_GPIO, GPIO_DIR_OUT, GPIO_NOPULL);
-  gpio_init_int(IRQ_GPIO, GPIO_NOPULL, GPIO_RISING, hal_rf230_isr, NULL);
+  gpio_init_int(IRQ_GPIO, GPIO_NOPULL, GPIO_RISING, hal_isr, NULL);
 
   /* Enable power switch to radio */
   hal_set_pwr_high();
@@ -256,7 +259,7 @@ hal_frame_read(hal_rx_frame_t *rx_frame) /* TODO: Make sure this is working */
  *  \param  length          Length of data. The maximum length is 127 bytes.
  */
 void
-hal_frame_write(uint8_t *write_buffer, uint8_t length) /* TODO: Make sure this is working */
+hal_frame_write(const uint8_t *write_buffer, uint8_t length) /* TODO: Make sure this is working */
 {
   HAL_ENTER_CRITICAL_REGION();
 
@@ -282,7 +285,7 @@ hal_frame_write(uint8_t *write_buffer, uint8_t length) /* TODO: Make sure this i
   HAL_LEAVE_CRITICAL_REGION();
 }
 /*----------------------------------------------------------------------------*/
-static void hal_rf230_isr(void* arg)
+static void hal_isr(void* arg)
 {
   at86rf212_interrupt(RTIMER_NOW());
 }

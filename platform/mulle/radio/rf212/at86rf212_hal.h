@@ -10,6 +10,8 @@
 #include "contiki-conf.h"
 #include "irq.h"
 #include "periph/gpio.h"
+#include "udelay.h"
+#include "at86rf212.h"
 
 /*============================ MACROS ========================================*/
 
@@ -83,20 +85,6 @@
 #define HAL_MAX_FRAME_LENGTH   (0x7F)   /**< A frame should no more than 127 bytes. */
 /** \} */
 
-/*============================ TYPDEFS =======================================*/
-/** \struct hal_rx_frame_t
- *  \brief  This struct defines the rx data container.
- *
- *  \see hal_frame_read
- */
-typedef struct {
-  uint8_t length;                         /**< Length of frame. */
-  uint8_t data[HAL_MAX_FRAME_LENGTH];     /**< Actual frame data. */
-  uint8_t lqi;                            /**< LQI value for received frame. */
-  uint8_t rssi;
-  bool crc;                               /**< Flag - did CRC pass for received frame? */
-} hal_rx_frame_t;
-
 /** RX_START event handler callback type. Is called with timestamp in IEEE 802.15.4 symbols and frame length. See hal_set_rx_start_event_handler(). */
 typedef void (*hal_rx_start_isr_event_handler_t)(uint32_t const isr_timestamp, uint8_t const frame_length);
 
@@ -130,9 +118,11 @@ void hal_subregister_write(uint8_t address, uint8_t mask, uint8_t position, uint
 
 /* For speed RF230BB does not use a callback */
 void hal_frame_read(hal_rx_frame_t *rx_frame);
-void hal_frame_write(uint8_t *write_buffer, uint8_t length);
+void hal_frame_write(const uint8_t *write_buffer, uint8_t length);
 void hal_sram_read(uint8_t address, uint8_t length, uint8_t *data);
 void hal_sram_write(uint8_t address, uint8_t length, uint8_t *data);
+
+#define delay_us(us) udelay(us)
 
 #endif
 

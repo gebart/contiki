@@ -4,9 +4,27 @@
 
 #include "radio.h"
 #include "rtimer.h"
+#include "packetbuf.h"
+#include "netstack.h"
+
+#include <string.h>
+
+/* TODO(henrik)Maybe turn off/on interrupts and disable enable LLWU through that routine on
+ * the hal layer.
+ */
+#include "llwu.h"
 
 #include <stddef.h>
 #include <stdbool.h>
+
+/* Debugging*/
+#define DEBUG 0
+#if DEBUG
+#include <stdio.h>
+#define PRINTF printf
+#else
+#define PRINTF(...)
+#endif
 
 /* Interrupt sources */
 enum
@@ -37,14 +55,6 @@ enum
   TIME_STATE_TRANSITION_PLL_ACTIVE = 1,     /**<  Transition time from PLL active state to another. */
 };
 
-/* RF212 radio packet */
-typedef struct
-{
-  uint8_t length;       // Length of frame.
-  uint8_t data[ 127 ];  // Actual frame data.
-  bool crc;             // Flag - did CRC pass for received frame?
-} hal_rx_frame_t;
-
 /* Received frames are buffered to rxframe in the interrupt routine */
 uint8_t rxframe_head;
 uint8_t rxframe_tail;
@@ -57,20 +67,25 @@ static bool poll_mode = false;
 rtimer_clock_t rf212_sfd_start_time;
 
 
-static void on();
-static void off();
-static bool is_receive_on();
-static bool is_sleeping();
-static void wakeup();
+static int at86rf212_read(void *buf, unsigned short bufsize);
+
+static void on(void);
+static void off(void);
+static bool is_receive_on(void);
+static bool is_sleeping(void);
+static void wakeup(void);
 static bool is_idle(void);
 static void wait_idle(void);
 static void flushrx(void);
 static uint8_t get_trx_state(void);
 static void reset_state_machine(void);
 static radio_status_t radio_set_trx_state(uint8_t new_state);
+static void set_auto_ack(uint8_t enable);
 static void set_frame_filtering(uint8_t enable);
 static void set_poll_mode(uint8_t enable);
 static void set_send_on_cca(bool enable);
+static uint8_t get_channel(void);
+static void set_channel(uint8_t c);
 
 PROCESS(rf212_process, "RF212 driver");
 /*---------------------------------------------------------------------------*/
@@ -82,6 +97,18 @@ PROCESS_THREAD(rf212_process, ev, data)
   while(1)
   {
     PROCESS_YIELD_UNTIL(ev == PROCESS_EVENT_POLL);
+#ifdef WITH_SLIP
+    leds_toggle(LEDS_RED);
+#endif
+
+    packetbuf_clear();
+    len = at86rf212_read(packetbuf_dataptr(), PACKETBUF_SIZE);
+
+    if(len > 0)
+    {
+      packetbuf_set_datalen(len);
+      NETSTACK_RDC.input();
+    }
   }
 
   PROCESS_END();
@@ -90,6 +117,8 @@ PROCESS_THREAD(rf212_process, ev, data)
 static int
 at86rf212_init(void)
 {
+  int i;
+  PRINTF("%s\n",__FUNCTION__);
 
   delay_us(TIME_TO_ENTER_P_ON);
 
@@ -143,9 +172,7 @@ at86rf212_init(void)
   /* Start the packet receive process */
   process_start(&rf212_process, NULL);
 
-  /* Trick off routine to believe radio is completely on by setting on = true */
-  receive_on = true;
-  rf212_off();
+  off();
 
   return 1;
 }
@@ -153,6 +180,7 @@ at86rf212_init(void)
 static int
 at86rf212_receive_on(void)
 {
+  PRINTF("%s\n",__FUNCTION__);
   if(is_receive_on())
   {
     return 1;
@@ -166,6 +194,7 @@ at86rf212_receive_on(void)
 static int
 at86rf212_receive_off(void)
 {
+  PRINTF("%s\n",__FUNCTION__);
   if(!is_receive_on())
   {
     return 0;
@@ -179,13 +208,13 @@ at86rf212_receive_off(void)
 static int
 at86rf212_cca(void)
 {
+  PRINTF("%s\n",__FUNCTION__);
   uint8_t cca = 0;
-  uint8_t radio_was_off = false;
 
   /* Turn radio on if necessary. If radio is currently busy return busy channel */
   if (!is_receive_on())
   {
-    at86rf212_on();
+    at86rf212_receive_on();
   }
   else if(!is_idle())
   {
@@ -212,7 +241,7 @@ at86rf212_cca(void)
   exit:
   if(!is_receive_on())
   {
-    at86rf212_off();
+    at86rf212_receive_off();
   }
   if(cca & 0x40)
   {
@@ -227,10 +256,7 @@ at86rf212_cca(void)
 static int
 at86rf212_prepare(const void *payload, unsigned short payload_len)
 {
-  int ret = 0;
-  uint8_t total_len;
-  uint8_t* pbuf;
-
+  PRINTF("%s\n",__FUNCTION__);
   if (is_sleeping())
   {
     wakeup();
@@ -258,8 +284,7 @@ at86rf212_prepare(const void *payload, unsigned short payload_len)
 static int
 at86rf212_transmit(unsigned short payload_len)
 {
-  int txpower;
-  uint8_t total_len;
+  PRINTF("%s: %d\n",__FUNCTION__, payload_len);
   uint8_t tx_result = RADIO_TX_OK;
 
   /* Wait for any previous operation or state transition to finish */
@@ -302,6 +327,7 @@ at86rf212_transmit(unsigned short payload_len)
 static int
 at86rf212_send(const void *payload, unsigned short payload_len)
 {
+  PRINTF("%s: %d\n",__FUNCTION__, payload_len);
   int ret;
   if ((ret = at86rf212_prepare(payload, payload_len)) != 0)
   {
@@ -312,8 +338,9 @@ at86rf212_send(const void *payload, unsigned short payload_len)
 }
 /*---------------------------------------------------------------------------*/
 static int
-at86rf212_pending_packet()
+at86rf212_pending_packet(void)
 {
+  PRINTF("%s: \n",__FUNCTION__, rxframe[rxframe_tail].length > 0);
   return rxframe[rxframe_tail].length > 0;
 }
 /*---------------------------------------------------------------------------*/
@@ -321,9 +348,10 @@ static int
 at86rf212_receiving_packet(void)
 {
   uint8_t radio_state;
-  if(!sleeping())
+  if(!is_sleeping())
   {
     radio_state = hal_subregister_read(SR_TRX_STATUS);
+    PRINTF("%s: %d\n",__FUNCTION__, (radio_state == BUSY_RX) || (radio_state == BUSY_RX_AACK));
     return (radio_state == BUSY_RX) || (radio_state == BUSY_RX_AACK);
   }
   return 0;
@@ -332,6 +360,7 @@ at86rf212_receiving_packet(void)
 static int
 at86rf212_read(void *buf, unsigned short bufsize)
 {
+  PRINTF("%s\n",__FUNCTION__);
   uint8_t len;
   uint8_t *framep;
 
@@ -382,40 +411,35 @@ at86rf212_read(void *buf, unsigned short bufsize)
    * Here return just the data length. The checksum is
    * however still in the buffer for packet sniffing
    */
+
+  PRINTF("%s: %u bytes\n", __FUNCTION__, len - AUX_LEN);
   return len - AUX_LEN;
 }
 /*---------------------------------------------------------------------------*/
 static void
-at86rf212_poll()
+at86rf212_poll(void)
 {
+  PRINTF("%s\n",__FUNCTION__);
   process_poll(&rf212_process);
-}
-/*---------------------------------------------------------------------------*/
-/* Set or unset frame autoack */
-static void
-set_auto_ack(uint8_t enable)
-{
-  HAL_ENTER_CRITICAL_REGION();
-  hal_subregister_write(RG_CSMA_SEED_1, 0x10, 4, enable);
-  HAL_LEAVE_CRITICAL_REGION();
 }
 /*---------------------------------------------------------------------------*/
 static radio_result_t
 at86rf212_get_value(radio_param_t param, radio_value_t *value)
 {
-  int i, v;
-
+  PRINTF("%s\n",__FUNCTION__);
   if(value == NULL) {
     return RADIO_RESULT_INVALID_VALUE;
   }
 
   switch(param) {
     case RADIO_PARAM_RSSI:
-      *value = rf230_get_raw_rssi();
+      //TODO(henrik) FIX
+      *value = 40; //rf230_get_raw_rssi();
       return RADIO_RESULT_OK;
 
     case RADIO_PARAM_LAST_RSSI:
-      *value = rf230_last_rssi;
+      //TODO(henrik) FIX
+      *value = 40; //rf230_last_rssi;
       return RADIO_RESULT_OK;
 
     case RADIO_PARAM_RX_MODE:
@@ -441,7 +465,7 @@ at86rf212_get_value(radio_param_t param, radio_value_t *value)
       return RADIO_RESULT_OK;
 
     case RADIO_PARAM_CHANNEL:
-      *value = rf230_get_channel();
+      *value = get_channel();
       return RADIO_RESULT_OK;
 
     case RADIO_PARAM_TX_MODE:
@@ -459,6 +483,7 @@ at86rf212_get_value(radio_param_t param, radio_value_t *value)
 static radio_result_t
 at86rf212_set_value(radio_param_t param, radio_value_t value)
 {
+  PRINTF("%s\n",__FUNCTION__);
   switch(param)
   {
     case RADIO_PARAM_RX_MODE:
@@ -472,7 +497,7 @@ at86rf212_set_value(radio_param_t param, radio_value_t value)
       return RADIO_RESULT_OK;
 
     case RADIO_PARAM_CHANNEL:
-      rf230_set_channel(value);
+      set_channel(value);
       return RADIO_RESULT_OK;
 
     case RADIO_PARAM_TX_MODE:
@@ -488,12 +513,13 @@ at86rf212_set_value(radio_param_t param, radio_value_t value)
 static radio_result_t
 at86rf212_get_object(radio_param_t param, void *dest, size_t size)
 {
+  PRINTF("%s\n",__FUNCTION__);
   if(param == RADIO_PARAM_LAST_PACKET_TIMESTAMP)
   {
     if(size != sizeof(rtimer_clock_t) || !dest) {
       return RADIO_RESULT_INVALID_VALUE;
     }
-    *(rtimer_clock_t*)dest = rf230_sfd_start_time;
+    *(rtimer_clock_t*)dest = rf212_sfd_start_time;
     return RADIO_RESULT_OK;
   }
   return RADIO_RESULT_NOT_SUPPORTED;
@@ -502,11 +528,12 @@ at86rf212_get_object(radio_param_t param, void *dest, size_t size)
 static radio_result_t
 at86rf212_set_object(radio_param_t param, const void *src, size_t size)
 {
+  PRINTF("%s\n",__FUNCTION__);
   return RADIO_RESULT_NOT_SUPPORTED;
 }
 /*---------------------------------------------------------------------------*/
 static void
-on()
+on(void)
 {
   /* If radio is sleeping turn it on */
   if(is_sleeping())
@@ -534,7 +561,7 @@ off()
   wait_idle();
 
   /* Force the device into TRX_OFF. */
-  radio_reset_state_machine();
+  reset_state_machine();
 
   /* Sleep Radio */
   if(!is_sleeping())
@@ -674,6 +701,8 @@ radio_set_trx_state(uint8_t new_state)
 
   original_state = get_trx_state();
 
+  PRINTF("%s: %d->%d\n",__FUNCTION__, original_state, new_state);
+
   if(new_state == original_state)
   {
     return RADIO_SUCCESS;
@@ -809,6 +838,15 @@ reset_state_machine(void)
   delay_us(TIME_CMD_FORCE_TRX_OFF);
 }
 /*---------------------------------------------------------------------------*/
+/* Set or unset frame autoack */
+static void
+set_auto_ack(uint8_t enable)
+{
+  HAL_ENTER_CRITICAL_REGION();
+  hal_subregister_write(RG_CSMA_SEED_1, 0x10, 4, enable);
+  HAL_LEAVE_CRITICAL_REGION();
+}
+/*---------------------------------------------------------------------------*/
 /* Set or unset frame filtering */
 static void
 set_frame_filtering(uint8_t enable)
@@ -829,16 +867,70 @@ set_poll_mode(uint8_t enable)
 /*---------------------------------------------------------------------------*/
 /* Enable or disable CCA before sending */
 static void
-set_send_on_cca(uint8_t enable)
+set_send_on_cca(bool enable)
 {
   send_on_cca = enable;
+}
+/*---------------------------------------------------------------------------*/
+/* This functionality could be moved to set_value/set_object */
+void
+at86rf212_set_pan_addr(unsigned pan,
+                   unsigned addr,
+                   const uint8_t ieee_addr[8])
+{
+  PRINTF("%d: PAN=%x Short Addr=%x\r\n", pan, addr, __FUNCTION__);
+
+  uint8_t abyte;
+  abyte = pan & 0xFF;
+  hal_register_write(RG_PAN_ID_0, abyte);
+  abyte = (pan >> 8 * 1) & 0xFF;
+  hal_register_write(RG_PAN_ID_1, abyte);
+
+  abyte = addr & 0xFF;
+  hal_register_write(RG_SHORT_ADDR_0, abyte);
+  abyte = (addr >> 8 * 1) & 0xFF;
+  hal_register_write(RG_SHORT_ADDR_1, abyte);
+
+  if(ieee_addr != NULL) {
+    PRINTF("MAC=%x", *ieee_addr);
+    hal_register_write(RG_IEEE_ADDR_7, *ieee_addr++);
+    PRINTF(":%x", *ieee_addr);
+    hal_register_write(RG_IEEE_ADDR_6, *ieee_addr++);
+    PRINTF(":%x", *ieee_addr);
+    hal_register_write(RG_IEEE_ADDR_5, *ieee_addr++);
+    PRINTF(":%x", *ieee_addr);
+    hal_register_write(RG_IEEE_ADDR_4, *ieee_addr++);
+    PRINTF(":%x", *ieee_addr);
+    hal_register_write(RG_IEEE_ADDR_3, *ieee_addr++);
+    PRINTF(":%x", *ieee_addr);
+    hal_register_write(RG_IEEE_ADDR_2, *ieee_addr++);
+    PRINTF(":%x", *ieee_addr);
+    hal_register_write(RG_IEEE_ADDR_1, *ieee_addr++);
+    PRINTF(":%x", *ieee_addr);
+    hal_register_write(RG_IEEE_ADDR_0, *ieee_addr);
+    PRINTF("\r\n");
+  }
+}
+/*---------------------------------------------------------------------------*/
+static uint8_t
+get_channel(void)
+{
+  return hal_subregister_read(SR_CHANNEL);
+}
+/*---------------------------------------------------------------------------*/
+static void
+set_channel(uint8_t c)
+{
+  /* Wait for any transmission to end. */
+  PRINTF("rf230_%s: Set Channel %u\r\n", __FUNCTION__, c);
+  wait_idle();
+  hal_subregister_write(SR_CHANNEL, c);
 }
 /*---------------------------------------------------------------------------*/
 void
 at86rf212_interrupt(rtimer_clock_t time)
 {
-  /* Separate RF230 has a single radio interrupt and the source must be read from the IRQ_STATUS register */
-  (void) arg; /* unused */
+  /* Separate RF212 has a single radio interrupt and the source must be read from the IRQ_STATUS register */
   volatile uint8_t state;
   uint8_t interrupt_source;
 
@@ -848,6 +940,7 @@ at86rf212_interrupt(rtimer_clock_t time)
   /* Handle the incoming interrupt. Prioritized. */
   if((interrupt_source & HAL_RX_START_MASK))
   {
+    rf212_sfd_start_time = time;
   }
   if(interrupt_source & HAL_TRX_END_MASK)
   {
@@ -856,13 +949,13 @@ at86rf212_interrupt(rtimer_clock_t time)
     {
       /* Received packet interrupt */
       /* Buffer the frame and call poll the radio process */
-      if(rxframe[rxframe_tail].length == 0)
+      if(rxframe[rxframe_head].length == 0)
       {
-        hal_frame_read(&rxframe[rxframe_tail]);
-        rxframe_tail++;
-        if(rxframe_tail >= RF212_RX_BUFFERS)
+        hal_frame_read(&rxframe[rxframe_head]);
+        rxframe_head++;
+        if(rxframe_head >= RF212_RX_BUFFERS)
         {
-          rxframe_tail = 0;
+          rxframe_head = 0;
         }
         at86rf212_poll();
       }
@@ -885,7 +978,6 @@ at86rf212_interrupt(rtimer_clock_t time)
     uint8_t trx_isr_mask = hal_register_read(RG_IRQ_MASK);
     trx_isr_mask &= ~HAL_BAT_LOW_MASK;
     hal_register_write(RG_IRQ_MASK, trx_isr_mask);
-    INTERRUPTDEBUG(16);
   }
 }
 /*---------------------------------------------------------------------------*/

@@ -44,11 +44,11 @@
 #include "K60.h"
 
 #include "contiki.h"
-#include "rf230bb.h"
+#include "at86rf212.h"
 #include "net/netstack.h"
 #include "net/mac/frame802154.h"
-#include "lwm2m-engine.h"
-#include "ipso-objects.h"
+//#include "lwm2m-engine.h"
+//#include "ipso-objects.h"
 
 #define DEBUG 1
 #if DEBUG
@@ -127,7 +127,7 @@ init_net(void)
       linkaddr_node_addr.u8[1];
     memset(longaddr, 0, sizeof(longaddr));
     linkaddr_copy((linkaddr_t *)&longaddr, &linkaddr_node_addr);
-    rf230_set_pan_addr(IEEE802154_CONF_PANID, shortaddr, longaddr);
+    at86rf212_set_pan_addr(IEEE802154_CONF_PANID, shortaddr, longaddr);
     PRINTF("PAN ID: 0x%04X\n", IEEE802154_CONF_PANID);
     PRINTF("RF channel: %u\n", RF_CHANNEL);
     PRINTF("longaddr: ");
@@ -136,7 +136,7 @@ init_net(void)
     }
     PRINTF("%02x\n", longaddr[7]);
   } while(0);
-  rf230_set_channel(RF_CHANNEL);
+  NETSTACK_RADIO.set_value(RADIO_PARAM_CHANNEL, RF_CHANNEL);
 
   memcpy(&uip_lladdr.addr, id.u8, sizeof(uip_lladdr.addr));
 

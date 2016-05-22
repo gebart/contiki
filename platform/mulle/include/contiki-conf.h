@@ -43,7 +43,7 @@
 #define __CONTIKI_CONF_H__
 
 #include <stdint.h>
-#include "at86rf230_registermap.h"
+#include "at86rf212_registermap.h"
 
 #ifdef __cplusplus
 extern "C" {

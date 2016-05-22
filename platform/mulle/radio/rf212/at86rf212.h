@@ -54,7 +54,19 @@ typedef enum
   RADIO_NO_ACK,                       /**< No acknowledge frame was received. */
 } radio_status_t;
 
+/* RF212 radio packet */
+typedef struct
+{
+  uint8_t length;       // Length of frame.
+  uint8_t data[ 127 ];  // Actual frame data.
+  bool crc;             // Flag - did CRC pass for received frame?
+} hal_rx_frame_t;
+
+
 void at86rf212_interrupt(rtimer_clock_t time);
+void at86rf212_set_pan_addr(unsigned pan,
+                   unsigned addr,
+                   const uint8_t ieee_addr[8]);
 
 
 #endif // AT86RF212_H
