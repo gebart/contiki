@@ -243,7 +243,7 @@ typedef uint32_t rtimer_clock_t;
 #endif /* NETSTACK_CONF_FRAMER */
 
 #ifndef NETSTACK_CONF_RADIO
-#define NETSTACK_CONF_RADIO         rf230_driver
+#define NETSTACK_CONF_RADIO         rf212_driver
 #endif /* NETSTACK_CONF_RADIO */
 
 #define SICSLOWPAN_CONF_MAXAGE      1

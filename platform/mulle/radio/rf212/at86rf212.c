@@ -18,7 +18,7 @@
 #include <stdbool.h>
 
 /* Debugging*/
-#define DEBUG 0
+#define DEBUG 1
 #if DEBUG
 #include <stdio.h>
 #define PRINTF printf
@@ -36,6 +36,10 @@ enum
   HAL_PLL_UNLOCK_MASK =   (0x02),   /**< Mask for the PLL_UNLOCK interrupt. */
   HAL_PLL_LOCK_MASK =     (0x01),   /**< Mask for the PLL_LOCK interrupt. */
 };
+
+/* RF212 does not support RX_START interrupts in extended mode, but it seems harmless to always enable it. */
+/* In non-extended mode this allows RX_START to sample the RF rssi at the end of the preamble */
+#define RF212_SUPPORTED_INTERRUPT_MASK          (0x0C)    /* disable bat low, trx underrun, pll lock/unlock */
 
 
 /* RF212 hardware delay times, from datasheet */
@@ -169,6 +173,12 @@ at86rf212_init(void)
   }
   PRINTF("rf212: Version %u, ID %u\r\n", tvers, tmanu);
 
+  // Enable PLL_LOCK and CCA_ED_DONE interrupts.
+  // CCA_ED_DONE is also triggered when going from SLEEP -> TRX_OFF
+  // PLL_LOCK could also be done with IRQ_MASK_MODE (register 0x04) but SLEEP > TRX_OFF can not.
+  // CCA_ED_DONE could be disabled after wakeup to prevent interrupts when doing CCA.
+  hal_register_write(RG_IRQ_MASK, RF212_SUPPORTED_INTERRUPT_MASK|0x10|0x1);
+
   /* Start the packet receive process */
   process_start(&rf212_process, NULL);
 
@@ -245,10 +255,12 @@ at86rf212_cca(void)
   }
   if(cca & 0x40)
   {
+    /* Idle */
     return 1;
   }
   else
   {
+    /* Busy */
     return 0;
   }
 }
@@ -278,13 +290,12 @@ at86rf212_prepare(const void *payload, unsigned short payload_len)
 
   hal_frame_write(payload, payload_len + AUX_LEN);
 
-  return 1;
+  return RADIO_RESULT_OK;
 }
 /*---------------------------------------------------------------------------*/
 static int
 at86rf212_transmit(unsigned short payload_len)
 {
-  PRINTF("%s: %d\n",__FUNCTION__, payload_len);
   uint8_t tx_result = RADIO_TX_OK;
 
   /* Wait for any previous operation or state transition to finish */
@@ -320,7 +331,7 @@ at86rf212_transmit(unsigned short payload_len)
   {
     off();
   }
-
+  PRINTF("%s: %d %d\n",__FUNCTION__, payload_len, tx_result);
   return tx_result;
 }
 /*---------------------------------------------------------------------------*/
@@ -329,7 +340,7 @@ at86rf212_send(const void *payload, unsigned short payload_len)
 {
   PRINTF("%s: %d\n",__FUNCTION__, payload_len);
   int ret;
-  if ((ret = at86rf212_prepare(payload, payload_len)) != 0)
+  if ((ret = at86rf212_prepare(payload, payload_len)) != RADIO_RESULT_OK)
   {
     return ret;
   }
@@ -340,7 +351,7 @@ at86rf212_send(const void *payload, unsigned short payload_len)
 static int
 at86rf212_pending_packet(void)
 {
-  PRINTF("%s: \n",__FUNCTION__, rxframe[rxframe_tail].length > 0);
+  PRINTF("%s: %d\n",__FUNCTION__, rxframe[rxframe_tail].length > 0);
   return rxframe[rxframe_tail].length > 0;
 }
 /*---------------------------------------------------------------------------*/
@@ -832,7 +843,10 @@ get_trx_state(void)
 static void
 reset_state_machine(void)
 {
-  wakeup();
+  if (is_sleeping())
+  {
+    wakeup();
+  }
   delay_us(TIME_NOCLK_TO_WAKE);
   hal_subregister_write(SR_TRX_CMD, CMD_FORCE_TRX_OFF);
   delay_us(TIME_CMD_FORCE_TRX_OFF);
@@ -878,7 +892,7 @@ at86rf212_set_pan_addr(unsigned pan,
                    unsigned addr,
                    const uint8_t ieee_addr[8])
 {
-  PRINTF("%d: PAN=%x Short Addr=%x\r\n", pan, addr, __FUNCTION__);
+  PRINTF("%s: PAN=%x Short Addr=%x\r\n",__FUNCTION__, pan, addr);
 
   uint8_t abyte;
   abyte = pan & 0xFF;
@@ -922,7 +936,7 @@ static void
 set_channel(uint8_t c)
 {
   /* Wait for any transmission to end. */
-  PRINTF("rf230_%s: Set Channel %u\r\n", __FUNCTION__, c);
+  PRINTF("rf212_%s: %u\r\n", __FUNCTION__, c);
   wait_idle();
   hal_subregister_write(SR_CHANNEL, c);
 }

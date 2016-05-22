@@ -119,6 +119,8 @@ init_net(void)
 #if NETSTACK_CONF_WITH_IPV6
   set_rime_addr();
   NETSTACK_RADIO.init();
+  /* Radio needs to be on when setting settings. */
+  NETSTACK_RADIO.on();
   do {
     uint8_t longaddr[8];
     uint16_t shortaddr;
@@ -223,7 +225,7 @@ init_net(void)
 #endif /* WITH_IPSO */
 
 #else /* If no radio stack should be used only turn on radio and set it to sleep for minimal power consumption */
-  rf230_init();
-  rf230_driver.off();
+  rf212.init();
+  rf212.off();
 #endif /* NETSTACK_CONF_WITH_IPV6 */
 }

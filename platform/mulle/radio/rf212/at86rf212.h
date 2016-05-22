@@ -68,5 +68,6 @@ void at86rf212_set_pan_addr(unsigned pan,
                    unsigned addr,
                    const uint8_t ieee_addr[8]);
 
+extern const struct radio_driver rf212_driver;
 
 #endif // AT86RF212_H
