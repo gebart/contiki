@@ -6,6 +6,7 @@
 #include "rtimer.h"
 #include "packetbuf.h"
 #include "netstack.h"
+#include "leds.h"
 
 #include <string.h>
 
@@ -18,7 +19,6 @@
 #include <stdbool.h>
 
 /* Debugging*/
-#include <stdio.h>
 #define DEBUG 0
 #if DEBUG
 #include <stdio.h>
