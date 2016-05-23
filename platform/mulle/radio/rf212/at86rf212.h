@@ -3,6 +3,7 @@
 
 #include "contiki.h"
 #include "rtimer.h"
+#include "at86rf212_registermap.h"
 
 #include <stdbool.h>
 
@@ -34,8 +35,8 @@
 #define RF212_FRAME_FILTERING false
 #endif
 
-#ifdef RF212_CONF_CSMA_RETRIES
-#define RF212_CCA_RETRIES RF212_CONF_CSMA_RETRIES
+#ifdef RF212_CONF_CCA_RETRIES
+#define RF212_CCA_RETRIES RF212_CONF_CCA_RETRIES
 #else
 #define RF212_CCA_RETRIES 0
 #endif
@@ -45,6 +46,12 @@
 #define RF212_AUTORETRIES RF212_CONF_AUTORETRIES
 #else
 #define RF212_AUTORETRIES 0
+#endif
+
+#ifdef RF212_CONF_PHY_MODE
+#define RF212_PHY_MODE RF212_CONF_PHY_MODE
+#else
+#define RF212_PHY_MODE RF212_PHY_MODE_BPSK_20
 #endif
 
 #define CHECKSUM_LEN 2

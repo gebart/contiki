@@ -18,7 +18,7 @@
 #include <stdbool.h>
 
 /* Debugging*/
-#define DEBUG 1
+#define DEBUG 0
 #if DEBUG
 #include <stdio.h>
 #define PRINTF printf
@@ -186,6 +186,7 @@ at86rf212_init(void)
   set_send_on_cca(RF212_SEND_ON_CCA);
   set_frame_filtering(RF212_FRAME_FILTERING);
   set_tx_retries(RF212_AUTORETRIES);
+  hal_subregister_write(RG_TRX_CTRL_2, 0x3F, 0, RF212_PHY_MODE);
 
   /* Start the packet receive process */
   process_start(&rf212_process, NULL);
@@ -254,6 +255,7 @@ at86rf212_cca(void)
   {
     cca = hal_register_read(RG_TRX_STATUS);
   }
+  hal_register_read(RG_IRQ_STATUS); // Clear interrupts
   HAL_LEAVE_CRITICAL_REGION();
 
   exit:
@@ -273,6 +275,7 @@ at86rf212_cca(void)
   }
 }
 /*---------------------------------------------------------------------------*/
+// TODO(henrik) State transitions are not so consistent between prepare, transmit and send
 static int
 at86rf212_prepare(const void *payload, unsigned short payload_len)
 {
@@ -324,14 +327,7 @@ at86rf212_transmit(unsigned short payload_len)
     default:
       tx_result = RADIO_TX_ERR;
   }
-  if(is_receive_on())
-  {
-    on();
-  }
-  else
-  {
-    off();
-  }
+
   PRINTF("%s: %d %d\n",__FUNCTION__, payload_len, tx_result);
   return tx_result;
 }
@@ -345,8 +341,16 @@ at86rf212_send(const void *payload, unsigned short payload_len)
   {
     return ret;
   }
-
-  return at86rf212_transmit(payload_len);
+  ret = at86rf212_transmit(payload_len);
+  if(is_receive_on())
+  {
+    on();
+  }
+  else
+  {
+    off();
+  }
+  return ret;
 }
 /*---------------------------------------------------------------------------*/
 static int
@@ -478,7 +482,7 @@ at86rf212_get_value(radio_param_t param, radio_value_t *value)
 
     case RADIO_PARAM_CHANNEL:
       *value = get_channel();
-       return RADIO_RESULT_OK;
+      return RADIO_RESULT_OK;
 
     case RADIO_PARAM_TX_MODE:
       *value = 0;

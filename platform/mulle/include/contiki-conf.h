@@ -109,9 +109,9 @@ typedef uint32_t rtimer_clock_t;
 /* Disable slip-bridge implementation of putchar because it messes up newlib buffered stdio */
 #define SLIP_BRIDGE_CONF_NO_PUTCHAR 1
 
-#ifndef RF230_CONF_PHY_MODE
+#ifndef RF212_CONF_PHY_MODE
 /* PHY mode is configured for 100 kbit/s data rate and following the 802.15.4 standard */
-#define RF230_CONF_PHY_MODE         RF230_PHY_MODE_OQPSK_SIN_RC_100
+#define RF212_CONF_PHY_MODE         RF212_PHY_MODE_OQPSK_SIN_RC_100
 #endif
 
 #ifndef NETSTACK_CONF_NETWORK
@@ -122,6 +122,9 @@ typedef uint32_t rtimer_clock_t;
 #define NETSTACK_CONF_MAC           csma_driver
 #endif /* NETSTACK_CONF_MAC */
 
+#define CONTIKIMAC 1
+/******************************* CONTIKIMAC ***********************************/
+#if CONTIKIMAC
 /**
  * BPSQ: 1 Symbol = 1 Bit => 8 Symbols = 1 Byte
  * O-QPSK: 1 Symbol = 4 Bits => 2 Symbols = 1 Byte
@@ -158,31 +161,31 @@ typedef uint32_t rtimer_clock_t;
  *       gives less PL.
  */
 
-#if RF230_CONF_PHY_MODE == RF230_PHY_MODE_BPSK_20
+#if RF212_CONF_PHY_MODE == RF212_PHY_MODE_BPSK_20
 #define CONTIKIMAC_Ti 3.5
 #define CONTIKIMAC_Tc 4
 #define CONTIKIMAC_Tr 0.4
 #define CONTIKIMAC_Tl 53.2
 #define CONTIKIMAC_Td 2.4
-#elif RF230_CONF_PHY_MODE == RF230_PHY_MODE_BPSK_40
+#elif RF212_CONF_PHY_MODE == RF212_PHY_MODE_BPSK_40
 #define CONTIKIMAC_Ti 3
 #define CONTIKIMAC_Tc 3.5
 #define CONTIKIMAC_Tr 0.2
 #define CONTIKIMAC_Tl 26.6
 #define CONTIKIMAC_Td 1.2
-#elif RF230_CONF_PHY_MODE == RF230_PHY_MODE_OQPSK_SIN_RC_100
+#elif RF212_CONF_PHY_MODE == RF212_PHY_MODE_OQPSK_SIN_RC_100
 #define CONTIKIMAC_Ti 1
 #define CONTIKIMAC_Tc 1.1
 #define CONTIKIMAC_Tr 0.32
 #define CONTIKIMAC_Tl 10.64
 #define CONTIKIMAC_Td 0.48
-#elif RF230_CONF_PHY_MODE == RF230_PHY_MODE_OQPSK_SIN_RC_200
+#elif RF212_CONF_PHY_MODE == RF212_PHY_MODE_OQPSK_SIN_RC_200
 #define CONTIKIMAC_Ti 1
 #define CONTIKIMAC_Tc 1.1
 #define CONTIKIMAC_Tr 0.32
 #define CONTIKIMAC_Tl (5.56+0.5) // Manually increased Tl for better stability
 #define CONTIKIMAC_Td 0.48
-#elif RF230_CONF_PHY_MODE == RF230_PHY_MODE_OQPSK_SIN_250
+#elif RF212_CONF_PHY_MODE == RF212_PHY_MODE_OQPSK_SIN_250
 #define CONTIKIMAC_Ti 0.5
 #define CONTIKIMAC_Tc 0.6
 #define CONTIKIMAC_Tr 0.128
@@ -192,19 +195,20 @@ typedef uint32_t rtimer_clock_t;
 #error "CONTIKIMAC does not support the specified radio speed"
 #endif
 
-#if CONTIKIMAC
-#ifndef NETSTACK_CONF_RDC
+#undef NETSTACK_CONF_RDC
 #define NETSTACK_CONF_RDC         contikimac_driver
-#endif /* NETSTACK_CONF_RDC */
-// TODO(henrik) Check parameters to CONTIKIMAC
-/* TX routine passes the cca/ack result in the return parameter */
-#define RDC_CONF_HARDWARE_ACK     1
-/* TX routine does automatic cca and optional backoffs */
+
+/*
+ * Contikimac strobes by itself.
+ */
+#define RF212_CONF_HARDWARE_ACK     1
+#define RF212_CONF_SEND_ON_CCA 1
+#define RF212_CONF_CCA_RETRIES   3
+#define RF212_CONF_AUTORETRIES      1
+#define RF212_CONF_FRAME_FILTERING 1
+
 #define RDC_CONF_HARDWARE_CSMA    1
-#define RF230_CONF_AUTOACK        1
-#define RF230_CONF_FRAME_RETRIES  1
-#define RF230_CONF_CSMA_RETRIES   0
-#define RF230_CONF_AUTORETRIES      1
+#define RDC_CONF_HARDWARE_ACK    1
 #define NETSTACK_CONF_RDC_CHANNEL_CHECK_RATE   8
 
 // Ti
@@ -221,18 +225,21 @@ typedef uint32_t rtimer_clock_t;
 /* Phase optimization seem to cause problems (drifting clocks?) */
 #define CONTIKIMAC_CONF_WITH_PHASE_OPTIMIZATION 0
 
-#else /* CONTIKIMAC */
+#else
+/******************************** Nullrdc *************************************/
 #ifndef NETSTACK_CONF_RDC
 #define NETSTACK_CONF_RDC           nullrdc_driver
 #endif /* NETSTACK_CONF_RDC */
+
 #define RDC_CONF_HARDWARE_ACK     1
 /* TX routine does automatic cca and optional backoffs */
 #define RDC_CONF_HARDWARE_CSMA    1
-#define RF230_CONF_AUTOACK        1
-#define RF230_CONF_FRAME_RETRIES  1
-#define RF230_CONF_CSMA_RETRIES   0
-#define RF230_CONF_AUTORETRIES      3
+#define RF212_CONF_HARDWARE_ACK     1
+#define RF212_CONF_SEND_ON_CCA 1
+#define RF212_CONF_CCA_RETRIES   0
+#define RF212_CONF_AUTORETRIES      3
 #endif /* CONTIKIMAC */
+
 
 #ifndef NETSTACK_CONF_FRAMER
 #if NETSTACK_CONF_WITH_IPV6
@@ -247,7 +254,7 @@ typedef uint32_t rtimer_clock_t;
 #endif /* NETSTACK_CONF_RADIO */
 
 #define SICSLOWPAN_CONF_MAXAGE      1
-#define RF230_CONF_RX_BUFFERS       10
+#define RF212_CONF_RX_BUFFERS       10
 #define LINKADDR_CONF_SIZE          8
 
 #ifndef UIP_CONF_BUFFER_SIZE

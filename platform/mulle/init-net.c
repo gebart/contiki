@@ -156,20 +156,7 @@ init_net(void)
 
   process_start(&tcpip_process, NULL);
 
-  PRINTF("Radio PHY mode: 0x%02x", RF230_CONF_PHY_MODE);
-  switch (RF230_CONF_PHY_MODE) {
-    case RF230_PHY_MODE_OQPSK_SIN_RC_100:
-    case RF230_PHY_MODE_OQPSK_SIN_250:
-      PRINTF(" (page 2)\n");
-      break;
-    case RF230_PHY_MODE_BPSK_20:
-    case RF230_PHY_MODE_BPSK_40:
-      PRINTF(" (page 0)\n");
-      break;
-    default:
-      PRINTF("\n");
-      break;
-  }
+  PRINTF("Radio PHY mode: 0x%02x\n", RF212_CONF_PHY_MODE);
 
   PRINTF("Tentative link-local IPv6 address ");
   do {

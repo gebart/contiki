@@ -131,13 +131,13 @@
 /** @name Radio modes suitable for 868 MHz, see Table 9-8. Register 0x0C (TRX_CTRL_2) Bit Alignment. */
 /** @{ */
 /** IEEE 802.15.4 - 2003/2006/2011: channel page 0, channel 0 */
-#define RF230_PHY_MODE_BPSK_20             (0x00)
+#define RF212_PHY_MODE_BPSK_20             (0x00)
 /** IEEE 802.15.4 - 2006/2011: channel page 2, channel 0 */
-#define RF230_PHY_MODE_OQPSK_SIN_RC_100    (0x08)
+#define RF212_PHY_MODE_OQPSK_SIN_RC_100    (0x08)
 /** Proprietary high data rate 200 kbit/s */
-#define RF230_PHY_MODE_OQPSK_SIN_RC_200    (0x09)
+#define RF212_PHY_MODE_OQPSK_SIN_RC_200    (0x09)
 /** Proprietary high data rate 400 kbit/s, scrambler on */
-#define RF230_PHY_MODE_OQPSK_SIN_RC_400    (0x2a)
+#define RF212_PHY_MODE_OQPSK_SIN_RC_400    (0x2a)
 /** @} */
 /** @name Radio modes suitable for 915 MHz, see Table 9-8. Register 0x0C (TRX_CTRL_2) Bit Alignment. */
 /** @{ */
