@@ -179,6 +179,11 @@ at86rf212_init(void)
   // CCA_ED_DONE could be disabled after wakeup to prevent interrupts when doing CCA.
   hal_register_write(RG_IRQ_MASK, RF212_SUPPORTED_INTERRUPT_MASK|0x10|0x1);
 
+  /* Default settings */
+  set_auto_ack(true);
+  set_send_on_cca(true);
+  set_frame_filtering(true);
+
   /* Start the packet receive process */
   process_start(&rf212_process, NULL);
 
@@ -305,11 +310,14 @@ at86rf212_transmit(unsigned short payload_len)
   hal_set_slptr_high();
   hal_set_slptr_low();
 
+  wait_idle();
+
   /* Get the transmission result */
   if (send_on_cca)
   {
     switch (hal_subregister_read(SR_TRAC_STATUS))
     {
+      case 0:
       case 1:
         tx_result = RADIO_TX_OK;
         break;
@@ -552,14 +560,7 @@ on(void)
     wakeup();
   }
 
-  if (auto_ack)
-  {
-    radio_set_trx_state(RX_AACK_ON);
-  }
-  else
-  {
-    radio_set_trx_state(RX_ON);
-  }
+  radio_set_trx_state(RX_AACK_ON);
   wait_idle();
 }
 /*---------------------------------------------------------------------------*/
@@ -857,7 +858,7 @@ static void
 set_auto_ack(uint8_t enable)
 {
   HAL_ENTER_CRITICAL_REGION();
-  hal_subregister_write(RG_CSMA_SEED_1, 0x10, 4, enable);
+  hal_subregister_write(RG_CSMA_SEED_1, 0x10, 4, !enable);
   HAL_LEAVE_CRITICAL_REGION();
 }
 /*---------------------------------------------------------------------------*/
@@ -866,7 +867,7 @@ static void
 set_frame_filtering(uint8_t enable)
 {
   HAL_ENTER_CRITICAL_REGION();
-  hal_subregister_write(RG_XAH_CTRL_1, 0x2, 1, enable);
+  hal_subregister_write(RG_XAH_CTRL_1, 0x2, 1, !enable);
   HAL_LEAVE_CRITICAL_REGION();
 }
 /*---------------------------------------------------------------------------*/
