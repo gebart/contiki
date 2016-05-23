@@ -65,8 +65,8 @@ uint8_t rxframe_tail;
 hal_rx_frame_t rxframe[RF212_RX_BUFFERS];
 
 static bool receive_on = false;
-static bool send_on_cca = false;
 static bool poll_mode = false;
+static uint8_t csma_retries = 0;
 rtimer_clock_t rf212_sfd_start_time;
 
 
@@ -86,8 +86,9 @@ static radio_status_t radio_set_trx_state(uint8_t new_state);
 static void set_auto_ack(uint8_t enable);
 static void set_frame_filtering(uint8_t enable);
 static void set_poll_mode(uint8_t enable);
+static bool set_cca_retries(uint8_t num);
 static void set_send_on_cca(bool enable);
-static void set_tx_retries(uint8_t num);
+static bool set_tx_retries(uint8_t num);
 static uint8_t get_channel(void);
 static void set_channel(uint8_t c);
 
@@ -181,6 +182,7 @@ at86rf212_init(void)
 
   /* Default settings */
   set_auto_ack(RF212_HARDWARE_ACK);
+  set_cca_retries(RF212_CCA_RETRIES);
   set_send_on_cca(RF212_SEND_ON_CCA);
   set_frame_filtering(RF212_FRAME_FILTERING);
   set_tx_retries(RF212_AUTORETRIES);
@@ -285,14 +287,7 @@ at86rf212_prepare(const void *payload, unsigned short payload_len)
   wait_idle();
 
   // Go into TX state to prevent buffer from being overwritten
-  if (send_on_cca)
-  {
-    radio_set_trx_state(TX_ARET_ON);
-  }
-  else
-  {
-    radio_set_trx_state(PLL_ON);
-  }
+  radio_set_trx_state(TX_ARET_ON);
 
   hal_frame_write(payload, payload_len + AUX_LEN);
 
@@ -314,23 +309,20 @@ at86rf212_transmit(unsigned short payload_len)
   wait_idle();
 
   /* Get the transmission result */
-  if (send_on_cca)
+  switch (hal_subregister_read(SR_TRAC_STATUS))
   {
-    switch (hal_subregister_read(SR_TRAC_STATUS))
-    {
-      case 0:
-      case 1:
-        tx_result = RADIO_TX_OK;
-        break;
-      case 3:
-        tx_result = RADIO_TX_COLLISION;
-        break;
-      case 5:
-        tx_result = RADIO_TX_NOACK;
-        break;
-      default:
-        tx_result = RADIO_TX_ERR;
-    }
+    case 0:
+    case 1:
+      tx_result = RADIO_TX_OK;
+      break;
+    case 3:
+      tx_result = RADIO_TX_COLLISION;
+      break;
+    case 5:
+      tx_result = RADIO_TX_NOACK;
+      break;
+    default:
+      tx_result = RADIO_TX_ERR;
   }
   if(is_receive_on())
   {
@@ -486,11 +478,11 @@ at86rf212_get_value(radio_param_t param, radio_value_t *value)
 
     case RADIO_PARAM_CHANNEL:
       *value = get_channel();
-      return RADIO_RESULT_OK;
+       return RADIO_RESULT_OK;
 
     case RADIO_PARAM_TX_MODE:
       *value = 0;
-      if(send_on_cca) {
+      if(hal_subregister_read(SR_MAX_CSMA_RETRIES) != 7) {
         *value |= RADIO_TX_MODE_SEND_ON_CCA;
       }
       return RADIO_RESULT_OK;
@@ -881,24 +873,56 @@ set_poll_mode(uint8_t enable)
   HAL_LEAVE_CRITICAL_REGION();
 }
 /*---------------------------------------------------------------------------*/
-/* Enable or disable CCA before sending */
+/* Sets the number CCA retries in TX_ARET state.
+ * CCA must also be enabled with set_send_on_cca.
+ */
+static bool
+set_cca_retries(uint8_t num)
+{
+  if (num > 5)
+  {
+    /* Max value is 5 */
+    return false;
+  }
+  csma_retries = num;
+  if (hal_subregister_read(SR_MAX_CSMA_RETRIES) != 7)
+  {
+    hal_subregister_write(SR_MAX_CSMA_RETRIES, num);
+  }
+  return true;
+}
+/*---------------------------------------------------------------------------*/
+/* Enables or disables CCA before sending */
 static void
 set_send_on_cca(bool enable)
 {
-  send_on_cca = enable;
+  if (enable)
+  {
+    hal_subregister_write(SR_MAX_CSMA_RETRIES, csma_retries);
+  }
+  else
+  {
+    /* CSMA retries value of 7 disables CSMA */
+    hal_subregister_write(SR_MAX_CSMA_RETRIES, 7);
+  }
 }
 /*---------------------------------------------------------------------------*/
-static void
+static bool
 set_tx_retries(uint8_t num)
 {
+  if (num > 15)
+  {
+    return false;
+  }
   hal_subregister_write(SR_MAX_FRAME_RETRIES, num);
+  return true;
 }
 /*---------------------------------------------------------------------------*/
 /* This functionality could be moved to set_value/set_object */
 void
 at86rf212_set_pan_addr(unsigned pan,
-                   unsigned addr,
-                   const uint8_t ieee_addr[8])
+                       unsigned addr,
+                       const uint8_t ieee_addr[8])
 {
   PRINTF("%s: PAN=%x Short Addr=%x\r\n",__FUNCTION__, pan, addr);
 
