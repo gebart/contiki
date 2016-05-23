@@ -88,6 +88,7 @@ static void set_auto_ack(uint8_t enable);
 static void set_frame_filtering(uint8_t enable);
 static void set_poll_mode(uint8_t enable);
 static void set_send_on_cca(bool enable);
+static void set_tx_retries(uint8_t num);
 static uint8_t get_channel(void);
 static void set_channel(uint8_t c);
 
@@ -180,9 +181,10 @@ at86rf212_init(void)
   hal_register_write(RG_IRQ_MASK, RF212_SUPPORTED_INTERRUPT_MASK|0x10|0x1);
 
   /* Default settings */
-  set_auto_ack(true);
-  set_send_on_cca(true);
-  set_frame_filtering(true);
+  set_auto_ack(RF212_HARDWARE_ACK);
+  set_send_on_cca(RF212_SEND_ON_CCA);
+  set_frame_filtering(RF212_FRAME_FILTERING);
+  set_tx_retries(RF212_AUTORETRIES);
 
   /* Start the packet receive process */
   process_start(&rf212_process, NULL);
@@ -885,6 +887,12 @@ static void
 set_send_on_cca(bool enable)
 {
   send_on_cca = enable;
+}
+/*---------------------------------------------------------------------------*/
+static void
+set_tx_retries(uint8_t num)
+{
+  hal_subregister_write(SR_MAX_FRAME_RETRIES, num);
 }
 /*---------------------------------------------------------------------------*/
 /* This functionality could be moved to set_value/set_object */

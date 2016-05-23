@@ -4,6 +4,8 @@
 #include "contiki.h"
 #include "rtimer.h"
 
+#include <stdbool.h>
+
 /*============================ MACROS ========================================*/
 #define RF212B_VERSION                          (3)
 #define RF212_SUPPORTED_MANUFACTURER_ID         (31)
@@ -12,6 +14,30 @@
 #define RF212_RX_BUFFERS RF212_CONF_RX_BUFFERS
 #else
 #define RF212_RX_BUFFERS 1
+#endif
+
+#ifdef RF212_CONF_HARDWARE_ACK
+#define RF212_HARDWARE_ACK RF212_CONF_HARDWARE_ACK
+#else
+#define RF212_HARDWARE_ACK false
+#endif
+
+#ifdef RF212_CONF_SEND_ON_CCA
+#define RF212_SEND_ON_CCA RF212_CONF_SEND_ON_CCA
+#else
+#define RF212_SEND_ON_CCA false
+#endif
+
+#ifdef RF212_CONF_FRAME_FILTERING
+#define RF212_FRAME_FILTERING RF212_CONF_FRAME_FILTERING
+#else
+#define RF212_FRAME_FILTERING false
+#endif
+
+#ifdef RF212_CONF_AUTORETRIES
+#define RF212_AUTORETRIES RF212_CONF_AUTORETRIES
+#else
+#define RF212_AUTORETRIES 0
 #endif
 
 #define CHECKSUM_LEN 2
