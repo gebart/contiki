@@ -18,6 +18,7 @@
 #include <stdbool.h>
 
 /* Debugging*/
+#include <stdio.h>
 #define DEBUG 0
 #if DEBUG
 #include <stdio.h>
@@ -379,19 +380,6 @@ at86rf212_read(void *buf, unsigned short bufsize)
   PRINTF("%s\n",__FUNCTION__);
   uint8_t len;
   uint8_t *framep;
-
-  /*
-   * Read could be allowed even if rx is off or radio is sleeping because
-   * packets are buffered.
-   */
-  if(is_sleeping())
-  {
-    return 0;
-  }
-  if(!is_receive_on())
-  {
-    return 0;
-  }
 
   /* The length includes the twp-byte checksum but not the LQI byte */
   len = rxframe[rxframe_tail].length;
