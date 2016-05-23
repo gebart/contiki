@@ -101,7 +101,7 @@ PROCESS_THREAD(rf212_process, ev, data)
 
   while(1)
   {
-    PROCESS_YIELD_UNTIL(ev == PROCESS_EVENT_POLL);
+    PROCESS_YIELD_UNTIL(ev == PROCESS_EVENT_POLL && !poll_mode);
 #ifdef WITH_SLIP
     leds_toggle(LEDS_RED);
 #endif
