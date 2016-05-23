@@ -65,7 +65,6 @@ uint8_t rxframe_tail;
 hal_rx_frame_t rxframe[RF212_RX_BUFFERS];
 
 static bool receive_on = false;
-static bool auto_ack = false;
 static bool send_on_cca = false;
 static bool poll_mode = false;
 rtimer_clock_t rf212_sfd_start_time;
