@@ -122,7 +122,6 @@ typedef uint32_t rtimer_clock_t;
 #define NETSTACK_CONF_MAC           csma_driver
 #endif /* NETSTACK_CONF_MAC */
 
-#define CONTIKIMAC 1
 /******************************* CONTIKIMAC ***********************************/
 #if CONTIKIMAC
 /**
