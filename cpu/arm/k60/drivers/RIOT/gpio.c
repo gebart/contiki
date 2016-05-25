@@ -52,6 +52,9 @@
  */
 #define PORT_ADDR_BASE      (PORTA_BASE & ~(PORT_ADDR_MASK))
 
+#ifndef GPIOA_BASE
+#define GPIOA_BASE PTA_BASE
+#endif
 /**
  * @brief   Cleaned up GPIO base address
  */

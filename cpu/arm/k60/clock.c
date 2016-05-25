@@ -117,6 +117,7 @@ clock_wait(clock_time_t delay)
 }
 #endif /* 0 */
 
+#if PIT_NUMOF
 /**
  * Delay the CPU by delay microseconds.
  *
@@ -143,7 +144,7 @@ static void usleep_cb(void* arg, int channel)
   volatile uint8_t* flag = (volatile uint8_t*) arg;
   flag[channel] = 0;
 }
-
+#endif
 /*
  * Initialize the clock module.
  */
@@ -152,5 +153,7 @@ clock_init(void)
 {
   //rtimer_set(&rt_clock, RTIMER_NOW() + RTIMER_SECOND/CLOCK_SECOND, 1, (rtimer_callback_t)rt_do_clock, NULL);
 
+#if PIT_NUMOF
   timer_init(TIMER_PIT_DEV(0), 1000000ul, usleep_cb, (void*)&waiting_flag);
+#endif
 }

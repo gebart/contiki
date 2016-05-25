@@ -22,7 +22,7 @@
  *
  * @}
  */
-
+#if TIMER_NUMOF
 #include <stdlib.h>
 
 #include "cpu.h"
@@ -762,3 +762,4 @@ void LPTMR_ISR_1(void)
     lptmr_irq_handler(_lptmr_tim_t(1));
 }
 #endif
+#endif /* TIMER_NUMOF */

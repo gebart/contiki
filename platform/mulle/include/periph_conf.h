@@ -61,6 +61,11 @@ extern "C"
  * @name Timer configuration
  * @{
  */
+
+#if K60_CPU_REV == 1
+#define PIT_NUMOF               (0U)
+#define PIT_CONFIG {}
+#else /* K60_CPU_REV */
 #define PIT_NUMOF               (2U)
 #define PIT_CONFIG {                 \
         {                            \
@@ -72,6 +77,7 @@ extern "C"
             .count_ch = 3,           \
         },                           \
     }
+#endif
 #define LPTMR_NUMOF             (0U)
 #define LPTMR_CONFIG {}
 #define TIMER_NUMOF             ((PIT_NUMOF) + (LPTMR_NUMOF))
@@ -80,7 +86,6 @@ extern "C"
 #define PIT_CLOCKGATE           (BITBAND_REG32(SIM->SCGC6, SIM_SCGC6_PIT_SHIFT))
 #define PIT_ISR_0               isr_pit1
 #define PIT_ISR_1               isr_pit3
-
 /** @} */
 
 /**
