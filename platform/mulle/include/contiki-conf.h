@@ -126,7 +126,7 @@ typedef uint32_t rtimer_clock_t;
 #define NETSTACK_CONF_MAC           csma_driver
 #endif /* NETSTACK_CONF_MAC */
 
-/******************************* CONTIKIMAC ***********************************/
+/******************************* TSCH ***********************************/
 #if TSCH
 
 #ifndef TSCH_CONF_DEFAULT_TIMESLOT_LENGTH
@@ -237,7 +237,7 @@ typedef uint32_t rtimer_clock_t;
 #define NETSTACK_CONF_RDC_CHANNEL_CHECK_RATE   8
 #define CSMA_CONF_MAX_MAC_TRANSMISSIONS 1
 #define SICSLOWPAN_CONF_MAX_MAC_TRANSMISSIONS 1
-/* Going from 2 to 3 CCA checks gives almost zero packetloss.
+/* Going from 2 to 3 CCA checks gives almost zero packetloss. */
 #define CONTIKIMAC_CONF_CCA_COUNT_MAX 3
 
 // Ti
