@@ -22,7 +22,6 @@
  *
  * @}
  */
-#if TIMER_NUMOF
 #include <stdlib.h>
 
 #include "cpu.h"
@@ -33,6 +32,7 @@
 #define timer_set periph_timer_set
 #include "periph/timer.h"
 
+#if TIMER_NUMOF
 #define ENABLE_DEBUG (0)
 #include "debug.h"
 
