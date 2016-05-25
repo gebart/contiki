@@ -42,16 +42,14 @@
 #include "K60.h"
 #include "config-board.h"
 
-static uint32_t _vref_millivolts = 0;
+uint32_t voltage_vref_raw = 0;
+uint32_t voltage_vref_millivolts = 0;
 
 /**
  * @brief Compute VREFH voltage by measuring the 1 V band gap voltage
  */
-static void _update_vref_millivolts(void)
+static void _update_vref(void)
 {
-  uint32_t raw;
-  uint32_t millivolts;
-
   /* Turn on 1 V band gap reference */
   BITBAND_REG8(PMC->REGSC, PMC_REGSC_BGBE_SHIFT) = 1;
 
@@ -64,32 +62,27 @@ static void _update_vref_millivolts(void)
   }
 
   /* read the raw value (0..65535) */
-  raw = adc_sample(MULLE_ADC_LINE_BANDGAP, ADC_RES_16BIT);
+  voltage_vref_raw = adc_sample(MULLE_ADC_LINE_BANDGAP, ADC_RES_16BIT);
 
   /* Turn off 1 V band gap reference to save power */
   BITBAND_REG8(PMC->REGSC, PMC_REGSC_BGBE_SHIFT) = 0;
 
-  millivolts = ((MULLE_BAND_GAP_MILLIVOLTS << 16) + (raw / 2)) / raw;
-  _vref_millivolts = millivolts;
+  voltage_vref_millivolts = ((MULLE_BAND_GAP_MILLIVOLTS << 16) + (voltage_vref_raw / 2)) / voltage_vref_raw;
 }
 
 void
 voltage_init(void)
 {
   adc_init(MULLE_ADC_LINE_BANDGAP);
-  _update_vref_millivolts();
+  _update_vref();
   adc_init(MULLE_ADC_LINE_VCHR);
   adc_init(MULLE_ADC_LINE_VBAT);
 }
-/**
- * Scale a raw ADC reading from 0..65535 to millivolts depending on the board's
- * VREFH, VREFL reference voltages.
- */
 uint32_t
 voltage_from_raw_adc(uint32_t adc_raw)
 {
   uint32_t millivolts;
-  millivolts = (adc_raw * _vref_millivolts) >> 16;
+  millivolts = (adc_raw * voltage_vref_millivolts) >> 16;
 
   return millivolts;
 }
@@ -125,5 +118,5 @@ voltage_read_vchr(void)
 uint32_t
 voltage_read_avdd(void)
 {
-  return _vref_millivolts;
+  return voltage_vref_millivolts;
 }

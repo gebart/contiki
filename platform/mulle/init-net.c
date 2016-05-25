@@ -44,9 +44,11 @@
 #include "K60.h"
 
 #include "contiki.h"
-#include "rf230bb.h"
+#include "at86rf212.h"
 #include "net/netstack.h"
 #include "net/mac/frame802154.h"
+//#include "lwm2m-engine.h"
+//#include "ipso-objects.h"
 
 #define DEBUG 1
 #if DEBUG
@@ -59,19 +61,12 @@
 #include "net/ipv6/uip-ds6.h"
 #endif /* NETSTACK_CONF_WITH_IPV6 */
 
-#ifndef NODE_ID
-#define NODE_ID 1
-#warning Node id = 1
-#else
-#warning Using user defined node id
-#endif
-
 static union {
   uint64_t u64;
   uint32_t u32[sizeof(uint64_t) / sizeof(uint32_t)];
   uint16_t u16[sizeof(uint64_t) / sizeof(uint16_t)];
   uint8_t u8[sizeof(uint64_t) / sizeof(uint8_t)];
-} id = { .u8 = {0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, NODE_ID } };
+} id;
 
 /** @brief Simple hash function used for generating link-local IPv6 and EUI64
  *         (64 bit) from CPUID (128 bit)
@@ -111,20 +106,21 @@ set_rime_addr(void)
 void
 init_net(void)
 {
-#ifndef WITH_SLIP
-  id.u32[0] = djb2_hash((const uint8_t *)&(SIM->UIDH), 8); /* Use SIM_UIDH, SIM_UIDMH for first half */
-  id.u32[1] = djb2_hash((const uint8_t *)&(SIM->UIDML), 8); /* Use SIM_UIDML, SIM_UIDL for second half */
-  id.u8[0] |= 0x02; /* Set the Local/Universal bit to Local */
-#else
-  /* Use fixed address for border router. */
+#if WITH_SLIP
+  /* Use fixed address for the border router. */
   id.u32[0] = 0x00000000;
   id.u32[1] = 0x00000000;
-  id.u8[0] = 0x02;
   id.u8[7] = 0x01;
+#else
+  id.u32[0] = djb2_hash((const uint8_t *)&(SIM->UIDH), 8); /* Use SIM_UIDH, SIM_UIDMH for first half */
+  id.u32[1] = djb2_hash((const uint8_t *)&(SIM->UIDML), 8); /* Use SIM_UIDML, SIM_UIDL for second half */
 #endif
+  id.u8[0] |= 0x02; /* Set the Local/Universal bit to Local */
 #if NETSTACK_CONF_WITH_IPV6
   set_rime_addr();
   NETSTACK_RADIO.init();
+  /* Radio needs to be on when setting settings. */
+  NETSTACK_RADIO.on();
   do {
     uint8_t longaddr[8];
     uint16_t shortaddr;
@@ -133,15 +129,16 @@ init_net(void)
       linkaddr_node_addr.u8[1];
     memset(longaddr, 0, sizeof(longaddr));
     linkaddr_copy((linkaddr_t *)&longaddr, &linkaddr_node_addr);
-    rf230_set_pan_addr(IEEE802154_CONF_PANID, shortaddr, longaddr);
+    at86rf212_set_pan_addr(IEEE802154_CONF_PANID, shortaddr, longaddr);
     PRINTF("PAN ID: 0x%04X\n", IEEE802154_CONF_PANID);
+    PRINTF("RF channel: %u\n", RF_CHANNEL);
     PRINTF("longaddr: ");
     for(int i = 0; i < 7; ++i) {
       PRINTF("%02x-", longaddr[i]);
     }
     PRINTF("%02x\n", longaddr[7]);
   } while(0);
-  rf230_set_channel(RF_CHANNEL);
+  NETSTACK_RADIO.set_value(RADIO_PARAM_CHANNEL, RF_CHANNEL);
 
   memcpy(&uip_lladdr.addr, id.u8, sizeof(uip_lladdr.addr));
 
@@ -159,20 +156,7 @@ init_net(void)
 
   process_start(&tcpip_process, NULL);
 
-  PRINTF("Radio PHY mode: 0x%02x", RF230_CONF_PHY_MODE);
-  switch (RF230_CONF_PHY_MODE) {
-    case RF230_PHY_MODE_OQPSK_SIN_RC_100:
-    case RF230_PHY_MODE_OQPSK_SIN_250:
-      PRINTF(" (page 2)\n");
-      break;
-    case RF230_PHY_MODE_BPSK_20:
-    case RF230_PHY_MODE_BPSK_40:
-      PRINTF(" (page 0)\n");
-      break;
-    default:
-      PRINTF("\n");
-      break;
-  }
+  PRINTF("Radio PHY mode: 0x%02x\n", RF212_CONF_PHY_MODE);
 
   PRINTF("Tentative link-local IPv6 address ");
   do {
@@ -201,8 +185,34 @@ init_net(void)
            ipaddr.u8[7 * 2] * 256 + ipaddr.u8[7 * 2 + 1]);
   }
 
+#if WITH_IPSO
+  PRINTF("Running with IPSO object support\n");
+  /* Initialize the OMA LWM2M engine */
+  lwm2m_engine_init();
+
+  /* Register default LWM2M objects */
+  lwm2m_engine_register_default_objects();
+
+  /* Register default IPSO objects */
+  ipso_objects_init();
+
+  /* Defer registration until user application approves */
+  lwm2m_engine_use_bootstrap_server(0);
+  lwm2m_engine_use_registration_server(0);
+
+#ifdef LWM2M_SERVER_ADDRESS
+  do {
+    uip_ipaddr_t addr;
+    if(uiplib_ipaddrconv(LWM2M_SERVER_ADDRESS, &addr)) {
+      lwm2m_engine_register_with_bootstrap_server(&addr, 0);
+      lwm2m_engine_register_with_server(&addr, 0);
+    }
+  } while(0);
+#endif /* LWM2M_SERVER_ADDRESS */
+#endif /* WITH_IPSO */
+
 #else /* If no radio stack should be used only turn on radio and set it to sleep for minimal power consumption */
-  rf230_init();
-  rf230_driver.off();
+  rf212.init();
+  rf212.off();
 #endif /* NETSTACK_CONF_WITH_IPV6 */
 }

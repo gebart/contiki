@@ -33,6 +33,8 @@
 #undef NBR_TABLE_CONF_MAX_NEIGHBORS
 #undef UIP_CONF_MAX_ROUTES
 
+#define CONTIKIMAC 1
+
 #ifdef TEST_MORE_ROUTES
 /* configure number of neighbors and routes */
 #define NBR_TABLE_CONF_MAX_NEIGHBORS     10
@@ -43,10 +45,11 @@
 #define UIP_CONF_MAX_ROUTES   10
 #endif /* TEST_MORE_ROUTES */
 
-#undef NETSTACK_CONF_RDC
-#define NETSTACK_CONF_RDC     nullrdc_driver
-#undef NULLRDC_CONF_802154_AUTOACK
-#define NULLRDC_CONF_802154_AUTOACK       1
+//#undef NETSTACK_CONF_RDC
+//#define NETSTACK_CONF_RDC     nullrdc_driver
+//#undef NULLRDC_CONF_802154_AUTOACK
+//#define NULLRDC_CONF_802154_AUTOACK       0
+//#define NULLRDC_CONF_802154_AUTOACK_HW 0
 
 /* Define as minutes */
 #define RPL_CONF_DEFAULT_LIFETIME_UNIT   60

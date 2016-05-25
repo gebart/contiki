@@ -1055,11 +1055,11 @@ cfs_seek(int fd, cfs_offset_t offset, int whence)
   }
 
   if(fdp->file->end < new_offset) {
-    if (FD_WRITABLE(fd)) {
+    if(FD_WRITABLE(fd)) {
       fdp->file->end = new_offset;
     } else {
       /* Disallow seeking past the end of the file for read only FDs */
-      new_offset = fdp->file->end;
+      return (cfs_offset_t)-1;
     }
   }
 

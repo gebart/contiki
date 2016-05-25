@@ -79,6 +79,18 @@ main(void)
   /* Set up core clocks so that timings will be correct in all modules */
   SystemInit();
 
+  /*
+   * There is probably some better place for this
+   * Set all int priorities to max/2.
+   */
+  {
+    int i;
+    for(i = 0; i < PORTE_IRQn; ++i)
+    {
+      NVIC_SetPriority(i, 16/2);
+    }
+  }
+
   /* Update SystemCoreClock global var */
   SystemCoreClockUpdate();
 
