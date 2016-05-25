@@ -86,7 +86,6 @@ static bool poll_mode = false;
 static uint8_t csma_retries = 0;
 rtimer_clock_t rf212_sfd_start_time;
 
-
 static int at86rf212_read(void *buf, unsigned short bufsize);
 
 static void on(void);
@@ -262,14 +261,14 @@ at86rf212_cca(void)
     goto exit;
   }
 
-  wait_idle();
-
   /* Don't allow interrupts! */
   HAL_ENTER_CRITICAL_REGION();
 
   // Go to RX_ON state
   hal_subregister_write(0x15, 0x80, 7, 1); // Disable frame reception
   radio_set_trx_state(RX_ON);
+
+  wait_idle();
 
   gpio_set(GPIO_PIN(PORT_C, 6));
   hal_subregister_write(SR_CCA_REQUEST, 1);
@@ -602,6 +601,12 @@ off()
   /* Should we wait for packet transmission to finish? */
   /* Wait for any transmission to end */
   wait_idle();
+
+  /*
+   * Radio needs high priority on interrupt, if it runs with a lower priority
+   * than the routine calling off() a reception will be broken.
+   * A workaround could be to save the message to the buffer here.
+   */
 
   /* Force the device into TRX_OFF. */
   reset_state_machine();

@@ -199,6 +199,8 @@ int gpio_init_int(gpio_t pin, gpio_pp_t pullup, gpio_flank_t flank, gpio_cb_t cb
     /* clear interrupt flags */
     port(pin)->ISFR &= ~(1 << pin_num(pin));
     /* enable global port interrupts in the NVIC */
+    // TODO(Henrik): Perhaps set priority level somewhere else. Radio needs high priority.
+    NVIC_SetPriority(PORTA_IRQn + port_num(pin), 0);
     NVIC_EnableIRQ(PORTA_IRQn + port_num(pin));
     /* finally, enable the interrupt for the select pin */
     port(pin)->PCR[pin_num(pin)] |= flank;
