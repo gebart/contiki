@@ -18,6 +18,7 @@
 #include <stddef.h>
 #include <stdbool.h>
 
+#include <stdio.h>
 /* Debugging*/
 #define DEBUG 0
 #if DEBUG
@@ -60,10 +61,25 @@ enum
   TIME_STATE_TRANSITION_PLL_ACTIVE = 1,     /**<  Transition time from PLL active state to another. */
 };
 
+/*
+ * Radio driver is expected to go into RX state after transmit. RF212 uses same
+ * buffer for TX and RX so the packet must be saved in ram on the MCU so that
+ * a TX packet does not get overwritten between sends.
+ *
+ * Defining TX_BUF sets the radio into RX after transmit, not defining TX_BUF
+ * leaves radio in TX after a transmitt and keeps the packet in the radio buffer.
+ */
+#define TX_BUF 1
+
 /* Received frames are buffered to rxframe in the interrupt routine */
 uint8_t rxframe_head;
 uint8_t rxframe_tail;
 hal_rx_frame_t rxframe[RF212_RX_BUFFERS];
+
+#ifdef TX_BUF
+static uint8_t tx_buf[127];
+static int tx_len;
+#endif
 
 static bool receive_on = false;
 static bool poll_mode = false;
@@ -189,6 +205,10 @@ at86rf212_init(void)
   set_tx_retries(RF212_AUTORETRIES);
   hal_subregister_write(RG_TRX_CTRL_2, 0x3F, 0, RF212_PHY_MODE);
 
+  /* Dont know if this really makes any difference */
+  /* CCA Mode Mode 1=Energy above threshold  2=Carrier sense only  3=Both 0=Either */
+  hal_subregister_write(SR_CCA_MODE, 0); // Carrier sense or above threshold
+
   /* Start the packet receive process */
   process_start(&rf212_process, NULL);
 
@@ -201,10 +221,6 @@ static int
 at86rf212_receive_on(void)
 {
   PRINTF("%s\n",__FUNCTION__);
-  if(is_receive_on())
-  {
-    return 1;
-  }
   receive_on = 1;
   on();
 
@@ -232,22 +248,30 @@ at86rf212_cca(void)
   uint8_t cca = 0;
 
   /* Turn radio on if necessary. If radio is currently busy return busy channel */
+  /* A manual CCA check should not be done in extended operation mode */
   if (!is_receive_on())
   {
-    at86rf212_receive_on();
+    /* If radio is sleeping turn it on */
+    if(is_sleeping())
+    {
+      wakeup();
+    }
   }
   else if(!is_idle())
   {
     goto exit;
   }
 
-  /* CCA Mode Mode 1=Energy above threshold  2=Carrier sense only  3=Both 0=Either (RF231 only) */
-  /* Use the current mode. Note triggering a manual CCA is not recommended in extended mode */
-  /* hal_subregister_write(SR_CCA_MODE,1); */
+  wait_idle();
 
   /* Don't allow interrupts! */
   HAL_ENTER_CRITICAL_REGION();
-  wait_idle();
+
+  // Go to RX_ON state
+  hal_subregister_write(0x15, 0x80, 7, 1); // Disable frame reception
+  radio_set_trx_state(RX_ON);
+
+  gpio_set(GPIO_PIN(PORT_C, 6));
   hal_subregister_write(SR_CCA_REQUEST, 1);
   // No need to delay_us, this will wait for CCA to finish
   // TODO(henrik) Break infinite loop after a timeout
@@ -257,6 +281,8 @@ at86rf212_cca(void)
     cca = hal_register_read(RG_TRX_STATUS);
   }
   hal_register_read(RG_IRQ_STATUS); // Clear interrupts
+  radio_set_trx_state(RX_AACK_ON);
+  hal_subregister_write(0x15, 0x80, 7, 0); // Enable frame reception
   HAL_LEAVE_CRITICAL_REGION();
 
   exit:
@@ -264,6 +290,7 @@ at86rf212_cca(void)
   {
     at86rf212_receive_off();
   }
+  gpio_clear(GPIO_PIN(PORT_C, 6));
   if(cca & 0x40)
   {
     /* Idle */
@@ -276,16 +303,20 @@ at86rf212_cca(void)
   }
 }
 /*---------------------------------------------------------------------------*/
-// TODO(henrik) State transitions are not so consistent between prepare, transmit and send
 static int
 at86rf212_prepare(const void *payload, unsigned short payload_len)
 {
   PRINTF("%s\n",__FUNCTION__);
+
   if (is_sleeping())
   {
     wakeup();
   }
 
+#ifdef TX_BUF
+  memcpy(tx_buf, payload, payload_len);
+  tx_len = payload_len;
+#else // Buffer directly on radio
   /* Wait for any previous operation or state transition to finish */
   /* Do we need to do that? */
   wait_idle();
@@ -294,7 +325,7 @@ at86rf212_prepare(const void *payload, unsigned short payload_len)
   radio_set_trx_state(TX_ARET_ON);
 
   hal_frame_write(payload, payload_len + AUX_LEN);
-
+#endif
   return RADIO_RESULT_OK;
 }
 /*---------------------------------------------------------------------------*/
@@ -306,6 +337,14 @@ at86rf212_transmit(unsigned short payload_len)
   /* Wait for any previous operation or state transition to finish */
   wait_idle();
 
+#ifdef TX_BUF
+  // Go into TX state to prevent buffer from being overwritten
+  radio_set_trx_state(TX_ARET_ON);
+
+  hal_frame_write(tx_buf, tx_len + AUX_LEN);
+#endif
+
+  gpio_set(GPIO_PIN(PORT_C, 7));
   /* Toggle the SLP_TR pin to initiate the frame transmission */
   hal_set_slptr_high();
   hal_set_slptr_low();
@@ -329,7 +368,12 @@ at86rf212_transmit(unsigned short payload_len)
       tx_result = RADIO_TX_ERR;
   }
 
+#ifdef TX_BUF
+  at86rf212_receive_on();
+#endif
+
   PRINTF("%s: %d %d\n",__FUNCTION__, payload_len, tx_result);
+  gpio_clear(GPIO_PIN(PORT_C, 7));
   return tx_result;
 }
 /*---------------------------------------------------------------------------*/
@@ -343,6 +387,7 @@ at86rf212_send(const void *payload, unsigned short payload_len)
     return ret;
   }
   ret = at86rf212_transmit(payload_len);
+#ifndef TX_BUF
   if(is_receive_on())
   {
     on();
@@ -351,6 +396,7 @@ at86rf212_send(const void *payload, unsigned short payload_len)
   {
     off();
   }
+#endif
   return ret;
 }
 /*---------------------------------------------------------------------------*/
@@ -377,7 +423,7 @@ at86rf212_receiving_packet(void)
 static int
 at86rf212_read(void *buf, unsigned short bufsize)
 {
-  PRINTF("%s\n",__FUNCTION__);
+  PRINTF("%s %d\n",__FUNCTION__, rxframe[rxframe_tail].length);
   uint8_t len;
   uint8_t *framep;
 

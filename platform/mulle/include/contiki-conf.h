@@ -173,10 +173,11 @@ typedef uint32_t rtimer_clock_t;
 #define CONTIKIMAC_Tl 26.6
 #define CONTIKIMAC_Td 1.2
 #elif RF212_CONF_PHY_MODE == RF212_PHY_MODE_OQPSK_SIN_RC_100
-#define CONTIKIMAC_Ti 1
-#define CONTIKIMAC_Tc 1.1
+/* Values increased after measurements with oscilloscope */
+#define CONTIKIMAC_Ti 1.2 // Manually increased from 1.0
+#define CONTIKIMAC_Tc 4.1 // Manually increased from 1.1
 #define CONTIKIMAC_Tr 0.32
-#define CONTIKIMAC_Tl 10.64
+#define CONTIKIMAC_Tl 10.64*1.5 // Manually increased with 50%
 #define CONTIKIMAC_Td 0.48
 #elif RF212_CONF_PHY_MODE == RF212_PHY_MODE_OQPSK_SIN_RC_200
 #define CONTIKIMAC_Ti 1
@@ -202,13 +203,15 @@ typedef uint32_t rtimer_clock_t;
  */
 #define RF212_CONF_HARDWARE_ACK     1
 #define RF212_CONF_SEND_ON_CCA 1
-#define RF212_CONF_CCA_RETRIES   3
-#define RF212_CONF_AUTORETRIES      1
+#define RF212_CONF_CCA_RETRIES   0
+#define RF212_CONF_AUTORETRIES      0
 #define RF212_CONF_FRAME_FILTERING 1
 
 #define RDC_CONF_HARDWARE_CSMA    1
 #define RDC_CONF_HARDWARE_ACK    1
 #define NETSTACK_CONF_RDC_CHANNEL_CHECK_RATE   8
+#define CSMA_CONF_MAX_MAC_TRANSMISSIONS 1
+#define SICSLOWPAN_CONF_MAX_MAC_TRANSMISSIONS 1
 
 // Ti
 #define CONTIKIMAC_CONF_INTER_PACKET_INTERVAL (RTIMER_ARCH_SECOND / (1000/CONTIKIMAC_Ti))
