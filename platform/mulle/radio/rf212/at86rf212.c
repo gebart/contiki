@@ -270,7 +270,6 @@ at86rf212_cca(void)
 
   wait_idle();
 
-  gpio_set(GPIO_PIN(PORT_C, 6));
   hal_subregister_write(SR_CCA_REQUEST, 1);
   // No need to delay_us, this will wait for CCA to finish
   // TODO(henrik) Break infinite loop after a timeout
@@ -289,7 +288,6 @@ at86rf212_cca(void)
   {
     at86rf212_receive_off();
   }
-  gpio_clear(GPIO_PIN(PORT_C, 6));
   if(cca & 0x40)
   {
     /* Idle */
@@ -306,11 +304,6 @@ static int
 at86rf212_prepare(const void *payload, unsigned short payload_len)
 {
   PRINTF("%s\n",__FUNCTION__);
-
-  if (is_sleeping())
-  {
-    wakeup();
-  }
 
 #ifdef TX_BUF
   memcpy(tx_buf, payload, payload_len);
@@ -333,6 +326,11 @@ at86rf212_transmit(unsigned short payload_len)
 {
   uint8_t tx_result = RADIO_TX_OK;
 
+  if (is_sleeping())
+  {
+    wakeup();
+  }
+
   /* Wait for any previous operation or state transition to finish */
   wait_idle();
 
@@ -343,7 +341,6 @@ at86rf212_transmit(unsigned short payload_len)
   hal_frame_write(tx_buf, tx_len + AUX_LEN);
 #endif
 
-  gpio_set(GPIO_PIN(PORT_C, 7));
   /* Toggle the SLP_TR pin to initiate the frame transmission */
   hal_set_slptr_high();
   hal_set_slptr_low();
@@ -367,12 +364,17 @@ at86rf212_transmit(unsigned short payload_len)
       tx_result = RADIO_TX_ERR;
   }
 
+  // CSMA retries == 7 means no CSMA
+  if (hal_subregister_read(SR_MAX_CSMA_RETRIES) == 7)
+  {
+    tx_result = RADIO_TX_OK;
+  }
+
 #ifdef TX_BUF
   at86rf212_receive_on();
 #endif
 
   PRINTF("%s: %d %d\n",__FUNCTION__, payload_len, tx_result);
-  gpio_clear(GPIO_PIN(PORT_C, 7));
   return tx_result;
 }
 /*---------------------------------------------------------------------------*/
