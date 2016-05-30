@@ -82,8 +82,12 @@ static int tx_len;
 #endif
 
 static bool receive_on = false;
+static bool frame_filtering = false;
+static bool auto_ack = false;
 static bool poll_mode = false;
 static uint8_t csma_retries = 0;
+static uint8_t channel = 0;
+static bool send_on_cca = false;
 rtimer_clock_t rf212_sfd_start_time;
 
 static int at86rf212_read(void *buf, unsigned short bufsize);
@@ -340,6 +344,7 @@ at86rf212_transmit(unsigned short payload_len)
 
   hal_frame_write(tx_buf, tx_len + AUX_LEN);
 #endif
+  set_send_on_cca(send_on_cca);
 
   /* Toggle the SLP_TR pin to initiate the frame transmission */
   hal_set_slptr_high();
@@ -496,10 +501,10 @@ at86rf212_get_value(radio_param_t param, radio_value_t *value)
     case RADIO_PARAM_RX_MODE:
       *value = 0;
       // TODO(henrik): Masks for positions.
-      if(hal_register_read(RG_XAH_CTRL_1) & 0x2) {
+      if(frame_filtering) {
         *value |= RADIO_RX_MODE_ADDRESS_FILTER;
       }
-      if (hal_register_read(RG_CSMA_SEED_1) & 0x10) {
+      if (auto_ack) {
         *value |= RADIO_RX_MODE_AUTOACK;
       }
       if(poll_mode) {
@@ -521,7 +526,8 @@ at86rf212_get_value(radio_param_t param, radio_value_t *value)
 
     case RADIO_PARAM_TX_MODE:
       *value = 0;
-      if(hal_subregister_read(SR_MAX_CSMA_RETRIES) != 7) {
+      if(send_on_cca)
+      {
         *value |= RADIO_TX_MODE_SEND_ON_CCA;
       }
       return RADIO_RESULT_OK;
@@ -539,25 +545,33 @@ at86rf212_set_value(radio_param_t param, radio_value_t value)
   {
     case RADIO_PARAM_RX_MODE:
       if(value & ~(RADIO_RX_MODE_ADDRESS_FILTER |
-          RADIO_RX_MODE_AUTOACK | RADIO_RX_MODE_POLL_MODE)) {
+          RADIO_RX_MODE_AUTOACK | RADIO_RX_MODE_POLL_MODE))
+      {
         return RADIO_RESULT_INVALID_VALUE;
       }
-      set_frame_filtering((value & RADIO_RX_MODE_ADDRESS_FILTER) != 0);
-      set_auto_ack((value & RADIO_RX_MODE_AUTOACK) != 0);
-      set_poll_mode((value & RADIO_RX_MODE_POLL_MODE) != 0);
+      frame_filtering = (value & RADIO_RX_MODE_ADDRESS_FILTER) != 0;
+      auto_ack = (value & RADIO_RX_MODE_AUTOACK) != 0;
+      poll_mode = (value & RADIO_RX_MODE_POLL_MODE) != 0;
+
+      set_frame_filtering(frame_filtering);
+      set_auto_ack(auto_ack);
+      set_poll_mode(poll_mode);
       return RADIO_RESULT_OK;
 
     case RADIO_PARAM_CHANNEL:
+      channel = value;
       set_channel(value);
       return RADIO_RESULT_OK;
 
     case RADIO_PARAM_TX_MODE:
-      if(value & ~(RADIO_TX_MODE_SEND_ON_CCA)) {
+      if(value & ~(RADIO_TX_MODE_SEND_ON_CCA))
+      {
         return RADIO_RESULT_INVALID_VALUE;
       }
       set_send_on_cca((value & RADIO_TX_MODE_SEND_ON_CCA) != 0);
       return RADIO_RESULT_OK;
   }
+
   return RADIO_RESULT_NOT_SUPPORTED;
 }
 /*---------------------------------------------------------------------------*/
@@ -592,6 +606,8 @@ on(void)
     wakeup();
   }
 
+  set_auto_ack(auto_ack);
+  set_frame_filtering(frame_filtering);
   radio_set_trx_state(RX_AACK_ON);
   wait_idle();
 }
@@ -645,6 +661,7 @@ wakeup()
   while(hal_get_irq() == 0) {}
   hal_register_read(RG_IRQ_STATUS); // Clear interrupts
   hal_enable_trx_interrupt();
+  set_channel(channel);
 }
 /*---------------------------------------------------------------------------*/
 static bool
@@ -895,6 +912,10 @@ reset_state_machine(void)
 static void
 set_auto_ack(uint8_t enable)
 {
+  if (is_sleeping())
+  {
+    return;
+  }
   HAL_ENTER_CRITICAL_REGION();
   hal_subregister_write(RG_CSMA_SEED_1, 0x10, 4, !enable);
   HAL_LEAVE_CRITICAL_REGION();
@@ -904,8 +925,18 @@ set_auto_ack(uint8_t enable)
 static void
 set_frame_filtering(uint8_t enable)
 {
+  if (is_sleeping())
+  {
+    return;
+  }
   HAL_ENTER_CRITICAL_REGION();
+  // TODO(henriK): This snippet doesnt seem to work(?) so if TSCH is defined
+  // turn off frame filtering for now.
+#ifdef TSCH
+  hal_subregister_write(RG_XAH_CTRL_1, 0x2, 1, 1); //!enable);
+#else
   hal_subregister_write(RG_XAH_CTRL_1, 0x2, 1, !enable);
+#endif
   HAL_LEAVE_CRITICAL_REGION();
 }
 /*---------------------------------------------------------------------------*/
@@ -913,6 +944,10 @@ set_frame_filtering(uint8_t enable)
 static void
 set_poll_mode(uint8_t enable)
 {
+  if (is_sleeping())
+  {
+    return;
+  }
   HAL_ENTER_CRITICAL_REGION();
   poll_mode = enable;
   HAL_LEAVE_CRITICAL_REGION();
@@ -941,6 +976,10 @@ set_cca_retries(uint8_t num)
 static void
 set_send_on_cca(bool enable)
 {
+  if (is_sleeping())
+  {
+    return;
+  }
   if (enable)
   {
     hal_subregister_write(SR_MAX_CSMA_RETRIES, csma_retries);
@@ -1006,13 +1045,17 @@ at86rf212_set_pan_addr(unsigned pan,
 static uint8_t
 get_channel(void)
 {
-  return hal_subregister_read(SR_CHANNEL);
+  return channel;
 }
 /*---------------------------------------------------------------------------*/
 static void
 set_channel(uint8_t c)
 {
   /* Wait for any transmission to end. */
+  if (is_sleeping())
+  {
+    return;
+  }
   PRINTF("rf212_%s: %u\r\n", __FUNCTION__, c);
   wait_idle();
   hal_subregister_write(SR_CHANNEL, c);

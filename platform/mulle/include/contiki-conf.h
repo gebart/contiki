@@ -118,37 +118,100 @@ typedef uint32_t rtimer_clock_t;
 #define RF212_CONF_PHY_MODE         RF212_PHY_MODE_OQPSK_SIN_RC_100
 #endif
 
-#ifndef NETSTACK_CONF_NETWORK
-#define NETSTACK_CONF_NETWORK       sicslowpan_driver
-#endif /* NETSTACK_CONF_NETWORK */
 
-#ifndef NETSTACK_CONF_MAC
-#define NETSTACK_CONF_MAC           csma_driver
-#endif /* NETSTACK_CONF_MAC */
-
+#ifdef TSCH
 /******************************* TSCH ***********************************/
-#if TSCH
 
-#ifndef TSCH_CONF_DEFAULT_TIMESLOT_LENGTH
-#define TSCH_CONF_DEFAULT_TIMESLOT_LENGTH 65000
-#endif
-// TODO(henrik) Do we really start at sleep??
+/* TSCH packet calculations are done with respect to 250kbps data rates */
+#undef RF212_CONF_PHY_MODE
+#define RF212_CONF_PHY_MODE         RF230_PHY_MODE_OQPSK_SIN_250
+
+/* Netstack layers */
+#undef NETSTACK_CONF_MAC
+#define NETSTACK_CONF_MAC     tschmac_driver
+#undef NETSTACK_CONF_RDC
+#define NETSTACK_CONF_RDC     nordc_driver
+#undef NETSTACK_CONF_FRAMER
+#define NETSTACK_CONF_FRAMER  framer_802154
+
+/* IEEE802.15.4 frame version */
+#undef FRAME802154_CONF_VERSION
+#define FRAME802154_CONF_VERSION FRAME802154_IEEE802154E_2012
+
+/* TSCH and RPL callbacks */
+#define RPL_CALLBACK_PARENT_SWITCH tsch_rpl_callback_parent_switch
+#define RPL_CALLBACK_NEW_DIO_INTERVAL tsch_rpl_callback_new_dio_interval
+#define TSCH_CALLBACK_JOINING_NETWORK tsch_rpl_callback_joining_network
+#define TSCH_CALLBACK_LEAVING_NETWORK tsch_rpl_callback_leaving_network
+
+#define TSCH_SCHEDULE_CONF_DEFAULT_LENGTH 1
+
+#define TSCH_LOG_CONF_LEVEL 2
+
+// TODO(henrik) WIP
+/* TSCH_CONF_DEFAULT_TIMESLOT_LENGTH == -1 means platform defined timings */
+//#undef TSCH_CONF_DEFAULT_TIMESLOT_LENGTH
+//#define TSCH_CONF_DEFAULT_TIMESLOT_LENGTH -1
+//
+//#define TSCH_CONF_RX_WAIT 4000
+//
+////#define TSCH_DEFAULT_TS_CCA_OFFSET         1800
+////#define TSCH_DEFAULT_TS_CCA                128
+////#define TSCH_DEFAULT_TS_TX_OFFSET          52000
+////#define TSCH_DEFAULT_TS_RX_OFFSET          (TSCH_DEFAULT_TS_TX_OFFSET - (TSCH_CONF_RX_WAIT / 2))
+////#define TSCH_DEFAULT_TS_RX_ACK_DELAY       58600
+////#define TSCH_DEFAULT_TS_TX_ACK_DELAY       59000
+////#define TSCH_DEFAULT_TS_RX_WAIT            TSCH_CONF_RX_WAIT
+////#define TSCH_DEFAULT_TS_ACK_WAIT           800
+////#define TSCH_DEFAULT_TS_RX_TX              2072
+////#define TSCH_DEFAULT_TS_MAX_ACK            2400
+////#define TSCH_DEFAULT_TS_MAX_TX             10640
+////#define TSCH_DEFAULT_TS_TIMESLOT_LENGTH    65000
+//
+//#define TSCH_DEFAULT_TS_CCA_OFFSET         1800
+//#define TSCH_DEFAULT_TS_CCA                128
+//#define TSCH_DEFAULT_TS_TX_OFFSET          (52000-35000)
+//#define TSCH_DEFAULT_TS_RX_OFFSET          (TSCH_DEFAULT_TS_TX_OFFSET - (TSCH_CONF_RX_WAIT / 2))
+//#define TSCH_DEFAULT_TS_RX_ACK_DELAY       (57600-20000)
+//#define TSCH_DEFAULT_TS_TX_ACK_DELAY       (59000-20000)
+//#define TSCH_DEFAULT_TS_RX_WAIT            TSCH_CONF_RX_WAIT
+//#define TSCH_DEFAULT_TS_ACK_WAIT           2800
+//#define TSCH_DEFAULT_TS_RX_TX              2072
+//#define TSCH_DEFAULT_TS_MAX_ACK            3400
+//#define TSCH_DEFAULT_TS_MAX_TX             14256
+//#define TSCH_DEFAULT_TS_TIMESLOT_LENGTH    65000
+
 
 /* Delay between GO signal and SFD */
-// time to tx from sleep + 4 bytes preamble => (380+200+40)+(2*40*4)=940 uS
-#define RADIO_DELAY_BEFORE_TX ((unsigned)US_TO_RTIMERTICKS(940))
+/* Sleep to tx => 540 us (measured time) + 4 bytes preamble  + 1 byte SFD*/
+#define RADIO_DELAY_BEFORE_TX ((unsigned)US_TO_RTIMERTICKS(540+2*16*(4+1)))
 
 /* Delay between GO signal and start listening */
-// time to rx from sleep + 4 bytes preamble => (380+200) + 2*40*4 = 520
-#define RADIO_DELAY_BEFORE_RX ((unsigned)US_TO_RTIMERTICKS(520))
+/* Sleep to rx => 460 (measured time) */
+#define RADIO_DELAY_BEFORE_RX ((unsigned)US_TO_RTIMERTICKS(460))
+//#define RADIO_DELAY_BEFORE_RX 0
 
 /* Delay between the SFD finishes arriving and it is detected in software */
-#define RADIO_DELAY_BEFORE_DETECT 0
+/* IRQ delay 8 us + PHR byte */
+#define RADIO_DELAY_BEFORE_DETECT ((unsigned)US_TO_RTIMERTICKS((8+2*16*1)))
 
-#define TSCH_CONF_DEFAULT_HOPPING_SEQUENCE (uint8_t[]){ 1, 3, 2, 4 }
+#define RF_CHANNEL                  1 /* not needed */
+#define TSCH_CONF_DEFAULT_HOPPING_SEQUENCE (uint8_t[]){ 1 }
+
+#define RF212_CONF_HARDWARE_ACK     0 /* TSCH sends acks by itself */
+#define RF212_CONF_SEND_ON_CCA 0
+#define RF212_CONF_CCA_RETRIES   0
+#define RF212_CONF_AUTORETRIES      0
+#define RF212_CONF_FRAME_FILTERING 1
 
 /******************************* CONTIKIMAC ***********************************/
 #elif CONTIKIMAC
+
+/* CONTIKIMAC has only been tested with O-QPSK-100 */
+#undef RF212_CONF_PHY_MODE
+/* PHY mode is configured for 100 kbit/s data rate and following the 802.15.4 standard */
+#define RF212_CONF_PHY_MODE         RF212_PHY_MODE_OQPSK_SIN_RC_100
+
 /**
  * BPSQ: 1 Symbol = 1 Bit => 8 Symbols = 1 Byte
  * O-QPSK: 1 Symbol = 4 Bits => 2 Symbols = 1 Byte
@@ -267,7 +330,15 @@ typedef uint32_t rtimer_clock_t;
 #define RF212_CONF_SEND_ON_CCA 1
 #define RF212_CONF_CCA_RETRIES   0
 #define RF212_CONF_AUTORETRIES      3
-#endif /* CONTIKIMAC */
+#endif /* TSCH */
+
+#ifndef NETSTACK_CONF_NETWORK
+#define NETSTACK_CONF_NETWORK       sicslowpan_driver
+#endif /* NETSTACK_CONF_NETWORK */
+
+#ifndef NETSTACK_CONF_MAC
+#define NETSTACK_CONF_MAC           csma_driver
+#endif /* NETSTACK_CONF_MAC */
 
 
 #ifndef NETSTACK_CONF_FRAMER
