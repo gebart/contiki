@@ -85,8 +85,7 @@ CONTIKI_TARGET_SOURCEFILES += contiki-main.c \
   battery-sensor.c \
   button-sensor.c
 
-include $(PLATFORM_DIR)/radio/rf230bb/Makefile.rf230bb
-CFLAGS += -DRF230BB
+include $(PLATFORM_DIR)/radio/rf212/Makefile.rf212
 
 include $(CPU_DIR)/Makefile.$(CPU_NAME)
 contiki-$(TARGET).a: ${addprefix $(OBJECTDIR)/,symbols.o}

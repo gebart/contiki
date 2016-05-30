@@ -43,7 +43,11 @@
 #define __CONTIKI_CONF_H__
 
 #include <stdint.h>
-#include "at86rf230_registermap.h"
+#include "at86rf212_registermap.h"
+
+#ifdef PROJECT_CONF_H
+#include PROJECT_CONF_H
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -109,18 +113,104 @@ typedef uint32_t rtimer_clock_t;
 /* Disable slip-bridge implementation of putchar because it messes up newlib buffered stdio */
 #define SLIP_BRIDGE_CONF_NO_PUTCHAR 1
 
-#ifndef RF230_CONF_PHY_MODE
+#ifndef RF212_CONF_PHY_MODE
 /* PHY mode is configured for 100 kbit/s data rate and following the 802.15.4 standard */
-#define RF230_CONF_PHY_MODE         RF230_PHY_MODE_OQPSK_SIN_RC_100
+#define RF212_CONF_PHY_MODE         RF212_PHY_MODE_OQPSK_SIN_RC_100
 #endif
 
-#ifndef NETSTACK_CONF_NETWORK
-#define NETSTACK_CONF_NETWORK       sicslowpan_driver
-#endif /* NETSTACK_CONF_NETWORK */
 
-#ifndef NETSTACK_CONF_MAC
-#define NETSTACK_CONF_MAC           csma_driver
-#endif /* NETSTACK_CONF_MAC */
+#ifdef TSCH
+/******************************* TSCH ***********************************/
+
+/* TSCH packet calculations are done with respect to 250kbps data rates */
+#undef RF212_CONF_PHY_MODE
+#define RF212_CONF_PHY_MODE         RF230_PHY_MODE_OQPSK_SIN_250
+
+/* Netstack layers */
+#undef NETSTACK_CONF_MAC
+#define NETSTACK_CONF_MAC     tschmac_driver
+#undef NETSTACK_CONF_RDC
+#define NETSTACK_CONF_RDC     nordc_driver
+#undef NETSTACK_CONF_FRAMER
+#define NETSTACK_CONF_FRAMER  framer_802154
+
+/* IEEE802.15.4 frame version */
+#undef FRAME802154_CONF_VERSION
+#define FRAME802154_CONF_VERSION FRAME802154_IEEE802154E_2012
+
+/* TSCH and RPL callbacks */
+#define RPL_CALLBACK_PARENT_SWITCH tsch_rpl_callback_parent_switch
+#define RPL_CALLBACK_NEW_DIO_INTERVAL tsch_rpl_callback_new_dio_interval
+#define TSCH_CALLBACK_JOINING_NETWORK tsch_rpl_callback_joining_network
+#define TSCH_CALLBACK_LEAVING_NETWORK tsch_rpl_callback_leaving_network
+
+#define TSCH_SCHEDULE_CONF_DEFAULT_LENGTH 1
+
+#define TSCH_LOG_CONF_LEVEL 2
+
+// TODO(henrik) WIP
+/* TSCH_CONF_DEFAULT_TIMESLOT_LENGTH == -1 means platform defined timings */
+//#undef TSCH_CONF_DEFAULT_TIMESLOT_LENGTH
+//#define TSCH_CONF_DEFAULT_TIMESLOT_LENGTH -1
+//
+//#define TSCH_CONF_RX_WAIT 4000
+//
+////#define TSCH_DEFAULT_TS_CCA_OFFSET         1800
+////#define TSCH_DEFAULT_TS_CCA                128
+////#define TSCH_DEFAULT_TS_TX_OFFSET          52000
+////#define TSCH_DEFAULT_TS_RX_OFFSET          (TSCH_DEFAULT_TS_TX_OFFSET - (TSCH_CONF_RX_WAIT / 2))
+////#define TSCH_DEFAULT_TS_RX_ACK_DELAY       58600
+////#define TSCH_DEFAULT_TS_TX_ACK_DELAY       59000
+////#define TSCH_DEFAULT_TS_RX_WAIT            TSCH_CONF_RX_WAIT
+////#define TSCH_DEFAULT_TS_ACK_WAIT           800
+////#define TSCH_DEFAULT_TS_RX_TX              2072
+////#define TSCH_DEFAULT_TS_MAX_ACK            2400
+////#define TSCH_DEFAULT_TS_MAX_TX             10640
+////#define TSCH_DEFAULT_TS_TIMESLOT_LENGTH    65000
+//
+//#define TSCH_DEFAULT_TS_CCA_OFFSET         1800
+//#define TSCH_DEFAULT_TS_CCA                128
+//#define TSCH_DEFAULT_TS_TX_OFFSET          (52000-35000)
+//#define TSCH_DEFAULT_TS_RX_OFFSET          (TSCH_DEFAULT_TS_TX_OFFSET - (TSCH_CONF_RX_WAIT / 2))
+//#define TSCH_DEFAULT_TS_RX_ACK_DELAY       (57600-20000)
+//#define TSCH_DEFAULT_TS_TX_ACK_DELAY       (59000-20000)
+//#define TSCH_DEFAULT_TS_RX_WAIT            TSCH_CONF_RX_WAIT
+//#define TSCH_DEFAULT_TS_ACK_WAIT           2800
+//#define TSCH_DEFAULT_TS_RX_TX              2072
+//#define TSCH_DEFAULT_TS_MAX_ACK            3400
+//#define TSCH_DEFAULT_TS_MAX_TX             14256
+//#define TSCH_DEFAULT_TS_TIMESLOT_LENGTH    65000
+
+
+/* Delay between GO signal and SFD */
+/* Sleep to tx => 540 us (measured time) + 4 bytes preamble  + 1 byte SFD*/
+#define RADIO_DELAY_BEFORE_TX ((unsigned)US_TO_RTIMERTICKS(540+2*16*(4+1)))
+
+/* Delay between GO signal and start listening */
+/* Sleep to rx => 460 (measured time) */
+#define RADIO_DELAY_BEFORE_RX ((unsigned)US_TO_RTIMERTICKS(460))
+//#define RADIO_DELAY_BEFORE_RX 0
+
+/* Delay between the SFD finishes arriving and it is detected in software */
+/* IRQ delay 8 us + PHR byte */
+#define RADIO_DELAY_BEFORE_DETECT ((unsigned)US_TO_RTIMERTICKS((8+2*16*1)))
+
+#define RF_CHANNEL                  1 /* not needed */
+#define TSCH_CONF_DEFAULT_HOPPING_SEQUENCE (uint8_t[]){ 1 }
+
+#define RF212_CONF_HARDWARE_ACK     0 /* TSCH sends acks by itself */
+#define RF212_CONF_SEND_ON_CCA 0
+#define RF212_CONF_CCA_RETRIES   0
+#define RF212_CONF_AUTORETRIES      0
+#define RF212_CONF_FRAME_FILTERING 1
+
+/******************************* CONTIKIMAC ***********************************/
+#elif CONTIKIMAC
+
+/* CONTIKIMAC has only been tested with O-QPSK-100 */
+#undef RF212_CONF_PHY_MODE
+/* PHY mode is configured for 100 kbit/s data rate and following the 802.15.4 standard */
+#define RF212_CONF_PHY_MODE         RF212_PHY_MODE_OQPSK_SIN_RC_100
 
 /**
  * BPSQ: 1 Symbol = 1 Bit => 8 Symbols = 1 Byte
@@ -158,31 +248,32 @@ typedef uint32_t rtimer_clock_t;
  *       gives less PL.
  */
 
-#if RF230_CONF_PHY_MODE == RF230_PHY_MODE_BPSK_20
+#if RF212_CONF_PHY_MODE == RF212_PHY_MODE_BPSK_20
 #define CONTIKIMAC_Ti 3.5
 #define CONTIKIMAC_Tc 4
 #define CONTIKIMAC_Tr 0.4
 #define CONTIKIMAC_Tl 53.2
 #define CONTIKIMAC_Td 2.4
-#elif RF230_CONF_PHY_MODE == RF230_PHY_MODE_BPSK_40
+#elif RF212_CONF_PHY_MODE == RF212_PHY_MODE_BPSK_40
 #define CONTIKIMAC_Ti 3
 #define CONTIKIMAC_Tc 3.5
 #define CONTIKIMAC_Tr 0.2
 #define CONTIKIMAC_Tl 26.6
 #define CONTIKIMAC_Td 1.2
-#elif RF230_CONF_PHY_MODE == RF230_PHY_MODE_OQPSK_SIN_RC_100
-#define CONTIKIMAC_Ti 1
-#define CONTIKIMAC_Tc 1.1
+#elif RF212_CONF_PHY_MODE == RF212_PHY_MODE_OQPSK_SIN_RC_100
+/* Values increased after measurements with oscilloscope */
+#define CONTIKIMAC_Ti 1.2 // Manually increased from 1.0
+#define CONTIKIMAC_Tc 4.1 // Manually increased from 1.1
 #define CONTIKIMAC_Tr 0.32
-#define CONTIKIMAC_Tl 10.64
+#define CONTIKIMAC_Tl 10.64*1.5 // Manually increased with 50%
 #define CONTIKIMAC_Td 0.48
-#elif RF230_CONF_PHY_MODE == RF230_PHY_MODE_OQPSK_SIN_RC_200
+#elif RF212_CONF_PHY_MODE == RF212_PHY_MODE_OQPSK_SIN_RC_200
 #define CONTIKIMAC_Ti 1
 #define CONTIKIMAC_Tc 1.1
 #define CONTIKIMAC_Tr 0.32
 #define CONTIKIMAC_Tl (5.56+0.5) // Manually increased Tl for better stability
 #define CONTIKIMAC_Td 0.48
-#elif RF230_CONF_PHY_MODE == RF230_PHY_MODE_OQPSK_SIN_250
+#elif RF212_CONF_PHY_MODE == RF212_PHY_MODE_OQPSK_SIN_250
 #define CONTIKIMAC_Ti 0.5
 #define CONTIKIMAC_Tc 0.6
 #define CONTIKIMAC_Tr 0.128
@@ -192,20 +283,25 @@ typedef uint32_t rtimer_clock_t;
 #error "CONTIKIMAC does not support the specified radio speed"
 #endif
 
-#if CONTIKIMAC
-#ifndef NETSTACK_CONF_RDC
+#undef NETSTACK_CONF_RDC
 #define NETSTACK_CONF_RDC         contikimac_driver
-#endif /* NETSTACK_CONF_RDC */
-// TODO(henrik) Check parameters to CONTIKIMAC
-/* TX routine passes the cca/ack result in the return parameter */
-#define RDC_CONF_HARDWARE_ACK     1
-/* TX routine does automatic cca and optional backoffs */
+
+/*
+ * Contikimac strobes by itself.
+ */
+#define RF212_CONF_HARDWARE_ACK     1
+#define RF212_CONF_SEND_ON_CCA 1
+#define RF212_CONF_CCA_RETRIES   0
+#define RF212_CONF_AUTORETRIES      0
+#define RF212_CONF_FRAME_FILTERING 1
+
 #define RDC_CONF_HARDWARE_CSMA    1
-#define RF230_CONF_AUTOACK        1
-#define RF230_CONF_FRAME_RETRIES  1
-#define RF230_CONF_CSMA_RETRIES   0
-#define RF230_CONF_AUTORETRIES      1
+#define RDC_CONF_HARDWARE_ACK    1
 #define NETSTACK_CONF_RDC_CHANNEL_CHECK_RATE   8
+#define CSMA_CONF_MAX_MAC_TRANSMISSIONS 1
+#define SICSLOWPAN_CONF_MAX_MAC_TRANSMISSIONS 1
+/* Going from 2 to 3 CCA checks gives almost zero packetloss. */
+#define CONTIKIMAC_CONF_CCA_COUNT_MAX 3
 
 // Ti
 #define CONTIKIMAC_CONF_INTER_PACKET_INTERVAL (RTIMER_ARCH_SECOND / (1000/CONTIKIMAC_Ti))
@@ -221,18 +317,29 @@ typedef uint32_t rtimer_clock_t;
 /* Phase optimization seem to cause problems (drifting clocks?) */
 #define CONTIKIMAC_CONF_WITH_PHASE_OPTIMIZATION 0
 
-#else /* CONTIKIMAC */
+#else
+/******************************** Nullrdc *************************************/
 #ifndef NETSTACK_CONF_RDC
 #define NETSTACK_CONF_RDC           nullrdc_driver
 #endif /* NETSTACK_CONF_RDC */
+
 #define RDC_CONF_HARDWARE_ACK     1
 /* TX routine does automatic cca and optional backoffs */
 #define RDC_CONF_HARDWARE_CSMA    1
-#define RF230_CONF_AUTOACK        1
-#define RF230_CONF_FRAME_RETRIES  1
-#define RF230_CONF_CSMA_RETRIES   0
-#define RF230_CONF_AUTORETRIES      3
-#endif /* CONTIKIMAC */
+#define RF212_CONF_HARDWARE_ACK     1
+#define RF212_CONF_SEND_ON_CCA 1
+#define RF212_CONF_CCA_RETRIES   0
+#define RF212_CONF_AUTORETRIES      3
+#endif /* TSCH */
+
+#ifndef NETSTACK_CONF_NETWORK
+#define NETSTACK_CONF_NETWORK       sicslowpan_driver
+#endif /* NETSTACK_CONF_NETWORK */
+
+#ifndef NETSTACK_CONF_MAC
+#define NETSTACK_CONF_MAC           csma_driver
+#endif /* NETSTACK_CONF_MAC */
+
 
 #ifndef NETSTACK_CONF_FRAMER
 #if NETSTACK_CONF_WITH_IPV6
@@ -243,11 +350,11 @@ typedef uint32_t rtimer_clock_t;
 #endif /* NETSTACK_CONF_FRAMER */
 
 #ifndef NETSTACK_CONF_RADIO
-#define NETSTACK_CONF_RADIO         rf230_driver
+#define NETSTACK_CONF_RADIO         rf212_driver
 #endif /* NETSTACK_CONF_RADIO */
 
 #define SICSLOWPAN_CONF_MAXAGE      1
-#define RF230_CONF_RX_BUFFERS       10
+#define RF212_CONF_RX_BUFFERS       10
 #define LINKADDR_CONF_SIZE          8
 
 #ifndef UIP_CONF_BUFFER_SIZE

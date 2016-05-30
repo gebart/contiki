@@ -1,0 +1,2 @@
+CONTIKI_TARGET_DIRS           += radio/rf212
+CONTIKI_TARGET_SOURCEFILES += at86rf212.c at86rf212_hal.c

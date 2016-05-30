@@ -344,7 +344,7 @@ PROCESS_THREAD(border_router_process, ev, data)
  * Prevent that by turning the radio off until we are initialized as a DAG root.
  */
   prefix_set = 0;
-  NETSTACK_MAC.off(0);
+  //NETSTACK_MAC.off(0);
 
   PROCESS_PAUSE();
 
@@ -369,7 +369,7 @@ PROCESS_THREAD(border_router_process, ev, data)
   /* Now turn the radio on, but disable radio duty cycling.
    * Since we are the DAG root, reception delays would constrain mesh throughbut.
    */
-  NETSTACK_MAC.off(1);
+ // NETSTACK_MAC.on();
 
 #if DEBUG || 1
   print_local_addresses();

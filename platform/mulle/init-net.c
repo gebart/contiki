@@ -44,11 +44,11 @@
 #include "K60.h"
 
 #include "contiki.h"
-#include "rf230bb.h"
+#include "at86rf212.h"
 #include "net/netstack.h"
 #include "net/mac/frame802154.h"
-#include "lwm2m-engine.h"
-#include "ipso-objects.h"
+//#include "lwm2m-engine.h"
+//#include "ipso-objects.h"
 
 #define DEBUG 1
 #include "net/ip/uip-debug.h"
@@ -115,6 +115,8 @@ init_net(void)
 #if NETSTACK_CONF_WITH_IPV6
   set_rime_addr();
   NETSTACK_RADIO.init();
+  /* Radio needs to be on when setting settings. */
+  NETSTACK_RADIO.on();
   do {
     uint8_t longaddr[8];
     uint16_t shortaddr;
@@ -123,7 +125,7 @@ init_net(void)
       linkaddr_node_addr.u8[1];
     memset(longaddr, 0, sizeof(longaddr));
     linkaddr_copy((linkaddr_t *)&longaddr, &linkaddr_node_addr);
-    rf230_set_pan_addr(IEEE802154_CONF_PANID, shortaddr, longaddr);
+    at86rf212_set_pan_addr(IEEE802154_CONF_PANID, shortaddr, longaddr);
     PRINTF("PAN ID: 0x%04X\n", IEEE802154_CONF_PANID);
     PRINTF("RF channel: %u\n", RF_CHANNEL);
     PRINTF("longaddr: ");
@@ -132,7 +134,7 @@ init_net(void)
     }
     PRINTF("%02x\n", longaddr[7]);
   } while(0);
-  rf230_set_channel(RF_CHANNEL);
+  NETSTACK_RADIO.set_value(RADIO_PARAM_CHANNEL, RF_CHANNEL);
 
   memcpy(&uip_lladdr.addr, id.u8, sizeof(uip_lladdr.addr));
 
@@ -150,20 +152,7 @@ init_net(void)
 
   process_start(&tcpip_process, NULL);
 
-  PRINTF("Radio PHY mode: 0x%02x", RF230_CONF_PHY_MODE);
-  switch (RF230_CONF_PHY_MODE) {
-    case RF230_PHY_MODE_OQPSK_SIN_RC_100:
-    case RF230_PHY_MODE_OQPSK_SIN_250:
-      PRINTF(" (page 2)\n");
-      break;
-    case RF230_PHY_MODE_BPSK_20:
-    case RF230_PHY_MODE_BPSK_40:
-      PRINTF(" (page 0)\n");
-      break;
-    default:
-      PRINTF("\n");
-      break;
-  }
+  PRINTF("Radio PHY mode: 0x%02x\n", RF212_CONF_PHY_MODE);
 
   PRINTF("Tentative link-local IPv6 address ");
   do {
@@ -210,7 +199,7 @@ init_net(void)
 #endif /* WITH_IPSO */
 
 #else /* If no radio stack should be used only turn on radio and set it to sleep for minimal power consumption */
-  rf230_init();
-  rf230_driver.off();
+  rf212.init();
+  rf212.off();
 #endif /* NETSTACK_CONF_WITH_IPV6 */
 }

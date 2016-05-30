@@ -54,7 +54,7 @@
 #include "net/ip/uip-debug.h"
 
 #ifndef PERIOD
-#define PERIOD 60
+#define PERIOD 5
 #endif
 
 #define START_INTERVAL		(15 * CLOCK_SECOND)
@@ -200,17 +200,21 @@ PROCESS_THREAD(udp_client_process, ev, data)
 	UIP_HTONS(client_conn->lport), UIP_HTONS(client_conn->rport));
 
   /* initialize serial line */
-  uart1_set_input(serial_line_input_byte);
-  serial_line_init();
+//  uart1_set_input(serial_line_input_byte);
+//  serial_line_init();
 
 
 #if WITH_COMPOWER
   powertrace_sniff(POWERTRACE_ON);
 #endif
 
+//  etimer_set(&periodic, CLOCK_SECOND*30);
+//  PROCESS_YIELD();
   etimer_set(&periodic, SEND_INTERVAL);
   while(1) {
+//    NETSTACK_RADIO.off();
     PROCESS_YIELD();
+//    NETSTACK_RADIO.on();
     if(ev == tcpip_event) {
       tcpip_handler();
     }

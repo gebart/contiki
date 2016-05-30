@@ -1,4 +1,21 @@
 /*
+RADIO_PARAM_RX_MODE
+	RADIO_RX_MODE_ADDRESS_FILTER
+	RADIO_RX_MODE_AUTOACK
+	RADIO_RX_MODE_POLL_MODE
+RADIO_PARAM_LAST_RSSI
+RADIO_PARAM_LAST_PACKET_TIMESTAMP
+RADIO_PARAM_CHANNEL
+RADIO_PARAM_TX_MODE
+	RADIO_TX_MODE_SEND_ON_CCA
+
+RADIO_DELAY_BEFORE_TX
+RADIO_DELAY_BEFORE_RX
+RADIO_DELAY_BEFORE_DETECT
+TSCH_CONF_DEFAULT_HOPPING_SEQUENCE
+ */
+
+/*
  * Copyright (c) 2007, Swedish Institute of Computer Science
  * All rights reserved.
  *
@@ -46,7 +63,7 @@
 #define sei() MK60_ENABLE_INTERRUPT()
 #define IRQ_POLLING 1
 #include "dev/leds.h"
-#define DEBUG 0
+#define DEBUG 1
 #if DEBUG
 #define PRINTF(...)              printf(__VA_ARGS__)
 #define PRINTSHORT(...)            printf(__VA_ARGS__)
@@ -62,6 +79,7 @@
 #include "net/packetbuf.h"
 #include "net/rime/rimestats.h"
 #include "net/netstack.h"
+#include "core/sys/rtimer.h"
 
 #define WITH_SEND_CCA 0
 
@@ -237,23 +255,134 @@ static int rf230_pending_packet(void);
 static int rf230_cca(void);
 
 uint8_t rf230_last_correlation, rf230_last_rssi, rf230_smallest_rssi;
+static bool poll_mode = 0;
+static bool send_on_cca = 0;
+rtimer_clock_t rf230_sfd_start_time;
 
+/*---------------------------------------------------------------------------*/
+/* Set or unset frame autoack */
+static void
+set_auto_ack(uint8_t enable)
+{
+  HAL_ENTER_CRITICAL_REGION();
+  hal_subregister_write(RG_CSMA_SEED_1, 0x10, 4, enable);
+  HAL_LEAVE_CRITICAL_REGION();
+}
+/*---------------------------------------------------------------------------*/
+/* Set or unset frame filtering */
+static void
+set_frame_filtering(uint8_t enable)
+{
+  HAL_ENTER_CRITICAL_REGION();
+  hal_subregister_write(RG_XAH_CTRL_1, 0x2, 1, enable);
+  HAL_LEAVE_CRITICAL_REGION();
+}
+/*---------------------------------------------------------------------------*/
+/* Enable or disable radio interrupts */
+static void
+set_poll_mode(uint8_t enable)
+{
+  HAL_ENTER_CRITICAL_REGION();
+  poll_mode = enable;
+  HAL_LEAVE_CRITICAL_REGION();
+}
+/*---------------------------------------------------------------------------*/
+/* Enable or disable CCA before sending */
+static void
+set_send_on_cca(uint8_t enable)
+{
+  send_on_cca = enable;
+}
 /*---------------------------------------------------------------------------*/
 static radio_result_t
 get_value(radio_param_t param, radio_value_t *value)
 {
-  return RADIO_RESULT_NOT_SUPPORTED;
+  int i, v;
+
+  if(!value) {
+    return RADIO_RESULT_INVALID_VALUE;
+  }
+
+  switch(param) {
+    case RADIO_PARAM_RSSI:
+      *value = rf230_get_raw_rssi();
+      return RADIO_RESULT_OK;
+    case RADIO_PARAM_LAST_RSSI:
+      *value = rf230_last_rssi;
+      return RADIO_RESULT_OK;
+    case RADIO_PARAM_RX_MODE:
+      *value = 0;
+      // TODO(henrik): Masks for positions.
+      if(hal_register_read(RG_XAH_CTRL_1) & 0x2) {
+        *value |= RADIO_RX_MODE_ADDRESS_FILTER;
+      }
+      if (hal_register_read(RG_CSMA_SEED_1) & 0x10) {
+        *value |= RADIO_RX_MODE_AUTOACK;
+      }
+      if(poll_mode) {
+        *value |= RADIO_RX_MODE_POLL_MODE;
+      }
+      return RADIO_RESULT_OK;
+    case RADIO_CONST_CHANNEL_MIN:
+      *value = 0;
+      return RADIO_RESULT_OK;
+    case RADIO_CONST_CHANNEL_MAX:
+      *value = 10;
+      return RADIO_RESULT_OK;
+    case RADIO_PARAM_CHANNEL:
+      *value = rf230_get_channel();
+      return RADIO_RESULT_OK;
+    case RADIO_PARAM_TX_MODE:
+      *value = 0;
+      if(send_on_cca) {
+        *value |= RADIO_TX_MODE_SEND_ON_CCA;
+      }
+      return RADIO_RESULT_OK;
+    case RADIO_PARAM_LAST_PACKET_TIMESTAMP:
+
+    default:
+      return RADIO_RESULT_NOT_SUPPORTED;
+  }
 }
 /*---------------------------------------------------------------------------*/
 static radio_result_t
 set_value(radio_param_t param, radio_value_t value)
 {
+  switch(param)
+  {
+    case RADIO_PARAM_RX_MODE:
+      if(value & ~(RADIO_RX_MODE_ADDRESS_FILTER |
+          RADIO_RX_MODE_AUTOACK | RADIO_RX_MODE_POLL_MODE)) {
+        return RADIO_RESULT_INVALID_VALUE;
+      }
+      set_frame_filtering((value & RADIO_RX_MODE_ADDRESS_FILTER) != 0);
+      set_auto_ack((value & RADIO_RX_MODE_AUTOACK) != 0);
+      set_poll_mode((value & RADIO_RX_MODE_POLL_MODE) != 0);
+      return RADIO_RESULT_OK;
+    case RADIO_PARAM_CHANNEL:
+      rf230_set_channel(value);
+      return RADIO_RESULT_OK;
+    case RADIO_PARAM_TX_MODE:
+      if(value & ~(RADIO_TX_MODE_SEND_ON_CCA)) {
+        return RADIO_RESULT_INVALID_VALUE;
+      }
+      set_send_on_cca((value & RADIO_TX_MODE_SEND_ON_CCA) != 0);
+      return RADIO_RESULT_OK;
+  }
   return RADIO_RESULT_NOT_SUPPORTED;
 }
 /*---------------------------------------------------------------------------*/
 static radio_result_t
 get_object(radio_param_t param, void *dest, size_t size)
 {
+  if(param == RADIO_PARAM_LAST_PACKET_TIMESTAMP)
+  {
+    if(size != sizeof(rtimer_clock_t) || !dest) {
+      return RADIO_RESULT_INVALID_VALUE;
+    }
+    *(rtimer_clock_t*)dest = rf230_sfd_start_time;
+    return RADIO_RESULT_OK;
+  }
   return RADIO_RESULT_NOT_SUPPORTED;
 }
 /*---------------------------------------------------------------------------*/
@@ -870,12 +999,23 @@ rf230_transmit(unsigned short payload_len)
     ENERGEST_OFF(ENERGEST_TYPE_LISTEN);
   }
   /* Prepare to transmit */
+#ifndef RF230_TSCH
 #if RF230_CONF_AUTORETRIES
   radio_set_trx_state(TX_ARET_ON);
   DEBUGFLOW('t');
 #else
   radio_set_trx_state(PLL_ON);
   DEBUGFLOW('T');
+#endif
+#else
+  if (send_on_cca)
+  {
+    radio_set_trx_state(TX_ARET_ON);
+  }
+  else
+  {
+    radio_set_trx_state(PLL_ON);
+  }
 #endif
 
   txpower = 0;
@@ -923,11 +1063,22 @@ rf230_transmit(unsigned short payload_len)
   rf230_waitidle();
 
   /* Get the transmission result */
+#ifndef RF230_TSCH
 #if RF230_CONF_AUTORETRIES
   tx_result = hal_subregister_read(SR_TRAC_STATUS);
 #else
   tx_result = RADIO_TX_OK;
 #endif
+#else
+  if (send_on_cca)
+  {
+    tx_result = hal_subregister_read(SR_TRAC_STATUS);
+  }
+  else
+  {
+    tx_result = RADIO_TX_OK;
+  }
+#endif // RF230_TSCH
 
 #ifdef ENERGEST_CONF_LEVELDEVICE_LEVELS
   ENERGEST_OFF_LEVEL(ENERGEST_TYPE_TRANSMIT, rf230_get_txpower());
@@ -1258,7 +1409,7 @@ PROCESS_THREAD(rf230_process, ev, data)
   RF230PROCESSFLAG(99);
 
   while(1) {
-    PROCESS_YIELD_UNTIL(ev == PROCESS_EVENT_POLL);
+    PROCESS_YIELD_UNTIL(ev == PROCESS_EVENT_POLL && !poll_mode);
     RF230PROCESSFLAG(42);
 
     rf230_pending = 0;
