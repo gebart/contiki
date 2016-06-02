@@ -8,6 +8,7 @@
  */
 
 #include "K60.h"
+#include <stdio.h>
 
 #define SECTION(x) __attribute__ ((section(#x)))
 #define ISR_VECTOR_SECTION SECTION(.vector_table)
@@ -417,6 +418,8 @@ const ISR_func isr_vector[256] __attribute__((used)) ISR_VECTOR_SECTION =
 void
 isr_nmi(void)
 {
+  printf("NMI handler: Reboot!\n");
+  NVIC_SystemReset();
   while(1);
 }
 
