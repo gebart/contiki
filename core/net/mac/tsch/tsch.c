@@ -255,7 +255,7 @@ keepalive_send(void *arg)
 /*---------------------------------------------------------------------------*/
 /* Set ctimer to send a keepalive message after expiration of TSCH_KEEPALIVE_TIMEOUT */
 void
-tsch_schedule_keepalive()
+tsch_schedule_keepalive(void)
 {
   /* Pick a delay in the range [TSCH_KEEPALIVE_TIMEOUT*0.9, TSCH_KEEPALIVE_TIMEOUT[ */
   if(!tsch_is_coordinator && tsch_is_associated) {
