@@ -32,6 +32,8 @@ leds_arch_get(void)
 void
 leds_arch_set(unsigned char leds)
 {
+  #if CONFIG_LOW_POWER_LEDS
+  #else
   unsigned char value;
   value = (((leds & LEDS_RED) != 0) ? 1 : 0);
   gpio_write(LED_RED_GPIO, value);
@@ -39,5 +41,6 @@ leds_arch_set(unsigned char leds)
   gpio_write(LED_YELLOW_GPIO, value);
   value = (((leds & LEDS_GREEN) != 0) ? 1 : 0);
   gpio_write(LED_GREEN_GPIO, value);
+  #endif
 }
 /*---------------------------------------------------------------------------*/
