@@ -124,7 +124,7 @@ typedef uint32_t rtimer_clock_t;
 
 /* TSCH packet calculations are done with respect to 250kbps data rates */
 #undef RF212_CONF_PHY_MODE
-#define RF212_CONF_PHY_MODE         RF230_PHY_MODE_OQPSK_SIN_250
+#define RF212_CONF_PHY_MODE         RF212_PHY_MODE_OQPSK_SIN_250
 
 /* Netstack layers */
 #undef NETSTACK_CONF_MAC
@@ -146,7 +146,7 @@ typedef uint32_t rtimer_clock_t;
 
 #define TSCH_SCHEDULE_CONF_DEFAULT_LENGTH 1
 
-#define TSCH_LOG_CONF_LEVEL 2
+#define TSCH_LOG_CONF_LEVEL 0
 
 // TODO(henrik) WIP
 /* TSCH_CONF_DEFAULT_TIMESLOT_LENGTH == -1 means platform defined timings */
