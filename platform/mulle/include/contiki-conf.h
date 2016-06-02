@@ -144,43 +144,9 @@ typedef uint32_t rtimer_clock_t;
 #define TSCH_CALLBACK_JOINING_NETWORK tsch_rpl_callback_joining_network
 #define TSCH_CALLBACK_LEAVING_NETWORK tsch_rpl_callback_leaving_network
 
-#define TSCH_SCHEDULE_CONF_DEFAULT_LENGTH 1
+#define TSCH_CONF_DEFAULT_TIMESLOT_LENGTH 15000
 
 #define TSCH_LOG_CONF_LEVEL 0
-
-// TODO(henrik) WIP
-/* TSCH_CONF_DEFAULT_TIMESLOT_LENGTH == -1 means platform defined timings */
-//#undef TSCH_CONF_DEFAULT_TIMESLOT_LENGTH
-//#define TSCH_CONF_DEFAULT_TIMESLOT_LENGTH -1
-//
-//#define TSCH_CONF_RX_WAIT 4000
-//
-////#define TSCH_DEFAULT_TS_CCA_OFFSET         1800
-////#define TSCH_DEFAULT_TS_CCA                128
-////#define TSCH_DEFAULT_TS_TX_OFFSET          52000
-////#define TSCH_DEFAULT_TS_RX_OFFSET          (TSCH_DEFAULT_TS_TX_OFFSET - (TSCH_CONF_RX_WAIT / 2))
-////#define TSCH_DEFAULT_TS_RX_ACK_DELAY       58600
-////#define TSCH_DEFAULT_TS_TX_ACK_DELAY       59000
-////#define TSCH_DEFAULT_TS_RX_WAIT            TSCH_CONF_RX_WAIT
-////#define TSCH_DEFAULT_TS_ACK_WAIT           800
-////#define TSCH_DEFAULT_TS_RX_TX              2072
-////#define TSCH_DEFAULT_TS_MAX_ACK            2400
-////#define TSCH_DEFAULT_TS_MAX_TX             10640
-////#define TSCH_DEFAULT_TS_TIMESLOT_LENGTH    65000
-//
-//#define TSCH_DEFAULT_TS_CCA_OFFSET         1800
-//#define TSCH_DEFAULT_TS_CCA                128
-//#define TSCH_DEFAULT_TS_TX_OFFSET          (52000-35000)
-//#define TSCH_DEFAULT_TS_RX_OFFSET          (TSCH_DEFAULT_TS_TX_OFFSET - (TSCH_CONF_RX_WAIT / 2))
-//#define TSCH_DEFAULT_TS_RX_ACK_DELAY       (57600-20000)
-//#define TSCH_DEFAULT_TS_TX_ACK_DELAY       (59000-20000)
-//#define TSCH_DEFAULT_TS_RX_WAIT            TSCH_CONF_RX_WAIT
-//#define TSCH_DEFAULT_TS_ACK_WAIT           2800
-//#define TSCH_DEFAULT_TS_RX_TX              2072
-//#define TSCH_DEFAULT_TS_MAX_ACK            3400
-//#define TSCH_DEFAULT_TS_MAX_TX             14256
-//#define TSCH_DEFAULT_TS_TIMESLOT_LENGTH    65000
-
 
 /* Delay between GO signal and SFD */
 /* Sleep to tx => 540 us (measured time) + 4 bytes preamble  + 1 byte SFD*/
@@ -202,7 +168,10 @@ typedef uint32_t rtimer_clock_t;
 #define RF212_CONF_SEND_ON_CCA 0
 #define RF212_CONF_CCA_RETRIES   0
 #define RF212_CONF_AUTORETRIES      0
-#define RF212_CONF_FRAME_FILTERING 1
+#define RF212_CONF_FRAME_FILTERING 0
+
+/* TSCH uses polling, but we dont do real polling yet so set buffers to 1 */
+#define RF212_CONF_RX_BUFFERS       1
 
 /******************************* CONTIKIMAC ***********************************/
 #elif CONTIKIMAC
@@ -359,7 +328,11 @@ typedef uint32_t rtimer_clock_t;
 #endif /* NETSTACK_CONF_RADIO */
 
 #define SICSLOWPAN_CONF_MAXAGE      1
+
+#ifndef RF212_CONF_RX_BUFFERS
 #define RF212_CONF_RX_BUFFERS       10
+#endif
+
 #define LINKADDR_CONF_SIZE          8
 
 #ifndef UIP_CONF_BUFFER_SIZE

@@ -18,6 +18,11 @@ slip_arch_init(unsigned long ubr)
   gpio_init_port(BOARD_SLIP_UART_RX_GPIO, BOARD_SLIP_UART_RX_AF);
   gpio_init_port(BOARD_SLIP_UART_TX_GPIO, BOARD_SLIP_UART_TX_AF);
 
+  /*
+   * Set high priority for uart interrupts so the border router works better
+   * with TSCH
+   * */
+  NVIC_SetPriority(UART1_RX_TX_IRQn, 1);
   /* (Re-)initialize the UART module */
   uart_init(BOARD_SLIP_UART_NUM, 0, ubr);
 
