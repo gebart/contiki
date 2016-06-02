@@ -1083,16 +1083,19 @@ at86rf212_interrupt(rtimer_clock_t time)
     if((state == BUSY_RX_AACK) || (state == RX_ON) || (state == BUSY_RX) || (state == RX_AACK_ON))
     {
       /* Received packet interrupt */
-      /* Buffer the frame and call poll the radio process */
-      if(rxframe[rxframe_head].length == 0)
+      if (hal_subregister_read(SR_RX_CRC_VALID))
       {
-        hal_frame_read(&rxframe[rxframe_head]);
-        rxframe_head++;
-        if(rxframe_head >= RF212_RX_BUFFERS)
+        /* Buffer the frame and call poll the radio process */
+        if(rxframe[rxframe_head].length == 0)
         {
-          rxframe_head = 0;
+          hal_frame_read(&rxframe[rxframe_head]);
+          rxframe_head++;
+          if(rxframe_head >= RF212_RX_BUFFERS)
+          {
+            rxframe_head = 0;
+          }
+          at86rf212_poll();
         }
-        at86rf212_poll();
       }
     }
   }

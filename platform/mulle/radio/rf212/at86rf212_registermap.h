@@ -182,6 +182,7 @@
 #define SR_reserved_06_1             0x06, 0xe0, 5
 /** Access parameters for sub-register RSSI in register @ref RG_PHY_RSSI */
 #define SR_RSSI                      0x06, 0x1f, 0
+#define SR_RX_CRC_VALID              0x06, 0x80, 7
 /** Offset for register PHY_ED_LEVEL */
 #define RG_PHY_ED_LEVEL                  (0x07)
 /** Access parameters for sub-register ED_LEVEL in register @ref RG_PHY_ED_LEVEL */
