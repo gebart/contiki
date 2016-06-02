@@ -239,8 +239,9 @@ keepalive_packet_sent(void *ptr, int status, int transmissions)
 /*---------------------------------------------------------------------------*/
 /* Prepare and send a keepalive message */
 static void
-keepalive_send()
+keepalive_send(void *arg)
 {
+  (void) arg;
   if(tsch_is_associated) {
     struct tsch_neighbor *n = tsch_queue_get_time_source();
     /* Simply send an empty packet */
@@ -343,7 +344,7 @@ eb_input(struct input_packet *current_input)
 /*---------------------------------------------------------------------------*/
 /* Process pending input packet(s) */
 static void
-tsch_rx_process_pending()
+tsch_rx_process_pending(void)
 {
   int16_t input_index;
   /* Loop on accessing (without removing) a pending input packet */
@@ -378,7 +379,7 @@ tsch_rx_process_pending()
 /*---------------------------------------------------------------------------*/
 /* Pass sent packets to upper layer */
 static void
-tsch_tx_process_pending()
+tsch_tx_process_pending(void)
 {
   int16_t dequeued_index;
   /* Loop on accessing (without removing) a pending input packet */
@@ -454,7 +455,7 @@ tsch_associate(const struct input_packet *input_eb, rtimer_clock_t timestamp)
     return 0;
   }
 #endif /* TSCH_JOIN_SECURED_ONLY */
-  
+
 #if LLSEC802154_ENABLED
   if(!tsch_security_parse_frame(input_eb->payload, hdrlen,
       input_eb->len - hdrlen - tsch_security_mic_len(&frame),

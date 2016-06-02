@@ -134,12 +134,12 @@
 
 /* Called by TSCH when joining a network */
 #ifdef TSCH_CALLBACK_JOINING_NETWORK
-void TSCH_CALLBACK_JOINING_NETWORK();
+void TSCH_CALLBACK_JOINING_NETWORK(void);
 #endif
 
 /* Called by TSCH when leaving a network */
 #ifdef TSCH_CALLBACK_LEAVING_NETWORK
-void TSCH_CALLBACK_LEAVING_NETWORK();
+void TSCH_CALLBACK_LEAVING_NETWORK(void);
 #endif
 
 /***** External Variables *****/
