@@ -122,7 +122,7 @@ typedef uint32_t rtimer_clock_t;
 #undef FRAME802154_CONF_VERSION
 #define FRAME802154_CONF_VERSION FRAME802154_IEEE802154E_2012
 
-#ifdef TSCH
+#if WITH_TSCH
 /******************************* TSCH ***********************************/
 
 /* TSCH packet calculations are done with respect to 250kbps data rates */
@@ -321,6 +321,12 @@ typedef uint32_t rtimer_clock_t;
 /* Phase optimization seem to cause problems (drifting clocks?) */
 #define CONTIKIMAC_CONF_WITH_PHASE_OPTIMIZATION 0
 
+/* Below are TSCH parameters, not used by ContikiMAC, but defined to avoid build
+ * errors when including the TSCH module, which simplifies the Makefile */
+#define RADIO_DELAY_BEFORE_TX 0
+#define RADIO_DELAY_BEFORE_RX 0
+#define RADIO_DELAY_BEFORE_DETECT 0
+
 #else
 /******************************** Nullrdc *************************************/
 #ifndef NETSTACK_CONF_RDC
@@ -334,6 +340,13 @@ typedef uint32_t rtimer_clock_t;
 #define RF212_CONF_SEND_ON_CCA 1
 #define RF212_CONF_CCA_RETRIES   0
 #define RF212_CONF_AUTORETRIES      3
+
+/* Below are TSCH parameters, not used by nullrdc, but defined to avoid build
+ * errors when including the TSCH module, which simplifies the Makefile */
+#define RADIO_DELAY_BEFORE_TX 0
+#define RADIO_DELAY_BEFORE_RX 0
+#define RADIO_DELAY_BEFORE_DETECT 0
+
 #endif /* TSCH */
 
 #ifndef NETSTACK_CONF_NETWORK
