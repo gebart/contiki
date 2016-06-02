@@ -265,19 +265,19 @@ typedef uint32_t rtimer_clock_t;
 #define CONTIKIMAC_Ti 1.2 // Manually increased from 1.0
 #define CONTIKIMAC_Tc 4.1 // Manually increased from 1.1
 #define CONTIKIMAC_Tr 0.32
-#define CONTIKIMAC_Tl 10.64*1.5 // Manually increased with 50%
+#define CONTIKIMAC_Tl (10.64 * 1.5) // Manually increased with 50%
 #define CONTIKIMAC_Td 0.48
 #elif RF212_CONF_PHY_MODE == RF212_PHY_MODE_OQPSK_SIN_RC_200
 #define CONTIKIMAC_Ti 1
 #define CONTIKIMAC_Tc 1.1
 #define CONTIKIMAC_Tr 0.32
-#define CONTIKIMAC_Tl (5.56+0.5) // Manually increased Tl for better stability
+#define CONTIKIMAC_Tl (5.56 + 0.5) // Manually increased Tl for better stability
 #define CONTIKIMAC_Td 0.48
 #elif RF212_CONF_PHY_MODE == RF212_PHY_MODE_OQPSK_SIN_250
 #define CONTIKIMAC_Ti 0.5
 #define CONTIKIMAC_Tc 0.6
 #define CONTIKIMAC_Tr 0.128
-#define CONTIKIMAC_Tl (4.254+0.5) // Manually increased Tl for better stability
+#define CONTIKIMAC_Tl (4.254 + 0.5) // Manually increased Tl for better stability
 #define CONTIKIMAC_Td 0.192
 #else
 #error "CONTIKIMAC does not support the specified radio speed"
@@ -304,15 +304,20 @@ typedef uint32_t rtimer_clock_t;
 #define CONTIKIMAC_CONF_CCA_COUNT_MAX 3
 
 // Ti
-#define CONTIKIMAC_CONF_INTER_PACKET_INTERVAL (RTIMER_ARCH_SECOND / (1000/CONTIKIMAC_Ti))
+#define CONTIKIMAC_CONF_INTER_PACKET_INTERVAL \
+    ((RTIMER_ARCH_SECOND) / (1000 / (CONTIKIMAC_Ti)))
 // Tc
-#define CONTIKIMAC_CONF_CCA_SLEEP_TIME (RTIMER_ARCH_SECOND / (1000/CONTIKIMAC_Tc))
+#define CONTIKIMAC_CONF_CCA_SLEEP_TIME \
+    ((RTIMER_ARCH_SECOND) / (1000 / (CONTIKIMAC_Tc)))
 // Tr
-#define CONTIKIMAC_CONF_CCA_CHECK_TIME (RTIMER_ARCH_SECOND / (1000/CONTIKIMAC_Tr))
+#define CONTIKIMAC_CONF_CCA_CHECK_TIME \
+    ((RTIMER_ARCH_SECOND) / (1000 / (CONTIKIMAC_Tr)))
 // Time to send 2 packets (tl) + one wait between packets (Ti)
-#define CONTIKIMAC_CONF_LISTEN_TIME_AFTER_PACKET_DETECTED ((CONTIKIMAC_CONF_INTER_PACKET_INTERVAL + 2*(RTIMER_ARCH_SECOND / (1000/CONTIKIMAC_Tl))))
+#define CONTIKIMAC_CONF_LISTEN_TIME_AFTER_PACKET_DETECTED \
+    (((CONTIKIMAC_CONF_INTER_PACKET_INTERVAL) + 2 * ((RTIMER_ARCH_SECOND) / (1000 / (CONTIKIMAC_Tl)))))
 // Td
-#define CONTIKIMAC_CONF_AFTER_ACK_DETECTECT_WAIT_TIME (RTIMER_ARCH_SECOND / (1000/CONTIKIMAC_Td))
+#define CONTIKIMAC_CONF_AFTER_ACK_DETECTECT_WAIT_TIME \
+    ((RTIMER_ARCH_SECOND) / (1000 / (CONTIKIMAC_Td)))
 
 /* Phase optimization seem to cause problems (drifting clocks?) */
 #define CONTIKIMAC_CONF_WITH_PHASE_OPTIMIZATION 0
