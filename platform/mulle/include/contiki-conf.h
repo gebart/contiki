@@ -118,6 +118,9 @@ typedef uint32_t rtimer_clock_t;
 #define RF212_CONF_PHY_MODE         RF212_PHY_MODE_OQPSK_SIN_RC_100
 #endif
 
+/* IEEE802.15.4 frame version */
+#undef FRAME802154_CONF_VERSION
+#define FRAME802154_CONF_VERSION FRAME802154_IEEE802154E_2012
 
 #ifdef TSCH
 /******************************* TSCH ***********************************/
@@ -133,10 +136,6 @@ typedef uint32_t rtimer_clock_t;
 #define NETSTACK_CONF_RDC     nordc_driver
 #undef NETSTACK_CONF_FRAMER
 #define NETSTACK_CONF_FRAMER  framer_802154
-
-/* IEEE802.15.4 frame version */
-#undef FRAME802154_CONF_VERSION
-#define FRAME802154_CONF_VERSION FRAME802154_IEEE802154E_2012
 
 /* TSCH and RPL callbacks */
 #define RPL_CALLBACK_PARENT_SWITCH tsch_rpl_callback_parent_switch
