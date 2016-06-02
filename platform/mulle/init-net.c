@@ -47,8 +47,8 @@
 #include "at86rf212.h"
 #include "net/netstack.h"
 #include "net/mac/frame802154.h"
-//#include "lwm2m-engine.h"
-//#include "ipso-objects.h"
+#include "lwm2m-engine.h"
+#include "ipso-objects.h"
 
 #define DEBUG 1
 #include "net/ip/uip-debug.h"
