@@ -247,6 +247,12 @@ hal_frame_read(hal_rx_frame_t *rx_frame) /* TODO: Make sure this is working */
      * Else show the crc has passed the hardware check.
      */
     rx_frame->crc = true;
+
+    /*
+     * ED_LEVEL should be used instead of RSSI in extended operation mode so
+     * use it always.
+     */
+    rx_frame->rssi = hal_register_read(RG_ED_LEVEL);
   }
 
   HAL_LEAVE_CRITICAL_REGION();

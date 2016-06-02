@@ -186,7 +186,8 @@
 /** Offset for register PHY_ED_LEVEL */
 #define RG_PHY_ED_LEVEL                  (0x07)
 /** Access parameters for sub-register ED_LEVEL in register @ref RG_PHY_ED_LEVEL */
-#define SR_ED_LEVEL                  0x07, 0xff, 0
+#define RG_ED_LEVEL                   0x07
+#define SR_ED_LEVEL                  RG_ED_LEVEL, 0xff, 0
 /** Offset for register PHY_CC_CCA */
 #define RG_PHY_CC_CCA                    (0x08)
 /** Access parameters for sub-register CCA_REQUEST in register @ref RG_PHY_CC_CCA */

@@ -461,10 +461,11 @@ at86rf212_read(void *buf, unsigned short bufsize)
   framep = &(rxframe[rxframe_tail].data[0]);
   memcpy(buf, framep, len - AUX_LEN + CHECKSUM_LEN);
 
+  packetbuf_set_attr(PACKETBUF_ATTR_RSSI, rxframe[rxframe_tail].rssi);
+
   /* Prepare to receive another packet */
   flushrx();
 
-  packetbuf_set_attr(PACKETBUF_ATTR_RSSI, 50);
   packetbuf_set_attr(PACKETBUF_ATTR_LINK_QUALITY, 50);
 
   /*

@@ -100,6 +100,7 @@ typedef struct
   uint8_t length;       // Length of frame.
   uint8_t data[ 127 ];  // Actual frame data.
   bool crc;             // Flag - did CRC pass for received frame?
+  uint8_t rssi;
 } hal_rx_frame_t;
 
 
