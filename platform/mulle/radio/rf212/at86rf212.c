@@ -206,6 +206,10 @@ at86rf212_init(void)
   set_send_on_cca(RF212_SEND_ON_CCA);
   set_frame_filtering(RF212_FRAME_FILTERING);
   set_tx_retries(RF212_AUTORETRIES);
+  #ifdef FRAME802154_CONF_VERSION
+  /* Set frame filtering on frame version in transceiver to accept frame versions 0, 1, 2 */
+    hal_subregister_write(SR_AACK_FVN_MODE, FRAME802154_CONF_VERSION);
+  #endif
   hal_subregister_write(RG_TRX_CTRL_2, 0x3F, 0, RF212_PHY_MODE);
 
   /* Dont know if this really makes any difference */
@@ -917,6 +921,7 @@ set_auto_ack(uint8_t enable)
     return;
   }
   HAL_ENTER_CRITICAL_REGION();
+  auto_ack = enable;
   hal_subregister_write(RG_CSMA_SEED_1, 0x10, 4, !enable);
   HAL_LEAVE_CRITICAL_REGION();
 }
@@ -930,13 +935,8 @@ set_frame_filtering(uint8_t enable)
     return;
   }
   HAL_ENTER_CRITICAL_REGION();
-  // TODO(henriK): This snippet doesnt seem to work(?) so if TSCH is defined
-  // turn off frame filtering for now.
-#ifdef TSCH
-  hal_subregister_write(RG_XAH_CTRL_1, 0x2, 1, 1); //!enable);
-#else
+  frame_filtering = enable;
   hal_subregister_write(RG_XAH_CTRL_1, 0x2, 1, !enable);
-#endif
   HAL_LEAVE_CRITICAL_REGION();
 }
 /*---------------------------------------------------------------------------*/
@@ -980,6 +980,7 @@ set_send_on_cca(bool enable)
   {
     return;
   }
+  send_on_cca = enable;
   if (enable)
   {
     hal_subregister_write(SR_MAX_CSMA_RETRIES, csma_retries);
