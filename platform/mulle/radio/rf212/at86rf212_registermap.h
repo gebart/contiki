@@ -142,9 +142,9 @@
 /** @name Radio modes suitable for 915 MHz, see Table 9-8. Register 0x0C (TRX_CTRL_2) Bit Alignment. */
 /** @{ */
 /** IEEE 802.15.4 - 2003/2006/2011: channel page 0, channel 1 to 10 */
-#define RF230_PHY_MODE_BPSK_40             (0x04)
+#define RF212_PHY_MODE_BPSK_40             (0x04)
 /** IEEE 802.15.4 - 2006/2011: channel page 2, channel 1 to 10 */
-#define RF230_PHY_MODE_OQPSK_SIN_250       (0x0c)
+#define RF212_PHY_MODE_OQPSK_SIN_250       (0x0c)
 /** @} */
 /** Constant CLKM_2mA for sub-register @ref SR_PAD_IO_CLKM */
 #define CLKM_2mA                 (0)
