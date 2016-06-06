@@ -1,0 +1,38 @@
+Bootloader
+----------------------------------------------
+The bootloader installs as a standalone application like any other application.
+
+When the bootloader is installed the node will always boot into the bootloader first.
+The bootloader checks if a valid user application is installed and that a flag to
+indicate bootup of the user application is set. If these conditions are met, the
+bootloader starts the user application. Else the bootloader startsup the radio
+with a CoAP interface to upload a new application.
+
+The bootloader is flashed to the mote as any other application.
+
+Upload of a new application is done through "bootloader/upload" and a bootup of
+the user application is done with a PUT to "bootloader/run" with the char '1'.
+
+A bootloader application image is made by making target <PROJECT>.i, eg:
+$ make TARGET=mulle hello-world.i
+
+If an application image should be flashed through a debugger use the extension .if.mulle as the FILENAME, eg:
+$ make TARGET=mulle flash FILENAME=hello-world.if.mulle
+The application will automatically boot if the flag is set to boot into the application from the bootloader. 
+If the flag is not set do a PUT of "1" through CoAP interface "bootloader/run".
+
+To boot into the bootloader again from the user application one can call
+bootloader_run() (bootloader_api.h). The application coap-bootloader can also be used to
+go into the bootloader through a CoAP interface.
+
+The file format of the image is
+4 bytes size : This is the size of the data including application data and checksums
+512 bytes application + 2 bytes crc : This sequence is repeated, note that last
+                                      block can be less than 512 bytes but 2 bytes crc
+                                      is always present.
+
+
+
+See make_image.py for crc calculation. All data is written least significant byte first.
+//TODO(henrik) Include start address of the image to prevent wiring of images to wrong
+               address.

@@ -58,7 +58,7 @@ endif
 
 export CPU_MODEL
 
-CONTIKI_TARGET_DIRS += . dev
+CONTIKI_TARGET_DIRS += . dev bootloader
 CONTIKI_CORE=contiki-main
 CONTIKI_TARGET_MAIN = ${CONTIKI_CORE}.o
 
@@ -83,7 +83,9 @@ CONTIKI_TARGET_SOURCEFILES += contiki-main.c \
   hih6130.c \
   radio-sensor.c \
   battery-sensor.c \
-  button-sensor.c
+  button-sensor.c \
+  bootloader-arch.c \
+  bootloader_api.c
 
 include $(PLATFORM_DIR)/radio/rf212/Makefile.rf212
 
@@ -231,6 +233,28 @@ debug-server:
 
 reset:
 	$(RESET) $(RESET_FLAGS)
+
+### Bootloader
+# Start address of application to be run from bootloader
+CPU_BOOTLOADER_IMAGE_START_ADDRESS = 0x40100
+
+# This rule creates a image that can be uploaded through CoAP.
+# Usage with hello-world example: $ make TARGET=mulle hello-world.i
+	#$(LD) $(subst $(LINKERSCRIPT),$(LINKERSCRIPT_IMAGE_UPLOAD),$(LDFLAGS)) $(TARGET_STARTFILES) $(LD_START_GROUP) ${filter-out %.a,$^} ${filter %.a,$^} $(TARGET_LIBFILES) $(LD_END_GROUP) -o $@.mulle.elf
+%.i: %.co $(PROJECT_OBJECTFILES) $(PROJECT_LIBRARIES) RIOT-$(TARGET).a contiki-$(TARGET).a $(CPU_STARTOBJ)
+	$(subst $(LINKERSCRIPT),$(LINKERSCRIPT_IMAGE_UPLOAD),$(Q)$(LD) $(TARGET_STARTFILES) $(LD_START_GROUP) ${filter-out %.a,$^} ${filter %.a,$^} $(TARGET_LIBFILES) $(LD_END_GROUP) $(LDFLAGS) -o $@.mulle.elf)
+	$(OBJCOPY) -O ihex $@.mulle.elf $@.mulle.ihex
+	python $(PLATFORM_DIR)/bootloader/make_image.py $@.mulle.ihex $@.$(TARGET) $(CPU_BOOTLOADER_IMAGE_START_ADDRESS)
+	rm $@.mulle.ihex
+	rm $@.mulle.elf
+
+# This rule injects an application through a programmer to the bootloader application flash area and sets all flags to be able to boot the image.
+# First flash the bootloader as a standard application, then flash the application:
+# $ make TARGET=mulle flash FILENAME=hello-world.if.mulle
+# Remember the .if. part in FILENAME to flash to the bootloader application area.
+%.if.$(TARGET): %.co $(PROJECT_OBJECTFILES) $(PROJECT_LIBRARIES) RIOT-$(TARGET).a contiki-$(TARGET).a $(CPU_STARTOBJ)
+	$(subst $(LINKERSCRIPT),$(LINKERSCRIPT_IMAGE_INJECT),$(Q)$(LD) $(TARGET_STARTFILES) $(LD_START_GROUP) ${filter-out %.a,$^} ${filter %.a,$^} $(TARGET_LIBFILES) $(LD_END_GROUP) $(LDFLAGS) -o $@)
+
 
 MODULES += \
   core/net \

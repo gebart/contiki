@@ -33,6 +33,11 @@
 #define PRINTF(...)
 #endif
 
+#ifdef MAKE_BOOTLOADER
+#include "bootloader.h"
+#endif
+
+
 /*---------------------------------------------------------------------------*/
 #define COFFEE_AUTO_FORMAT 1
 static void
@@ -136,6 +141,12 @@ main(void)
   PRINTF("Clocks:\n F_CPU: %u\n F_SYS: %u\n F_BUS: %u\n F_FLEXBUS: %u\n F_FLASH: %u\n", (unsigned int)SystemCoreClock, (unsigned int)SystemSysClock, (unsigned int)SystemBusClock, (unsigned int)SystemFlexBusClock, (unsigned int)SystemFlashClock);
 #endif
 
+
+  init_cfs();
+#ifdef MAKE_BOOTLOADER
+  bootloader_startup();
+#endif
+
   /*
    * Initialize Contiki and our processes.
    */
@@ -148,7 +159,7 @@ main(void)
 
   ctimer_init();
 
-  init_cfs();
+
   init_net();
   voltage_init();
 

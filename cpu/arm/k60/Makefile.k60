@@ -29,7 +29,8 @@ CONTIKI_TARGET_SOURCEFILES += \
   onewire.c \
   fault-handlers.c \
   ds18b20.c \
-  system_MK60D10.c
+  system_MK60D10.c \
+  pflash.c
 
 
 CONTIKI_SOURCEFILES += $(CONTIKI_TARGET_SOURCEFILES)
@@ -125,6 +126,8 @@ AROPTS   = rcs
 
 LINKERSCRIPTPATH = $(CONTIKI_CPU)/ldscripts
 LINKERSCRIPT = $(CPU_PART).ld
+LINKERSCRIPT_IMAGE_UPLOAD = $(CPU_PART)_image.ld
+LINKERSCRIPT_IMAGE_INJECT = $(CPU_PART)_bootloader.ld
 #AROPTS   = rv
 #CFLAGS   += $(CFLAGSNO)  $(DEBUG) -O$(OPTI) $(OPTFLAGS) -Wall -Werror=implicit-function-declaration -fno-common -fno-strict-aliasing -mcpu=cortex-m4 -mthumb -ffunction-sections -fdata-sections -fshort-enums -fsigned-char $(NEWLIB_INCLUDES)
 #LDFLAGS  += $(CFLAGS) -nostartfiles -Wl,-L$(LINKERSCRIPTPATH) -T $(LINKERSCRIPT) -Wl,-Map=$@.map -Wl,--gc-sections
