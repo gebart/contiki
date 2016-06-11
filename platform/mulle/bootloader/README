@@ -10,16 +10,19 @@ with a CoAP interface to upload a new application.
 
 The bootloader is flashed to the mote as any other application.
 
-Upload of a new application is done through "bootloader/upload" and a bootup of
-the user application is done with a PUT to "bootloader/run" with the char '1'.
+##### CoAP Upload
+Upload of a new application is done through the "bootloader/upload" service and a bootup of
+the user application is done with a PUT to the "bootloader/run" service with the char '1'.
 
 A bootloader application image is made by making target <PROJECT>.i, eg:
 $ make TARGET=mulle hello-world.i
 
 If an application image should be flashed through a debugger use the extension .if.mulle as the FILENAME, eg:
 $ make TARGET=mulle flash FILENAME=hello-world.if.mulle
-The application will automatically boot if the flag is set to boot into the application from the bootloader. 
+The application will automatically boot if the flag "boot into application" is set in the bootloader.
 If the flag is not set do a PUT of "1" through CoAP interface "bootloader/run".
+NOTE: The bootloader program ( this program located in this folder) must be flashed into the mote also through
+the standard flashing procedure.
 
 To boot into the bootloader again from the user application one can call
 bootloader_run() (bootloader_api.h). The application coap-bootloader can also be used to
