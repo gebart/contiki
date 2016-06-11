@@ -106,6 +106,7 @@ coap_receive(void)
           uint32_t block_num = 0;
           uint16_t block_size = COAP_MAX_BLOCK_SIZE;
           uint32_t block_offset = 0;
+          uint8_t block_more = 0;
           int32_t new_offset = 0;
 
           /* prepare response */
@@ -148,8 +149,11 @@ coap_receive(void)
                    && !IS_OPTION(response, COAP_OPTION_BLOCK1)) {
                   PRINTF("Block1 NOT IMPLEMENTED\n");
 
-                  erbium_status_code = NOT_IMPLEMENTED_5_01;
-                  coap_error_message = "NoBlock1Support";
+                  //erbium_status_code = NOT_IMPLEMENTED_5_01;
+                  //coap_error_message = "NoBlock1Support";
+                  coap_get_header_block1(message, &block_num, &block_more, &block_size, &block_offset);
+                  PRINTF("Blockwise1: %lu %u %u %lu\n", block_num, block_more, block_size, block_offset);
+                  coap_set_header_block1(response, block_num, 0, REST_MAX_CHUNK_SIZE);
 
                   /* client requested Block2 transfer */
                 } else if(IS_OPTION(message, COAP_OPTION_BLOCK2)) {
