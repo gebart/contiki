@@ -240,7 +240,6 @@ CPU_BOOTLOADER_IMAGE_START_ADDRESS = 0x40100
 
 # This rule creates a image that can be uploaded through CoAP.
 # Usage with hello-world example: $ make TARGET=mulle hello-world.i
-	#$(LD) $(subst $(LINKERSCRIPT),$(LINKERSCRIPT_IMAGE_UPLOAD),$(LDFLAGS)) $(TARGET_STARTFILES) $(LD_START_GROUP) ${filter-out %.a,$^} ${filter %.a,$^} $(TARGET_LIBFILES) $(LD_END_GROUP) -o $@.mulle.elf
 %.i: %.co $(PROJECT_OBJECTFILES) $(PROJECT_LIBRARIES) RIOT-$(TARGET).a contiki-$(TARGET).a $(CPU_STARTOBJ)
 	$(subst $(LINKERSCRIPT),$(LINKERSCRIPT_IMAGE_UPLOAD),$(Q)$(LD) $(TARGET_STARTFILES) $(LD_START_GROUP) ${filter-out %.a,$^} ${filter %.a,$^} $(TARGET_LIBFILES) $(LD_END_GROUP) $(LDFLAGS) -o $@.mulle.elf)
 	$(OBJCOPY) -O ihex $@.mulle.elf $@.mulle.ihex
