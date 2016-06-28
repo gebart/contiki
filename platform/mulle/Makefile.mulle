@@ -76,6 +76,7 @@ CONTIKI_TARGET_SOURCEFILES += contiki-main.c \
   power-control.c \
   voltage.c \
   flash.c \
+  fram.c \
   xmem.c \
   cfs-coffee.c \
   lis3dh.c \
