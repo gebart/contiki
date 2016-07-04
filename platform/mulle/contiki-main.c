@@ -25,6 +25,8 @@
 #include "rtc.h"
 #include "spi-config.h"
 #include "spi-k60.h"
+#include "nvram-spi-old.h"
+#include "mulle-nvram.h"
 
 #define DEBUG 1
 #if DEBUG
@@ -37,6 +39,65 @@
 #include "bootloader.h"
 #endif
 
+static nvram_t mulle_nvram_dev;
+const nvram_t *mulle_nvram = NULL;
+static nvram_spi_params_t nvram_spi_params = {
+  .spi = FRAM_SPI_NUM,
+  .cs = (1 << FRAM_CHIP_SELECT_PIN),
+  .ctas = FRAM_CTAS,
+  .address_count = 1,
+};
+
+static int mulle_nvram_init(void)
+{
+    union {
+        uint32_t u32;
+        uint8_t  u8[sizeof(uint32_t)];
+    } rec;
+    rec.u32 = 0;
+
+    if (nvram_spi_init(&mulle_nvram_dev, &nvram_spi_params, MULLE_NVRAM_CAPACITY) != 0) {
+        return -2;
+    }
+    mulle_nvram = &mulle_nvram_dev;
+
+    if (mulle_nvram->read(mulle_nvram, &rec.u8[0], MULLE_NVRAM_MAGIC, sizeof(rec.u32)) != sizeof(rec.u32)) {
+        return -3;
+    }
+
+    if (rec.u32 != MULLE_NVRAM_MAGIC_EXPECTED) {
+        int i;
+        union {
+            uint64_t u64;
+            uint8_t  u8[sizeof(uint64_t)];
+        } zero;
+        zero.u64 = 0;
+        for (i = 0; i < MULLE_NVRAM_CAPACITY; i += sizeof(zero)) {
+            if (mulle_nvram->write(mulle_nvram, &zero.u8[0], i, sizeof(zero.u64)) != sizeof(zero.u64)) {
+                return -4;
+            }
+        }
+        rec.u32 = MULLE_NVRAM_MAGIC_EXPECTED;
+        if (mulle_nvram->write(mulle_nvram, &rec.u8[0], MULLE_NVRAM_MAGIC, sizeof(rec.u32)) != sizeof(rec.u32)) {
+            return -5;
+        }
+    }
+    return 0;
+}
+
+static void increase_boot_count(void)
+{
+    union {
+        uint32_t u32;
+        uint8_t  u8[sizeof(uint32_t)];
+    } rec;
+    rec.u32 = 0;
+    if (mulle_nvram->read(mulle_nvram, &rec.u8[0], MULLE_NVRAM_BOOT_COUNT, sizeof(rec.u32)) != sizeof(rec.u32)) {
+        return;
+    }
+    ++rec.u32;
+    mulle_nvram->write(mulle_nvram, &rec.u8[0], MULLE_NVRAM_BOOT_COUNT, sizeof(rec.u32));
+}
 
 /*---------------------------------------------------------------------------*/
 #define COFFEE_AUTO_FORMAT 1
@@ -146,6 +207,13 @@ main(void)
 #ifdef MAKE_BOOTLOADER
   bootloader_startup();
 #endif
+
+  /* Initialize NVRAM */
+  int status = mulle_nvram_init();
+  if (status == 0) {
+    /* Increment boot counter */
+    increase_boot_count();
+  }
 
   /*
    * Initialize Contiki and our processes.
