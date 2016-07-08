@@ -111,12 +111,14 @@ static void set_send_on_cca(bool enable);
 static bool set_tx_retries(uint8_t num);
 static uint8_t get_channel(void);
 static void set_channel(uint8_t c);
+static void at86rf212_interrupt(rtimer_clock_t time);
+
+static volatile rtimer_clock_t poll_timestamp = 0;
 
 PROCESS(rf212_process, "RF212 driver");
 /*---------------------------------------------------------------------------*/
 PROCESS_THREAD(rf212_process, ev, data)
 {
-  int len;
   PROCESS_BEGIN();
 
   while(1)
@@ -125,18 +127,25 @@ PROCESS_THREAD(rf212_process, ev, data)
 #ifdef WITH_SLIP
     leds_toggle(LEDS_RED);
 #endif
-
-    packetbuf_clear();
-    len = at86rf212_read(packetbuf_dataptr(), PACKETBUF_SIZE);
-
-    if(len > 0)
-    {
-      packetbuf_set_datalen(len);
-      NETSTACK_RDC.input();
-    }
+    at86rf212_interrupt(poll_timestamp);
   }
 
   PROCESS_END();
+}
+/*---------------------------------------------------------------------------*/
+/* Called from rf212_process when the radio has signaled that a new frame has arrived. */
+static void
+at86rf212_rx_event(void)
+{
+  int len;
+  packetbuf_clear();
+  len = at86rf212_read(packetbuf_dataptr(), PACKETBUF_SIZE);
+
+  if(len > 0)
+  {
+    packetbuf_set_datalen(len);
+    NETSTACK_RDC.input();
+  }
 }
 /*---------------------------------------------------------------------------*/
 static int
@@ -477,10 +486,11 @@ at86rf212_read(void *buf, unsigned short bufsize)
   return len - AUX_LEN;
 }
 /*---------------------------------------------------------------------------*/
-static void
+void
 at86rf212_poll(void)
 {
   PRINTF("%s\n",__FUNCTION__);
+  poll_timestamp = RTIMER_NOW();
   process_poll(&rf212_process);
 }
 /*---------------------------------------------------------------------------*/
@@ -1063,11 +1073,12 @@ set_channel(uint8_t c)
   hal_subregister_write(SR_CHANNEL, c);
 }
 /*---------------------------------------------------------------------------*/
-void
+/* Do not call from ISR context, that will break the SPI bus if any other device
+ * drivers are using it! */
+static void
 at86rf212_interrupt(rtimer_clock_t time)
 {
   /* Separate RF212 has a single radio interrupt and the source must be read from the IRQ_STATUS register */
-  volatile uint8_t state;
   uint8_t interrupt_source;
 
   /* Read Interrupt source. */
@@ -1080,7 +1091,7 @@ at86rf212_interrupt(rtimer_clock_t time)
   }
   if(interrupt_source & HAL_TRX_END_MASK)
   {
-    state = hal_subregister_read(SR_TRX_STATUS);
+    volatile uint8_t state = hal_subregister_read(SR_TRX_STATUS);
     if((state == BUSY_RX_AACK) || (state == RX_ON) || (state == BUSY_RX) || (state == RX_AACK_ON))
     {
       /* Received packet interrupt */
@@ -1095,7 +1106,7 @@ at86rf212_interrupt(rtimer_clock_t time)
           {
             rxframe_head = 0;
           }
-          at86rf212_poll();
+          at86rf212_rx_event();
         }
       }
     }

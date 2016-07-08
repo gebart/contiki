@@ -104,7 +104,7 @@ typedef struct
 } hal_rx_frame_t;
 
 
-void at86rf212_interrupt(rtimer_clock_t time);
+void at86rf212_poll(void);
 void at86rf212_set_pan_addr(unsigned pan,
                    unsigned addr,
                    const uint8_t ieee_addr[8]);
