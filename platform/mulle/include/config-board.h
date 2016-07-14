@@ -64,6 +64,16 @@ extern "C" {
 #define K60_CPU_REV 2
 #endif
 
+/*
+ * NMI watchdog timer pin to toggle if an NMI occurs.
+ *
+ * This must be done without any function calls since the stack may be corrupt
+ * at this point.
+ */
+#define NMI_WATCHDOG_PORT PORTB
+#define NMI_WATCHDOG_GPIO GPIOB
+#define NMI_WATCHDOG_PIN  11
+
 /**
  * Voltage reference high for ADC computations (millivolts).
  */
