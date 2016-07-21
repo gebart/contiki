@@ -154,6 +154,12 @@ int
 is_sensible_string(const unsigned char *s, int len)
 {
   int i;
+  if (len > 0) {
+    if ((s[0] & 0xf0) == 0x60) {
+      /* IPv6 packet */
+      return 0;
+    }
+  }
   for(i = 1; i < len; i++) {
     if(s[i] == 0 || s[i] == '\r' || s[i] == '\n' || s[i] == '\t') {
       continue;
