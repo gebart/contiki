@@ -154,20 +154,30 @@ int
 is_sensible_string(const unsigned char *s, int len)
 {
   int i;
-  if (len > 0) {
-    if ((s[0] & 0xf0) == 0x60) {
-      /* IPv6 packet */
+  int ret = 0;
+  if(len > 0) {
+    if (s[0] == 0x60) {
+      /* IPv6 packet with default traffic class, assume non-printable */
       return 0;
     }
   }
   for(i = 1; i < len; i++) {
-    if(s[i] == 0 || s[i] == '\r' || s[i] == '\n' || s[i] == '\t') {
+    if(s[i] == '\r' || s[i] == '\n' || s[i] == '\t') {
       continue;
     } else if(s[i] < ' ' || '~' < s[i]) {
       return 0;
     }
+    if('A' <= s[i] && s[i] <= 'Z') {
+      ret = 1;
+    }
+    else if('a' <= s[i] && s[i] <= 'z') {
+      ret = 1;
+    }
+    else if('0' <= s[i] && s[i] <= '9') {
+      ret = 1;
+    }
   }
-  return 1;
+  return ret;
 }
 
 /*
@@ -180,8 +190,8 @@ serial_to_tun(FILE *inslip, int outfd)
   static union {
     unsigned char inbuf[2000];
   } uip;
-  static int inbufptr = 0;
-  int ret,i;
+  static unsigned int inbufptr = 0;
+  int ret;
   unsigned char c;
 
 #ifdef linux
@@ -193,7 +203,7 @@ serial_to_tun(FILE *inslip, int outfd)
   while (1) {
     if(inbufptr >= sizeof(uip.inbuf)) {
        if(timestamp) stamptime();
-       fprintf(stderr, "*** dropping large %d byte packet\n",inbufptr);
+       fprintf(stderr, "*** dropping large %u byte packet\n",inbufptr);
 	   inbufptr = 0;
     }
     ret = fread(&c, 1, 1, inslip);
@@ -215,8 +225,8 @@ serial_to_tun(FILE *inslip, int outfd)
 	  if(uip.inbuf[1] == 'M') {
 	    /* Read gateway MAC address and autoconfigure tap0 interface */
 	    char macs[24];
-	    int i, pos;
-	    for(i = 0, pos = 0; i < 16; i++) {
+	    unsigned int pos = 0;
+	    for(unsigned int i = 0; i < 16; i++) {
 	      macs[pos++] = uip.inbuf[2 + i];
 	      if((i & 1) == 1 && i < 14) {
 		macs[pos++] = ':';
@@ -237,7 +247,6 @@ serial_to_tun(FILE *inslip, int outfd)
 	  if(uip.inbuf[1] == 'P') {
 	    /* Prefix info requested */
 	    struct in6_addr addr;
-	    int i;
 	    char *s = strchr(ipaddr, '/');
 	    if(s != NULL) {
 	      *s = '\0';
@@ -252,7 +261,7 @@ serial_to_tun(FILE *inslip, int outfd)
 		   addr.s6_addr[6], addr.s6_addr[7]);
 	    slip_send(slipfd, '!');
 	    slip_send(slipfd, 'P');
-	    for(i = 0; i < 8; i++) {
+	    for(unsigned int i = 0; i < 8; i++) {
 	      /* need to call the slip_send_char for stuffing */
 	      slip_send_char(slipfd, addr.s6_addr[i]);
 	    }
@@ -273,10 +282,12 @@ serial_to_tun(FILE *inslip, int outfd)
 	    if (verbose>4) {
   #if WIRESHARK_IMPORT_FORMAT
 	      printf("0000");
-		  for(i = 0; i < inbufptr; i++) printf(" %02x",uip.inbuf[i]);
+		  for(unsigned int i = 0; i < inbufptr; i++) {
+		    printf(" %02x",uip.inbuf[i]);
+		  }
   #else
 	      printf("         ");
-	      for(i = 0; i < inbufptr; i++) {
+	      for(unsigned int i = 0; i < inbufptr; i++) {
 		printf("%02x", uip.inbuf[i]);
 		if((i & 3) == 3) printf(" ");
 		if((i & 15) == 15) printf("\n         ");
@@ -322,7 +333,7 @@ serial_to_tun(FILE *inslip, int outfd)
       /* Echo lines as they are received for verbose=2,3,5+ */
       /* Echo all printable characters for verbose==4 */
       if((verbose==2) || (verbose==3) || (verbose>4)) {
-	if(c=='\n') {
+	if(c == '\n') {
 	  if(is_sensible_string(uip.inbuf, inbufptr)) {
 	    if (timestamp) stamptime();
 	    fwrite(uip.inbuf, inbufptr, 1, stdout);
@@ -342,7 +353,7 @@ serial_to_tun(FILE *inslip, int outfd)
 }
 
 unsigned char slip_buf[2000];
-int slip_end, slip_begin;
+unsigned int slip_end, slip_begin;
 
 void
 slip_send_char(int fd, unsigned char c)
@@ -400,6 +411,9 @@ slip_flushbuf(int fd)
   int n;
 
   if(slip_empty()) {
+    return;
+  }
+  if(slip_begin > slip_end) {
     return;
   }
 
