@@ -139,6 +139,26 @@
 #define ti_lib_aon_wuc_osc_config(...)                AONWUCOscConfig(__VA_ARGS__)
 #define ti_lib_aon_wuc_jtag_power_off(...)            AONWUCJtagPowerOff(__VA_ARGS__)
 /*---------------------------------------------------------------------------*/
+/* aux_adc.h */
+#include "driverlib/aux_adc.h"
+
+#define ti_lib_aux_adc_disable(...)                            AUXADCDisable(__VA_ARGS__)
+#define ti_lib_aux_adc_enable_async(...)                       AUXADCEnableAsync(__VA_ARGS__)
+#define ti_lib_aux_adc_enable_sync(...)                        AUXADCEnableSync(__VA_ARGS__)
+#define ti_lib_aux_adc_disable_input_scaling(...)              AUXADCDisableInputScaling(__VA_ARGS__)
+#define ti_lib_aux_adc_flush_fifo(...)                         AUXADCFlushFifo(__VA_ARGS__)
+#define ti_lib_aux_adc_gen_manual_trigger(...)                 AUXADCGenManualTrigger(__VA_ARGS__)
+#define ti_lib_aux_adc_get_fifo_status(...)                    AUXADCGetFifoStatus(__VA_ARGS__)
+#define ti_lib_aux_adc_read_fifo(...)                          AUXADCReadFifo(__VA_ARGS__)
+#define ti_lib_aux_adc_pop_fifo(...)                           AUXADCPopFifo(__VA_ARGS__)
+#define ti_lib_aux_adc_select_input(...)                       AUXADCSelectInput(__VA_ARGS__)
+#define ti_lib_aux_adc_get_adjustment_gain(...)                AUXADCGetAdjustmentGain(__VA_ARGS__)
+#define ti_lib_aux_adc_get_adjustment_offset(...)              AUXADCGetAdjustmentOffset(__VA_ARGS__)
+#define ti_lib_aux_adc_value_to_microvolts(...)                AUXADCValueToMicrovolts(__VA_ARGS__)
+#define ti_lib_aux_adc_microvolts_to_value(...)                AUXADCMicrovoltsToValue(__VA_ARGS__)
+#define ti_lib_aux_adc_adjust_value_for_gain_and_offset(...)   AUXADCAdjustValueForGainAndOffset(__VA_ARGS__)
+#define ti_lib_aux_adc_unadjust_value_for_gain_and_offset(...) AUXADCUnadjustValueForGainAndOffset(__VA_ARGS__)
+/*---------------------------------------------------------------------------*/
 /* aux_wuc.h */
 #include "driverlib/aux_wuc.h"
 
@@ -618,6 +638,22 @@
 #define ti_lib_timer_ccp_combine_disable(...)     TimerCcpCombineDisable(__VA_ARGS__)
 #define ti_lib_timer_match_update_mode(...)       TimerMatchUpdateMode(__VA_ARGS__)
 #define ti_lib_timer_interval_load_mode(...)      TimerIntervalLoadMode(__VA_ARGS__)
+/*---------------------------------------------------------------------------*/
+/* trng.h */
+#include "driverlib/trng.h"
+
+#define ti_lib_trng_configure(...)      TRNGConfigure(__VA_ARGS__)
+#define ti_lib_trng_enable(...)         TRNGEnable(__VA_ARGS__)
+#define ti_lib_trng_disable(...)        TRNGDisable(__VA_ARGS__)
+#define ti_lib_trng_number_get(...)     TRNGNumberGet(__VA_ARGS__)
+#define ti_lib_trng_status_get(...)     TRNGStatusGet(__VA_ARGS__)
+#define ti_lib_trng_reset(...)          TRNGReset(__VA_ARGS__)
+#define ti_lib_trng_int_enable(...)     TRNGIntEnable(__VA_ARGS__)
+#define ti_lib_trng_int_disable(...)    TRNGIntDisable(__VA_ARGS__)
+#define ti_lib_trng_int_status(...)     TRNGIntStatus(__VA_ARGS__)
+#define ti_lib_trng_int_clear(...)      TRNGIntClear(__VA_ARGS__)
+#define ti_lib_trng_int_register(...)   TRNGIntRegister(__VA_ARGS__)
+#define ti_lib_trng_int_unregister(...) TRNGIntUnregister(__VA_ARGS__)
 /*---------------------------------------------------------------------------*/
 /* uart.h */
 #include "driverlib/uart.h"

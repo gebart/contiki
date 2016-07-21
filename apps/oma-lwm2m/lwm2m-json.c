@@ -61,7 +61,7 @@ write_boolean(const lwm2m_context_t *ctx, uint8_t *outbuf, size_t outlen,
               int value)
 {
   int len = snprintf((char *)outbuf, outlen, "{\"e\":[{\"n\":\"%u\",\"bv\":%s}]}\n", ctx->resource_id, value ? "true" : "false");
-  if ((len < 0) || (len > outlen)) {
+  if((len < 0) || (len >= outlen)) {
     return 0;
   }
   return len;
@@ -72,7 +72,7 @@ write_int(const lwm2m_context_t *ctx, uint8_t *outbuf, size_t outlen,
           int32_t value)
 {
   int len = snprintf((char *)outbuf, outlen, "{\"e\":[{\"n\":\"%u\",\"v\":%" PRId32 "}]}\n", ctx->resource_id, value);
-  if ((len < 0) || (len > outlen)) {
+  if((len < 0) || (len >= outlen)) {
     return 0;
   }
   return len;
@@ -85,19 +85,19 @@ write_float32fix(const lwm2m_context_t *ctx, uint8_t *outbuf, size_t outlen,
   size_t len = 0;
   int res;
   res = snprintf((char *)outbuf, outlen, "{\"e\":[{\"n\":\"%u\",\"v\":", ctx->resource_id);
-  if (res <= 0 || res > outlen) {
+  if(res <= 0 || res >= outlen) {
     return 0;
   }
   len += res;
   outlen -= res;
   res = lwm2m_plain_text_write_float32fix(&outbuf[len], outlen, value, bits);
-  if ((res <= 0) || (res > outlen)) {
+  if((res <= 0) || (res >= outlen)) {
     return 0;
   }
   len += res;
   outlen -= res;
   res = snprintf((char *)&outbuf[len], outlen, "}]}\n");
-  if ((res <= 0) || (res > outlen)) {
+  if((res <= 0) || (res >= outlen)) {
     return 0;
   }
   len += res;
@@ -113,39 +113,39 @@ write_string(const lwm2m_context_t *ctx, uint8_t *outbuf, size_t outlen,
   int res;
   PRINTF("{\"e\":[{\"n\":\"%u\",\"sv\":\"", ctx->resource_id);
   res = snprintf((char *)outbuf, outlen, "{\"e\":[{\"n\":\"%u\",\"sv\":\"", ctx->resource_id);
-  if (res < 0 || res > outlen) {
+  if(res < 0 || res >= outlen) {
     return 0;
   }
   len += res;
   for (i = 0; i < stringlen && len < outlen; ++i) {
     /* Escape special characters */
     /* TODO: Handle UTF-8 strings */
-    if (value[i] < '\x20') {
+    if(value[i] < '\x20') {
       PRINTF("\\x%x", value[i]);
       res = snprintf((char *)&outbuf[len], outlen - len, "\\x%x", value[i]);
-      if ((res < 0) || (res > (outlen - len))) {
+      if((res < 0) || (res >= (outlen - len))) {
         return 0;
       }
       len += res;
       continue;
-    } else if (value[i] == '"' || value[i] == '\\') {
+    } else if(value[i] == '"' || value[i] == '\\') {
       PRINTF("\\");
       outbuf[len] = '\\';
       ++len;
-      if (len >= outlen) {
+      if(len >= outlen) {
         return 0;
       }
     }
     PRINTF("%c", value[i]);
     outbuf[len] = value[i];
     ++len;
-    if (len >= outlen) {
+    if(len >= outlen) {
       return 0;
     }
   }
   PRINTF("\"}]}\n");
   res = snprintf((char *)&outbuf[len], outlen - len, "\"}]}\n");
-  if ((res < 0) || (res > (outlen - len))) {
+  if((res < 0) || (res >= (outlen - len))) {
     return 0;
   }
   len += res;
