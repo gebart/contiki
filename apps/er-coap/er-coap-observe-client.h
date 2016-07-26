@@ -115,6 +115,14 @@ coap_observee_t *coap_obs_request_registration(uip_ipaddr_t *addr,
                                                notification_callback_t
                                                notification_callback,
                                                void *data);
+
+coap_observee_t *coap_obs_request_registration_format(uip_ipaddr_t *addr,
+                                              uint16_t port, char *uri,
+                                              notification_callback_t
+                                              notification_callback,
+                                              void *data,
+                                              unsigned int format);
+
 /* TODO: this function may be moved to er-coap.c */
 uint8_t coap_generate_token(uint8_t **token_ptr);
 
