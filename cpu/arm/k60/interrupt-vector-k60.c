@@ -13,14 +13,14 @@
 #define SECTION(x) __attribute__ ((section(#x)))
 #define ISR_VECTOR_SECTION SECTION(.vector_table)
 void reset_handler(void) __attribute__((naked));
-void isr_nmi(void) __attribute__((interrupt));
-void isr_hardfault(void) __attribute__((interrupt));
-void isr_memmanage(void) __attribute__((interrupt));
-void isr_busfault(void) __attribute__((interrupt));
-void isr_usagefault(void) __attribute__((interrupt));
+void isr_nmi(void);
+void isr_hardfault(void);
+void isr_memmanage(void);
+void isr_busfault(void);
+void isr_usagefault(void);
 
 /* Default handler for interrupts, infinite loop */
-static void unhandled_interrupt(void) __attribute__((interrupt, unused));
+static void unhandled_interrupt(void) __attribute__((unused));
 
 #define UNHANDLED_ALIAS __attribute__((weak, alias("unhandled_interrupt")));
 
@@ -35,7 +35,7 @@ static void dBusFault_handler(void) __attribute__((unused));
 
 /* ARM Cortex defined interrupt vectors */
 void reset_handler(void) __attribute__((naked));
-void isr_nmi(void) __attribute__((interrupt));
+void isr_nmi(void);
 void isr_hardfault(void) __attribute__((weak, alias("dHardFault_handler")));
 void isr_memmanage(void) __attribute__((weak, alias("dMemManage_handler")));
 void isr_busfault(void) __attribute__((weak, alias("dBusFault_handler")));
@@ -418,7 +418,30 @@ const ISR_func isr_vector[256] __attribute__((used)) ISR_VECTOR_SECTION =
 void
 isr_nmi(void)
 {
-  printf("NMI handler: Reboot!\n");
+#ifdef NMI_WATCHDOG_PIN
+  /* This must be done without any function calls since the stack may be corrupt
+   * at this point. */
+  /* We need to reinitialize the GPIO pin to a known state to avoid situations
+   * where the pin is not toggled and we get stuck in a reboot loop */
+  /* enable module clock */
+  BITBAND_REG32(SIM->SCGC5, SIM_SCGC5_PORTA_SHIFT + (NMI_WATCHDOG_PORT - PORTA)) = 1;
+  /* Enable GPIO */
+  NMI_WATCHDOG_PORT->PCR[NMI_WATCHDOG_PIN] = PORT_PCR_MUX(1);
+  /* Set GPIO to OUT */
+  NMI_WATCHDOG_GPIO->PDDR = (1 << NMI_WATCHDOG_PIN);
+  /* Toggle state */
+  NMI_WATCHDOG_GPIO->PTOR = (1 << NMI_WATCHDOG_PIN);
+  /* spin for a while to avoid the system reset causing the WDT signal to be
+   * released too soon */
+  for (unsigned int i = 0; i < 10000; ++i) {
+    asm volatile ("nop\n");
+  }
+  /* We can't be sure that any function calls will work in this situation, so we
+   * need to do the WDT poking before we can output any debug information */
+  printf("NMI: poked WDT\n");
+#endif
+  printf("NMI handler!\n");
+  printf("rebooting...\n");
   NVIC_SystemReset();
   while(1);
 }

@@ -26,9 +26,7 @@ CONTIKI_TARGET_SOURCEFILES += \
   clock.c \
   llwu.c \
   power-modes.c \
-  onewire.c \
   fault-handlers.c \
-  ds18b20.c \
   system_MK60D10.c \
   pflash.c
 

@@ -1,17 +1,3 @@
-/**
- * \addtogroup rt
- * @{
- */
-
-/**
- * \file
- *         Implementation of the architecture-agnostic parts of the real-time timer module.
- * \author
- *         Adam Dunkels <adam@sics.se>
- *
- */
-
-
 /*
  * Copyright (c) 2005, Swedish Institute of Computer Science
  * All rights reserved.
@@ -44,244 +30,310 @@
  *
  */
 
-#include <stdbool.h>
-#include <stdint.h>
+/**
+ * \file
+ *         Implementation of the architecture-agnostic parts of the real-time timer module.
+ * \author
+ *         Adam Dunkels <adam@sics.se>
+ *
+ */
+
+/**
+ * \addtogroup rt
+ * @{
+ */
 
 #include "sys/rtimer.h"
 #include "contiki.h"
 
+#include <stdio.h>
+
 #define DEBUG 0
 #if DEBUG
-#include <stdio.h>
 #define PRINTF(...) printf(__VA_ARGS__)
 #else
 #define PRINTF(...)
 #endif
 
-static struct rtimer *next_rtimer;
-static volatile bool locked = 0;	/* timer list is locked */
-static volatile bool deferred = 0;	/* run a timer after unlocking */
-static struct rtimer *set_queue[2];	/* for delayed setting */
-static volatile bool setting = 0;	/* processing set_queue */
-static volatile bool nesting = 0;	/* nesting depth for set_queue */
+static struct rtimer *volatile next_rtimer;
+/*---------------------------------------------------------------------------*/
+/*--------------------------MULTIPLE ACCESS RTIMER---------------------------*/
+/*---------------------------------------------------------------------------*/
+#if RTIMER_MULTIPLE_ACCESS
+#include "sys/isr-control.h"
+/*---------------------------------------------------------------------------*/
+static void
+schedule_rtimer_isr_safe(struct rtimer *rtimer)
+{
+  rtimer_clock_t min;
+  if(rtimer) {
+    min = RTIMER_NOW() + RTIMER_MINIMAL_SAFE_SCHEDULE;
+    if(RTIMER_CLOCK_LT(rtimer->time, min)) {
+      rtimer_arch_schedule(min);
+    } else {
+      rtimer_arch_schedule(rtimer->time);
+    }
+  }
+}
+/*---------------------------------------------------------------------------*/
+static int
+add_to_queue(struct rtimer *rtimer, rtimer_clock_t time,
+             rtimer_callback_t func, void *ptr)
+{
+  int ret = RTIMER_OK;
+  struct rtimer *iter;
 
-/*
- * Note that read accesses to the generation count must be atomic but neither
- * writes nor the increment operation have to.
- */
-static volatile uint8_t generation = 0;
+  isr_state_t state = atomic_section_enter();
 
+  if(rtimer->state != RTIMER_READY) {
+    ret = RTIMER_ERR_ALREADY_SCHEDULED;
+    goto finish;
+  }
 
+  rtimer->func = func;
+  rtimer->ptr = ptr;
+  rtimer->time = time;
+
+  if(next_rtimer == NULL || RTIMER_CLOCK_LT(rtimer->time, next_rtimer->time)) {
+    schedule_rtimer_isr_safe(rtimer);
+
+    rtimer->next = next_rtimer;
+    next_rtimer = rtimer;
+    rtimer->state = RTIMER_QUEUED;
+    goto finish;
+  }
+
+  iter = next_rtimer;
+  while(iter->next != NULL) {
+    if(!RTIMER_CLOCK_LT(iter->next->time, rtimer->time)) {
+      break;
+    }
+    iter = iter->next;
+  }
+
+  rtimer->next = iter->next;
+  iter->next = rtimer;
+  rtimer->state = RTIMER_QUEUED;
+
+finish:
+  atomic_section_exit(state);
+
+  return ret;
+}
+/*---------------------------------------------------------------------------*/
+static int
+remove_from_queue(struct rtimer *rtimer)
+{
+  int ret = RTIMER_OK;
+  struct rtimer *iter;
+
+  isr_state_t state = atomic_section_enter();
+
+  if(rtimer->state == RTIMER_READY) {
+    ret = RTIMER_ERR_NOT_SCEDULED;
+  } else if(rtimer->state == RTIMER_RUNNING) {
+    /* too late to cancel */
+    ret = RTIMER_ERR_TOO_LATE;
+  } else if(rtimer == next_rtimer) {
+    next_rtimer = next_rtimer->next;
+    schedule_rtimer_isr_safe(next_rtimer);
+  } else {
+    iter = next_rtimer;
+    while(iter->next != NULL) {
+      if(iter->next == rtimer) {
+        iter->next = iter->next->next;
+        break;
+      }
+      iter = iter->next;
+    }
+  }
+
+  rtimer->state = RTIMER_READY;
+
+  atomic_section_exit(state);
+
+  return ret;
+}
+/*---------------------------------------------------------------------------*/
+static struct rtimer *
+pop_expired_from_queue(void)
+{
+  isr_state_t state;
+  rtimer_clock_t now;
+
+  struct rtimer *last = NULL;
+  struct rtimer *ret = NULL;
+  struct rtimer *iter;
+
+  state = atomic_section_enter();
+
+  now = RTIMER_NOW();
+
+  iter = next_rtimer;
+
+  while(iter != NULL) {
+    if(RTIMER_CLOCK_LT(now, iter->time)) {
+      break;
+    }
+    /* mark as running so that no-one can cancel */
+    iter->state = RTIMER_RUNNING;
+    last = iter;
+    iter = iter->next;
+  }
+
+  if(last != NULL) {
+    ret = next_rtimer;
+    last->next = NULL;
+    next_rtimer = iter;
+
+    schedule_rtimer_isr_safe(next_rtimer);
+  }
+
+  atomic_section_exit(state);
+
+  return ret;
+}
+/*---------------------------------------------------------------------------*/
+static void
+func_call_list(volatile struct rtimer *list)
+{
+  struct rtimer *next;
+  rtimer_callback_t cb;
+  void *ptr;
+
+  while(list != NULL) {
+
+    next = list->next;
+    cb = list->func;
+    ptr = list->ptr;
+
+    /* we've made list volatile because after setting to RTIMER_READY,
+       other threads of execution are allowed to modify the rtimer. The
+       volatile qualifier prvents reordering the above reads through the write
+       to state. A memory barrier put here would be better, but we don't have
+       this functionality in Contiki at this time. */
+    list->state = RTIMER_READY;
+
+    cb((struct rtimer *)list, ptr);
+
+    list = next;
+  }
+}
+#else
+/*---------------------------------------------------------------------------*/
+/*---------------------------FALLBACK DEFINITIONS----------------------------*/
+/*---------------------------------------------------------------------------*/
+#define add_to_queue(a, b, c, d) (0)
+#define remove_from_queue(a)     (0)
+#define pop_expired_from_queue() (NULL)
+#define func_call_list(a)        {}
+#endif
+/*---------------------------------------------------------------------------*/
+/*---------------------------SINGLE ACCESS RTIMER----------------------------*/
+/*---------------------------------------------------------------------------*/
+static int
+add_single_access(struct rtimer *rtimer)
+{
+  int first = 0;
+
+  if(next_rtimer == NULL) {
+    first = 1;
+  }
+
+  next_rtimer = rtimer;
+
+  if(first == 1) {
+    rtimer_arch_schedule(rtimer->time);
+  }
+
+  return RTIMER_OK;
+}
+/*---------------------------------------------------------------------------*/
+static int
+remove_single_access(struct rtimer *rtimer)
+{
+  if(rtimer == next_rtimer) {
+    next_rtimer = NULL;
+    return RTIMER_OK;
+  }
+
+  return RTIMER_ERR_NOT_SCEDULED;
+}
+/*---------------------------------------------------------------------------*/
+static struct rtimer *
+remove_expired_single_access(void)
+{
+  struct rtimer *t = next_rtimer;
+
+  if(next_rtimer == NULL) {
+    return NULL;
+  }
+
+  next_rtimer = NULL;
+
+  return t;
+}
+/*---------------------------------------------------------------------------*/
+static void
+func_call_single(struct rtimer *t)
+{
+  if(t != NULL) {
+    t->func(t, t->ptr);
+  }
+}
+/*---------------------------------------------------------------------------*/
+/*-----------------------------PUBLIC INTERFACE------------------------------*/
 /*---------------------------------------------------------------------------*/
 void
 rtimer_init(void)
 {
+  if(RTIMER_MULTIPLE_ACCESS) {
+    PRINTF("rtimer is multiple access\n");
+  }
   rtimer_arch_init();
 }
 /*---------------------------------------------------------------------------*/
-static void
-schedule_locked(rtimer_clock_t time)
+int
+rtimer_cancel(struct rtimer *rtimer)
 {
-    rtimer_arch_schedule(time);
-
-    /*
-     * The behaviour of rtimer_arch_schedule when the time is in the past,
-     * equal to the present, or changes from future to past/present while
-     * rtimer_arch_schedule is running is undefined. In particular, no timer
-     * interrupt may be generated in such cases, causing the timer to expire
-     * in the distant future or possibly never at all.
-     *
-     * We therefore check whether the expiration time is still in the future
-     * after rtimer_arch_schedule. If not, the timer may still be pending and
-     * we have to process it "manually" (through run_deferred).
-     *
-     * Since schedule_locked is run while "locked" is set, we're guaranteed
-     * that "deferred" will be checked later on.
-     */
-    if(!RTIMER_CLOCK_LT(RTIMER_NOW(), time)) {
-      deferred = 1;
-    }
-}
-/*---------------------------------------------------------------------------*/
-static int
-set_locked(struct rtimer *rtimer, rtimer_clock_t time,
-	   rtimer_callback_t func, void *ptr)
-{
-  struct rtimer **anchor;
-
-  /*
-   * RTIMER_ERR_ALREADY_SCHEDULED in rtimer.h suggests we should fail if the
-   * timer is already scheduled. However, the original implementation allows
-   * timers to be rescheduled with impunity, so we maintain de facto
-   * compatibility.
-   */
-  for(anchor = &next_rtimer; *anchor; anchor = &(*anchor)->next) {
-    if(*anchor == rtimer) {
-      *anchor = rtimer->next;
-      break;
-    }
-  }
-  rtimer->time = time;
-  rtimer->func = func;
-  rtimer->ptr = ptr;
-  rtimer->cancel = 0;
-
-  for(anchor = &next_rtimer; *anchor; anchor = &(*anchor)->next) {
-    if(!RTIMER_CLOCK_LT((*anchor)->time, time)) {
-      break;
-    }
-  }
-  rtimer->next = *anchor;
-  *anchor = rtimer;
-
-  if(next_rtimer == rtimer) {
-    schedule_locked(time);
-  }
-  return RTIMER_OK;
-}
-/*---------------------------------------------------------------------------*/
-static void
-next_timer_locked(void)
-{
-  rtimer_clock_t now = RTIMER_NOW();
-  struct rtimer *t;
-  bool need_sched = 0;
-
-  while(next_rtimer && !RTIMER_CLOCK_LT(now, next_rtimer->time)) {
-    t = next_rtimer;   
-    next_rtimer = t->next;
-    if(t->cancel) {
-      need_sched = 1;
-    } else {
-      t->func(t, t->ptr);
-      need_sched |= t != next_rtimer;
-    }
-  }
-  if(next_rtimer && need_sched) {
-    schedule_locked(next_rtimer->time);
-  }
-}
-/*---------------------------------------------------------------------------*/
-static void
-lock_and_set(struct rtimer *rtimer, rtimer_clock_t time,
-	     rtimer_callback_t func, void *ptr)
-{
-  locked = 1;
-  if(!rtimer->set_cancel) {
-    set_locked(rtimer, time, func, ptr);
-  }
-  locked = 0;
-}
-/*---------------------------------------------------------------------------*/
-static void
-run_deferred(void)
-{
-  struct rtimer *rtimer;
-
-again:
-  while(deferred) {
-    locked = 1;
-    deferred = 0;
-    next_timer_locked();
-    locked = 0;
-  }
-  if(setting) {
-    return;
-  }
-  setting = 1;
-  rtimer = set_queue[0];
-  if(rtimer) {
-    set_queue[0] = rtimer->more[0];
+  if(RTIMER_MULTIPLE_ACCESS) {
+    return remove_from_queue(rtimer);
   } else {
-    rtimer = set_queue[1];
-    if(rtimer) {
-      set_queue[1] = rtimer->more[1];
-    }
+    return remove_single_access(rtimer);
   }
-  setting = 0;
-  if(rtimer) {
-    /*
-     * This function call copies the new set_* values from rtimer before
-     * locking, thus ensuring they are not changed by another call to
-     * rtimer_set while we are in the middle of processing them.
-     */
-    lock_and_set(rtimer, rtimer->set_time, rtimer->set_func, rtimer->set_ptr);
-    goto again;
-  }
-}
-/*---------------------------------------------------------------------------*/
-/*
- * We only come here if we're already in an interrupt. Since non-timer
- * interrupts are enabled when rtimer_run_next is run, we can thus get one
- * interrupt on top of it all.
- */
-static void
-maybe_queue_rtimer(struct rtimer *rtimer)
-{
-  const struct rtimer *t;
-  bool level = nesting;
-
-  nesting = 1;
-  for(t = set_queue[level]; t; t = t->more[level]) {
-    if(t == rtimer) {
-      return;
-    }
-  }
-  rtimer->more[level] = set_queue[level];
-  set_queue[level] = rtimer;
-  nesting = level;
 }
 /*---------------------------------------------------------------------------*/
 int
 rtimer_set(struct rtimer *rtimer, rtimer_clock_t time,
-	   rtimer_clock_t duration,
-	   rtimer_callback_t func, void *ptr)
+           rtimer_clock_t duration, rtimer_callback_t func, void *ptr)
 {
-  uint8_t start;
-  int res;
-
-  PRINTF("rtimer_set time %d\n", time);
-
-  if(locked) {
-    rtimer->cancel = 1;
-    do {
-      start = generation;
-      rtimer->set_time = time;
-      rtimer->set_func = func;
-      rtimer->set_ptr = ptr;
-    } while(start != generation++);
-    rtimer->set_cancel = 0;
-    maybe_queue_rtimer(rtimer);
-    return RTIMER_OK;
+  PRINTF("rtimer_set time %lu\n", time);
+  if(RTIMER_MULTIPLE_ACCESS) {
+    return add_to_queue(rtimer, time, func, ptr);
   } else {
-    locked = 1;
-    rtimer->set_cancel = 1; /* preserve ordering */
-    res = set_locked(rtimer, time, func, ptr);
-    locked = 0;
-    run_deferred();
+    rtimer->func = func;
+    rtimer->ptr = ptr;
+    rtimer->time = time;
+
+    return add_single_access(rtimer);
   }
-  return res;
-}
-/*---------------------------------------------------------------------------*/
-void
-rtimer_cancel(struct rtimer *rtimer)
-{
-  rtimer->set_cancel = 1;
-  rtimer->cancel = 1;
 }
 /*---------------------------------------------------------------------------*/
 void
 rtimer_run_next(void)
 {
-  if(locked) {
-    deferred = 1;
-    return;
-  }
+  struct rtimer *t;
 
-  locked = 1;
-  next_timer_locked();
-  locked = 0;
-  run_deferred();
+  if(RTIMER_MULTIPLE_ACCESS) {
+    t = pop_expired_from_queue();
+    func_call_list(t);
+  } else {
+    t = remove_expired_single_access();
+    func_call_single(t);
+    if(next_rtimer) {
+      rtimer_arch_schedule(next_rtimer->time);
+    }
+  }
 }
 /*---------------------------------------------------------------------------*/
 
