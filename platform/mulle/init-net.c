@@ -59,12 +59,14 @@
 #include "net/ipv6/uip-ds6.h"
 #endif /* NETSTACK_CONF_WITH_IPV6 */
 
-static union {
-  uint64_t u64;
-  uint32_t u32[sizeof(uint64_t) / sizeof(uint32_t)];
-  uint16_t u16[sizeof(uint64_t) / sizeof(uint16_t)];
-  uint8_t u8[sizeof(uint64_t) / sizeof(uint8_t)];
-} id;
+union {
+    uint64_t u64;
+    uint32_t u32[sizeof(uint64_t) / sizeof(uint32_t)];
+    uint16_t u16[sizeof(uint64_t) / sizeof(uint16_t)];
+    uint8_t  u8[sizeof(uint64_t) / sizeof(uint8_t)];
+} mulle_eui64;
+
+char mulle_eui64_str[sizeof(mulle_eui64) * 2 + 1];
 
 /** @brief Simple hash function used for generating link-local IPv6 and EUI64
  *         (64 bit) from CPUID (128 bit)
@@ -90,7 +92,7 @@ set_rime_addr(void)
   unsigned int i;
 
   /* memset(&addr, 0x65, sizeof(linkaddr_t)); */
-  memcpy(addr.u8, id.u8, sizeof(addr.u8));
+  memcpy(addr.u8, mulle_eui64.u8, sizeof(addr.u8));
 
   linkaddr_set_node_addr(&addr);
   PRINTF("Rime started with address ");
@@ -106,14 +108,14 @@ init_net(void)
 {
 #if WITH_SLIP
   /* Use fixed address for the border router. */
-  id.u32[0] = 0x00000000;
-  id.u32[1] = 0x00000000;
-  id.u8[7] = 0x01;
+  mulle_eui64.u32[0] = 0x00000000;
+  mulle_eui64.u32[1] = 0x00000000;
+  mulle_eui64.u8[7] = 0x01;
 #else
-  id.u32[0] = djb2_hash((const uint8_t *)&(SIM->UIDH), 8); /* Use SIM_UIDH, SIM_UIDMH for first half */
-  id.u32[1] = djb2_hash((const uint8_t *)&(SIM->UIDML), 8); /* Use SIM_UIDML, SIM_UIDL for second half */
+  mulle_eui64.u32[0] = djb2_hash((const uint8_t *)&(SIM->UIDH), 8); /* Use SIM_UIDH, SIM_UIDMH for first half */
+  mulle_eui64.u32[1] = djb2_hash((const uint8_t *)&(SIM->UIDML), 8); /* Use SIM_UIDML, SIM_UIDL for second half */
 #endif
-  id.u8[0] |= 0x02; /* Set the Local/Universal bit to Local */
+  mulle_eui64.u8[0] |= 0x02; /* Set the Local/Universal bit to Local */
 #if NETSTACK_CONF_WITH_IPV6
   set_rime_addr();
   NETSTACK_RADIO.init();
@@ -138,7 +140,19 @@ init_net(void)
   } while(0);
   NETSTACK_RADIO.set_value(RADIO_PARAM_CHANNEL, RF_CHANNEL);
 
-  memcpy(&uip_lladdr.addr, id.u8, sizeof(uip_lladdr.addr));
+  snprintf(mulle_eui64_str, sizeof(mulle_eui64_str), "%02x%02x%02x%02x%02x%02x%02x%02x",
+    mulle_eui64.u8[0],
+    mulle_eui64.u8[1],
+    mulle_eui64.u8[2],
+    mulle_eui64.u8[3],
+    mulle_eui64.u8[4],
+    mulle_eui64.u8[5],
+    mulle_eui64.u8[6],
+    mulle_eui64.u8[7]);
+
+  PRINTF("Using EUI64 string: %s\n", mulle_eui64_str);
+
+  memcpy(&uip_lladdr.addr, mulle_eui64.u8, sizeof(uip_lladdr.addr));
 
   queuebuf_init();
   NETSTACK_RDC.init();

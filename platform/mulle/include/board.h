@@ -150,5 +150,13 @@ void board_init(void);
 
 /** @} */
 
+extern union {
+    uint64_t u64;
+    uint32_t u32[sizeof(uint64_t) / sizeof(uint32_t)];
+    uint16_t u16[sizeof(uint64_t) / sizeof(uint16_t)];
+    uint8_t  u8[sizeof(uint64_t) / sizeof(uint8_t)];
+} mulle_eui64;
+extern char mulle_eui64_str[sizeof(mulle_eui64) * 2 + 1]; /* two characters per 8 bit value, + terminating null */
+
 #endif /* BOARD_H_ */
 /** @} */
