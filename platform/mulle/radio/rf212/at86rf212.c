@@ -111,7 +111,7 @@ static void set_send_on_cca(bool enable);
 static bool set_tx_retries(uint8_t num);
 static uint8_t get_channel(void);
 static void set_channel(uint8_t c);
-static void at86rf212_interrupt(rtimer_clock_t time);
+static void at86rf212_rx_event(void);
 
 static volatile rtimer_clock_t poll_timestamp = 0;
 
@@ -127,7 +127,14 @@ PROCESS_THREAD(rf212_process, ev, data)
 #ifdef WITH_SLIP
     leds_toggle(LEDS_RED);
 #endif
-    at86rf212_interrupt(poll_timestamp);
+#ifdef RF212_IRQ_POLL
+    if (at86rf212_interrupt(poll_timestamp))
+    {
+#endif
+      at86rf212_rx_event();
+#ifdef RF212_IRQ_POLL
+    }
+#endif
   }
 
   PROCESS_END();
@@ -490,7 +497,9 @@ void
 at86rf212_poll(void)
 {
   PRINTF("%s\n",__FUNCTION__);
+#ifdef RF212_IRQ_POLL
   poll_timestamp = RTIMER_NOW();
+#endif
   process_poll(&rf212_process);
 }
 /*---------------------------------------------------------------------------*/
@@ -1075,7 +1084,7 @@ set_channel(uint8_t c)
 /*---------------------------------------------------------------------------*/
 /* Do not call from ISR context, that will break the SPI bus if any other device
  * drivers are using it! */
-static void
+bool
 at86rf212_interrupt(rtimer_clock_t time)
 {
   /* Separate RF212 has a single radio interrupt and the source must be read from the IRQ_STATUS register */
@@ -1106,7 +1115,7 @@ at86rf212_interrupt(rtimer_clock_t time)
           {
             rxframe_head = 0;
           }
-          at86rf212_rx_event();
+          return true;
         }
       }
     }
@@ -1129,6 +1138,7 @@ at86rf212_interrupt(rtimer_clock_t time)
     trx_isr_mask &= ~HAL_BAT_LOW_MASK;
     hal_register_write(RG_IRQ_MASK, trx_isr_mask);
   }
+  return false;
 }
 /*---------------------------------------------------------------------------*/
 const struct radio_driver rf212_driver =

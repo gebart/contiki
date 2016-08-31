@@ -293,5 +293,12 @@ hal_frame_write(const uint8_t *write_buffer, uint8_t length) /* TODO: Make sure 
 /*----------------------------------------------------------------------------*/
 static void hal_isr(void* arg)
 {
-  at86rf212_poll();
+#ifndef RF212_IRQ_POLL
+  if (at86rf212_interrupt(RTIMER_NOW()))
+  {
+#endif
+    at86rf212_poll();
+#ifndef RF212_IRQ_POLL
+  }
+#endif
 }
