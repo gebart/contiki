@@ -71,7 +71,7 @@ extern "C" {
  * at this point.
  */
 #define NMI_WATCHDOG_PORT PORTB
-#define NMI_WATCHDOG_GPIO GPIOB
+#define NMI_WATCHDOG_GPIO PTB
 #define NMI_WATCHDOG_PIN  11
 
 /**
