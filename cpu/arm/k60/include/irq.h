@@ -57,4 +57,7 @@ static inline unsigned int irq_is_in(void)
     return (__get_IPSR() & 0xFF);
 }
 
+#define K60_ENTER_CRITICAL_REGION() { unsigned int mask = irq_disable()
+#define K60_LEAVE_CRITICAL_REGION() irq_restore(mask); }
+
 #endif

@@ -10,6 +10,7 @@
 #include <stddef.h>
 #include "nvram.h"
 #include "nvram-spi-old.h"
+#include "irq.h"
 
 /**
  * @ingroup     nvram
@@ -92,6 +93,7 @@ static int nvram_spi_write_9bit_addr(const nvram_t *dev, uint8_t *src, uint32_t 
     uint8_t addr;
     /* LSB of address */
     addr = (dst & 0xff);
+    K60_ENTER_CRITICAL_REGION();
     spi_acquire_bus(spi_dev->spi);
     /* Enable writes */
     cmd = NVRAM_SPI_CMD_WREN;
@@ -129,6 +131,7 @@ static int nvram_spi_write_9bit_addr(const nvram_t *dev, uint8_t *src, uint32_t 
         return status;
     }
     spi_release_bus(spi_dev->spi);
+    K60_LEAVE_CRITICAL_REGION();
     /* status contains the number of bytes actually written to the SPI bus. */
     return status;
 }
@@ -147,6 +150,7 @@ static int nvram_spi_read_9bit_addr(const nvram_t *dev, uint8_t *dst, uint32_t s
     }
     /* LSB of address */
     addr = (src & 0xff);
+    K60_ENTER_CRITICAL_REGION();
     spi_acquire_bus(spi_dev->spi);
     /* Write command and address */
     status = spi_transfer_blocking(spi_dev->spi, spi_dev->ctas, spi_dev->cs,
@@ -169,6 +173,7 @@ static int nvram_spi_read_9bit_addr(const nvram_t *dev, uint8_t *dst, uint32_t s
         return status;
     }
     spi_release_bus(spi_dev->spi);
+    K60_LEAVE_CRITICAL_REGION();
     /* status contains the number of bytes actually read from the SPI bus. */
     return status;
 }
