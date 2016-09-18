@@ -7,6 +7,10 @@
 
 #include <stdbool.h>
 
+#if RF212_IRQ_POLL && WITH_TSCH
+#error Polling RF212 process without logic in IRQ handler not supported with TSCH.
+#endif
+
 /*============================ MACROS ========================================*/
 #define RF212B_VERSION                          (3)
 #define RF212_SUPPORTED_MANUFACTURER_ID         (31)
@@ -105,6 +109,7 @@ typedef struct
 
 
 void at86rf212_poll(void);
+bool at86rf212_interrupt(rtimer_clock_t time);
 void at86rf212_set_pan_addr(unsigned pan,
                    unsigned addr,
                    const uint8_t ieee_addr[8]);
