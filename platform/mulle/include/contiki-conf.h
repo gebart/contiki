@@ -457,6 +457,9 @@ typedef uint32_t rtimer_clock_t;
 #ifndef LWM2M_DEVICE_MANUFACTURER
 #define LWM2M_DEVICE_MANUFACTURER "Eistec AB"
 #endif
+#ifndef LWM2M_DEVICE_FIRMWARE_VERSION
+#define LWM2M_DEVICE_FIRMWARE_VERSION "0.0.0"
+#endif
 #ifndef LWM2M_DEVICE_SERIAL_NO
 #define _stringify2(x) #x
 #define _stringify_macro(x) _stringify2(x)
