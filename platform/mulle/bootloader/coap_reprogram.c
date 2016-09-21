@@ -45,20 +45,11 @@ enum
   S_RECEIVING
 };
 static uint8_t state = S_IDLE;
-static struct ctimer rec_timer[1];
-//uint8_t app_buffer[514];
-//uint16_t app_buffer_pos;
-//uint32_t addr;
+static struct ctimer start_timer[1];
 uint32_t next_offset;
 
 PROCESS(coap_rep_process, "CoAP reprogram process");
 
-/*---------------------------------------------------------------------------*/
-void rec_timeout(void* data)
-{
-  PRINTF("Reception timedout\n");
-  state = S_IDLE;
-}
 /*---------------------------------------------------------------------------*/
 void rep_upload_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset);
 RESOURCE(rep_upload, "title=\"Upload new application\"", NULL, NULL, rep_upload_handler, NULL);
@@ -100,20 +91,11 @@ rep_upload_handler(void* request, void* response, uint8_t *buffer, uint16_t pref
       size = len;
       more = 0;
     }
-    if (boffset == 0)
+    if (boffset == 0 && state != S_RUN)
     {
       PRINTF("Offset 0, init\n");
-//      if (state != S_IDLE)
-//      {
-//        PRINTF("%s\n", RECEIVING_APP_TEXT);
-//        REST.set_response_status(response, REST.status.BAD_REQUEST);
-//        REST.set_response_payload(response, RECEIVING_APP_TEXT,strlen(RECEIVING_APP_TEXT));
-//        return;
-//      }
       next_offset = 0;
-      // Start timeout timer
       state = S_RECEIVING;
-      //ctimer_set(rec_timer, CLOCK_SECOND*60, rec_timeout, 0);
     }
     if (state != S_RECEIVING)
     {
@@ -132,7 +114,6 @@ rep_upload_handler(void* request, void* response, uint8_t *buffer, uint16_t pref
 
     if (!bl_app_data(boffset, payload, len))
     {
-      ctimer_stop(rec_timer);
       state = S_IDLE;
       PRINTF("%s\n", UNABLE_TO_WRITE_FLASH_TEXT);
       REST.set_response_status(response, REST.status.BAD_REQUEST);
@@ -143,12 +124,7 @@ rep_upload_handler(void* request, void* response, uint8_t *buffer, uint16_t pref
 
     if(!more)
     {
-      //ctimer_stop(rec_timer);
       state = S_IDLE;
-    }
-    else
-    {
-      //ctimer_restart(rec_timer);
     }
   }
 }
@@ -188,9 +164,12 @@ rep_start_handler(void* request, void* response, uint8_t *buffer, uint16_t prefe
       REST.set_response_status(response, REST.status.BAD_REQUEST);
       REST.set_response_payload(response, BAD_INPUT_TEXT, strlen(BAD_INPUT_TEXT));
     }
-    state = S_RUN;
-    process_poll(&coap_rep_process);
-    REST.set_response_status(response, REST.status.CHANGED);
+    else
+    {
+      state = S_RUN;
+      process_poll(&coap_rep_process);
+      REST.set_response_status(response, REST.status.CHANGED);
+    }
   }
 }
 /*---------------------------------------------------------------------------*/
@@ -198,6 +177,15 @@ void
 coap_reprogram_init(void)
 {
   process_start(&coap_rep_process, NULL);
+}
+/*---------------------------------------------------------------------------*/
+static void run_app(void* not_used)
+{
+  if (state == S_RUN)
+  {
+    bootloader_run_app();
+    // Will not get here
+  }
 }
 /*---------------------------------------------------------------------------*/
 PROCESS_THREAD(coap_rep_process, ev, data)
@@ -215,10 +203,8 @@ PROCESS_THREAD(coap_rep_process, ev, data)
     {
     case S_RUN:
       PRINTF("CoAP start app\n");
-      bootloader_run_app();
-      // Will not get here
+      ctimer_set(start_timer, CLOCK_SECOND*2, run_app, 0);
     }
-    state = S_IDLE;
   }
   PROCESS_END();
 }
