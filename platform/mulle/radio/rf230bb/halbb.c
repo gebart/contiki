@@ -195,10 +195,10 @@ hal_init(void)
 {
   /*** IO Specific Initialization.****/
 
-  gpio_init(SLPTR_GPIO, GPIO_DIR_OUT, GPIO_NOPULL);
-  gpio_init(RST_GPIO, GPIO_DIR_OUT, GPIO_NOPULL);
-  gpio_init(PWR_GPIO, GPIO_DIR_OUT, GPIO_NOPULL);
-  gpio_init_int(IRQ_GPIO, GPIO_NOPULL, GPIO_RISING, hal_rf230_isr, NULL);
+  gpio_init(SLPTR_GPIO, GPIO_OUT);
+  gpio_init(RST_GPIO, GPIO_OUT);
+  gpio_init(PWR_GPIO, GPIO_OUT);
+  gpio_init_int(IRQ_GPIO, GPIO_IN, GPIO_RISING, hal_rf230_isr, NULL);
 
   /* Enable power switch to radio */
   hal_set_pwr_high();
