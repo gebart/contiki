@@ -43,7 +43,6 @@
 #define __CONTIKI_CONF_H__
 
 #include <stdint.h>
-#include "at86rf212_registermap.h"
 
 #ifdef PROJECT_CONF_H
 #include PROJECT_CONF_H
