@@ -1,4 +1,4 @@
-/* 
+/*
  * CoAP service that can be used to re-start to the bootloader.
  *
  * Copyright (C) 2013 Andrey Kruglyak
@@ -41,10 +41,18 @@ run_bootloader_handler(void* request, void* response, uint8_t *buffer,
     uint16_t preferred_size, int32_t *offset)
 {
   if (REST.get_method_type(request) == METHOD_PUT) {
-    uint8_t* payload;
+    const uint8_t* payload;
     char text[100];
-    uint16_t len;
+    int len;
     len = REST.get_request_payload(request, &payload);
+    if (len < 0) {
+      /* Should never be possible */
+      /* er-coap returns 0 on no payload */
+      return;
+    }
+    else if (len > sizeof(text)) {
+      len = sizeof(text);
+    }
     memcpy(text, payload, len);
     text[len] = '\0';
     if (text[0] != '1') {
