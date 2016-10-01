@@ -31,7 +31,7 @@
  */
 
 #include "lib/sensors.h"
-#include "radio/rf230bb/rf230bb.h"
+#include "radio/rf212/at86rf212.h"
 #include "dev/radio-sensor.h"
 
 const struct sensors_sensor radio_sensor;
