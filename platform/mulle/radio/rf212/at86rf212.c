@@ -517,6 +517,11 @@ at86rf212_get_value(radio_param_t param, radio_value_t *value)
       *value = 40; //rf230_get_raw_rssi();
       return RADIO_RESULT_OK;
 
+    case RADIO_PARAM_LAST_LINK_QUALITY:
+      //TODO(henrik) FIX
+      *value = 40; //rf230_last_lqi;
+      return RADIO_RESULT_OK;
+
     case RADIO_PARAM_LAST_RSSI:
       //TODO(henrik) FIX
       *value = 40; //rf230_last_rssi;
