@@ -24,12 +24,22 @@
  * @}
  */
 
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 #include "sched.h"
 #include "thread.h"
 #include "cpu.h"
 #include "periph/gpio.h"
+
+/**
+ * @brief   Get the OCR reg value from the gpio_mode_t value
+ */
+#define MODE_PCR_MASK       (PORT_PCR_ODE_MASK | PORT_PCR_PE_MASK | PORT_PCR_PS_MASK)
+
+/**
+ * @brief   This bit in the mode is set to 1 for output configuration
+ */
+#define MODE_OUT            (0x80)
 
 /**
  * @brief   Shifting a gpio_t value by this number of bit we can extract the
@@ -52,9 +62,6 @@
  */
 #define PORT_ADDR_BASE      (PORTA_BASE & ~(PORT_ADDR_MASK))
 
-#ifndef GPIOA_BASE
-#define GPIOA_BASE PTA_BASE
-#endif
 /**
  * @brief   Cleaned up GPIO base address
  */
@@ -166,24 +173,29 @@ static void ctx_clear(int port, int pin)
     write_map(port, pin, ctx);
 }
 
-int gpio_init(gpio_t pin, gpio_dir_t dir, gpio_pp_t pullup)
+int gpio_init(gpio_t pin, gpio_mode_t mode)
 {
     /* set pin to analog mode while configuring it */
     gpio_init_port(pin, GPIO_AF_ANALOG);
+
     /* set pin direction */
-    gpio(pin)->PDDR &= ~(1 << pin_num(pin));
-    gpio(pin)->PDDR |=  (dir << pin_num(pin));
-    if (dir == GPIO_DIR_OUT) {
+    if (mode & MODE_OUT) {
+        gpio(pin)->PDDR |=  (1 << pin_num(pin));
         gpio(pin)->PCOR = (1 << pin_num(pin));
     }
+    else {
+        gpio(pin)->PDDR &= ~(1 << pin_num(pin));
+    }
+
     /* enable GPIO function */
-    port(pin)->PCR[pin_num(pin)] = (GPIO_AF_GPIO | pullup);
+    port(pin)->PCR[pin_num(pin)] = (GPIO_AF_GPIO | (mode & MODE_PCR_MASK));
     return 0;
 }
 
-int gpio_init_int(gpio_t pin, gpio_pp_t pullup, gpio_flank_t flank, gpio_cb_t cb, void *arg)
+int gpio_init_int(gpio_t pin, gpio_mode_t mode, gpio_flank_t flank,
+                  gpio_cb_t cb, void *arg)
 {
-    if (gpio_init(pin, GPIO_DIR_IN, pullup) < 0) {
+    if (gpio_init(pin, mode) < 0) {
         return -1;
     }
 
@@ -202,8 +214,6 @@ int gpio_init_int(gpio_t pin, gpio_pp_t pullup, gpio_flank_t flank, gpio_cb_t cb
     /* clear interrupt flags */
     port(pin)->ISFR &= ~(1 << pin_num(pin));
     /* enable global port interrupts in the NVIC */
-    // TODO(Henrik): Perhaps set priority level somewhere else. Radio needs high priority.
-    NVIC_SetPriority(PORTA_IRQn + port_num(pin), 0);
     NVIC_EnableIRQ(PORTA_IRQn + port_num(pin));
     /* finally, enable the interrupt for the select pin */
     port(pin)->PCR[pin_num(pin)] |= flank;

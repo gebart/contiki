@@ -46,9 +46,9 @@
 void
 power_control_init(void)
 {
-  gpio_init(MULLE_POWER_VPERIPH, GPIO_DIR_OUT, GPIO_NOPULL);
-  gpio_init(MULLE_POWER_VSEC, GPIO_DIR_OUT, GPIO_NOPULL);
-  gpio_init(MULLE_POWER_AVDD, GPIO_DIR_OUT, GPIO_NOPULL);
+  gpio_init(MULLE_POWER_VPERIPH, GPIO_OUT);
+  gpio_init(MULLE_POWER_VSEC, GPIO_OUT);
+  gpio_init(MULLE_POWER_AVDD, GPIO_OUT);
 }
 
 void
