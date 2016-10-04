@@ -68,6 +68,7 @@ union {
 
 char mulle_eui64_str[sizeof(mulle_eui64) * 2 + 1];
 
+#if !WITH_SLIP
 /** @brief Simple hash function used for generating link-local IPv6 and EUI64
  *         (64 bit) from CPUID (128 bit)
  *
@@ -83,6 +84,7 @@ djb2_hash(const uint8_t *buf, size_t len)
 
     return hash;
 }
+#endif
 
 /*---------------------------------------------------------------------------*/
 static void
