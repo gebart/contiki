@@ -43,6 +43,17 @@ extern "C"
 /* Rev 2.x made the OSC32KSEL field into a bitfield (is a single bit in 1.x) */
 #define SIM_SOPT1_OSC32KSEL(a) (SIM_SOPT1_OSC32KSEL_MASK)
 
+#define GPIOA_BASE  PTA_BASE
+#define GPIOA       PTA
+#define GPIOB_BASE  PTB_BASE
+#define GPIOB       PTB
+#define GPIOC_BASE  PTC_BASE
+#define GPIOC       PTC
+#define GPIOD_BASE  PTD_BASE
+#define GPIOD       PTD
+#define GPIOE_BASE  PTE_BASE
+#define GPIOE       PTE
+
 #endif /* K60_CPU_REV == 1 */
 
 
