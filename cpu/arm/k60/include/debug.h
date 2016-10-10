@@ -39,8 +39,13 @@
 #ifndef K60_DEBUG_H_
 #define K60_DEBUG_H_
 
+#if ENABLE_DEBUG
+#include <stdio.h>
+#define DEBUG(...) printf(__VA_ARGS__)
+#else
 #ifndef DEBUG
 #define DEBUG(...)
+#endif
 #endif
 
 #endif /* K60_MUTEX_H_ */
