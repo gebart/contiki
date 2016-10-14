@@ -132,8 +132,8 @@ static int nvram_spi_write_9bit_addr(const nvram_t *dev, uint8_t *src, uint32_t 
     }
     spi_release_bus(spi_dev->spi);
     K60_LEAVE_CRITICAL_REGION();
-    /* status contains the number of bytes actually written to the SPI bus. */
-    return status;
+    /* status is 0 in Contiki if all went well. */
+    return len;
 }
 
 static int nvram_spi_read_9bit_addr(const nvram_t *dev, uint8_t *dst, uint32_t src, size_t len)
@@ -174,6 +174,6 @@ static int nvram_spi_read_9bit_addr(const nvram_t *dev, uint8_t *dst, uint32_t s
     }
     spi_release_bus(spi_dev->spi);
     K60_LEAVE_CRITICAL_REGION();
-    /* status contains the number of bytes actually read from the SPI bus. */
-    return status;
+    /* status is 0 in Contiki if all went well. */
+    return len;
 }
