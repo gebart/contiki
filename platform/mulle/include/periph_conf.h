@@ -51,10 +51,10 @@ extern "C"
 /** Value of the fast internal oscillator clock frequency in Hz  */
 #define CPU_INT_FAST_CLK_HZ             4000000u
 /** Default System clock value */
-#define DEFAULT_SYSTEM_CLOCK            (CPU_XTAL32k_CLK_HZ * 2929u)
+#define DEFAULT_SYSTEM_CLOCK            (CPU_XTAL32k_CLK_HZ * 732u)
 
 /* bus clock for the peripherals */
-#define CLOCK_BUSCLOCK                  (DEFAULT_SYSTEM_CLOCK / 2)
+#define CLOCK_BUSCLOCK                  (DEFAULT_SYSTEM_CLOCK / 1)
 /** @} */
 
 /**

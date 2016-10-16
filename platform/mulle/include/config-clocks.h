@@ -49,7 +49,7 @@ extern "C" {
 #define CPU_XTAL32k_CLK_HZ              32768u   /**< Value of the external 32k crystal or oscillator clock frequency in Hz */
 #define CPU_INT_SLOW_CLK_HZ             32768u   /**< Value of the slow internal oscillator clock frequency in Hz  */
 #define CPU_INT_FAST_CLK_HZ             4000000u /**< Value of the fast internal oscillator clock frequency in Hz  */
-#define DEFAULT_SYSTEM_CLOCK            (CPU_XTAL32k_CLK_HZ * 2929u) /**< Default System clock value */
+#define DEFAULT_SYSTEM_CLOCK            (CPU_XTAL32k_CLK_HZ * 732u) /**< Default System clock value */
 
 /**
  * System clock divider setting, the actual hardware register value, see reference manual for details.
@@ -59,22 +59,22 @@ extern "C" {
 /**
  * Bus clock divider setting, the actual hardware register value, see reference manual for details
  */
-#define CONFIG_CLOCK_K60_BUS_DIV 0x01
+#define CONFIG_CLOCK_K60_BUS_DIV 0x00
 
 /**
  * Flexbus clock divider setting, the actual hardware register value, see reference manual for details
  */
-#define CONFIG_CLOCK_K60_FB_DIV 0x01
+#define CONFIG_CLOCK_K60_FB_DIV 0x00
 
 /**
  * Flash clock divider setting, the actual hardware register value, see reference manual for details
  */
-#define CONFIG_CLOCK_K60_FLASH_DIV 0x03
+#define CONFIG_CLOCK_K60_FLASH_DIV 0x00
 
 /**
  * FLL parameter DRST DRS in MCG register C4, see reference manual for details
  */
-#define CONFIG_CLOCK_K60_FLL_MCG_C4_DRST_DRS 0b11
+#define CONFIG_CLOCK_K60_FLL_MCG_C4_DRST_DRS 0b00
 
 /**
  * FLL parameter DMX32 in MCG register C4, see reference manual for details
