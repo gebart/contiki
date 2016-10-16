@@ -41,6 +41,7 @@
 #include "spi-k60.h"
 #include "K60.h"
 #include "synchronization.h"
+#include "irq.h"
 #include "power-modes.h"
 
 #define SPI_IDLE_DATA (0xffff)
@@ -53,6 +54,7 @@ static const spi_config_t *spi_conf[NUM_SPI][NUM_CTAR] = {{NULL}};
 
 static lock_t spi_lock[NUM_SPI] = {2, 2, 2}; /* Block access by default until spi_hw_init_master has been run */
 
+static unsigned int irq_mask;
 /**
  * Find the prescaler and scaler settings that will yield a delay timing
  * as close as possible (but not shorter than) the target delay, given the
@@ -175,10 +177,12 @@ static int find_closest_baudrate_scalers(const uint32_t module_clock, const uint
 
 void spi_acquire_bus(const spi_bus_t spi_num) {
   lock_acquire(&spi_lock[spi_num]);
+  irq_mask = irq_disable();
 }
 
 void spi_release_bus(const spi_bus_t spi_num) {
   lock_release(&spi_lock[spi_num]);
+  irq_restore(irq_mask);
 }
 
 int spi_is_busy(const spi_bus_t spi_num) {
