@@ -136,16 +136,6 @@ typedef uint32_t rtimer_clock_t;
 #undef NETSTACK_CONF_FRAMER
 #define NETSTACK_CONF_FRAMER  framer_802154
 
-/* TSCH and RPL callbacks */
-#define RPL_CALLBACK_PARENT_SWITCH tsch_rpl_callback_parent_switch
-#define RPL_CALLBACK_NEW_DIO_INTERVAL tsch_rpl_callback_new_dio_interval
-#define TSCH_CALLBACK_JOINING_NETWORK tsch_rpl_callback_joining_network
-#define TSCH_CALLBACK_LEAVING_NETWORK tsch_rpl_callback_leaving_network
-
-#define TSCH_CONF_DEFAULT_TIMESLOT_LENGTH 15000
-
-#define TSCH_LOG_CONF_LEVEL 0
-
 /* Delay between GO signal and SFD */
 /* Sleep to tx => 540 us (measured time) + 4 bytes preamble  + 1 byte SFD*/
 #define RADIO_DELAY_BEFORE_TX ((unsigned)US_TO_RTIMERTICKS(540+2*16*(4+1)))
@@ -153,14 +143,11 @@ typedef uint32_t rtimer_clock_t;
 /* Delay between GO signal and start listening */
 /* Sleep to rx => 460 (measured time) */
 #define RADIO_DELAY_BEFORE_RX ((unsigned)US_TO_RTIMERTICKS(460))
-//#define RADIO_DELAY_BEFORE_RX 0
 
 /* Delay between the SFD finishes arriving and it is detected in software */
 /* IRQ delay 8 us + PHR byte */
 #define RADIO_DELAY_BEFORE_DETECT ((unsigned)US_TO_RTIMERTICKS((8+2*16*1)))
 
-#define RF_CHANNEL                  1 /* not needed */
-#define TSCH_CONF_DEFAULT_HOPPING_SEQUENCE (uint8_t[]){ 1 }
 
 #define RF212_CONF_HARDWARE_ACK     0 /* TSCH sends acks by itself */
 #define RF212_CONF_SEND_ON_CCA 0
@@ -170,6 +157,46 @@ typedef uint32_t rtimer_clock_t;
 
 /* TSCH uses polling, but we dont do real polling yet so set buffers to 1 */
 #define RF212_CONF_RX_BUFFERS       1
+
+#define TSCH_QUEUE_CONF_NUM_PER_NEIGHBOR 4
+
+#define RF_CHANNEL                  1
+#define TSCH_CONF_DEFAULT_HOPPING_SEQUENCE (uint8_t[]){ RF_CHANNEL }
+#define TSCH_CONF_RADIO_ON_DURING_TIMESLOT 0
+#define TSCH_CONF_RESYNC_WITH_SFD_TIMESTAMPS 1
+
+#define TSCH_CONF_DEFAULT_TIMESLOT_LENGTH 15000
+#define TSCH_CONF_MAC_MAX_FRAME_RETRIES 2
+
+#undef TSCH_LOG_CONF_LEVEL
+#define TSCH_LOG_CONF_LEVEL 2
+
+/* TSCH and RPL callbacks */
+#define RPL_CALLBACK_PARENT_SWITCH tsch_rpl_callback_parent_switch
+#define RPL_CALLBACK_NEW_DIO_INTERVAL tsch_rpl_callback_new_dio_interval
+#define TSCH_CALLBACK_JOINING_NETWORK tsch_rpl_callback_joining_network
+#define TSCH_CALLBACK_LEAVING_NETWORK tsch_rpl_callback_leaving_network
+
+/* 6TiSCH minimal schedule length.
+ * Larger values result in less frequent active slots: reduces capacity and saves energy. */
+//#undef TSCH_SCHEDULE_CONF_DEFAULT_LENGTH
+//#define TSCH_SCHEDULE_CONF_DEFAULT_LENGTH 41 /* 11 => around 10% duty cycle */
+
+#define TSCH_CONF_EB_PERIOD (10*CLOCK_SECOND)
+#define TSCH_CONF_KEEPALIVE_TIMEOUT (10*CLOCK_SECOND)
+
+/* If using Orchestra orchestra_init() must be called from application and orchestra app must be added. */
+// TODO(henrik) Maybe orchestra_init() could be called from radio-init and orchestra app could be added through Mulle Makefile
+#if WITH_ORCHESTRA
+/* See apps/orchestra/README.md for more Orchestra configuration options */
+#define TSCH_SCHEDULE_CONF_WITH_6TISCH_MINIMAL 0 /* No 6TiSCH minimal schedule */
+#define TSCH_CONF_WITH_LINK_SELECTOR 1 /* Orchestra requires per-packet link selection */
+/* Orchestra callbacks */
+#define TSCH_CALLBACK_NEW_TIME_SOURCE orchestra_callback_new_time_source
+#define TSCH_CALLBACK_PACKET_READY orchestra_callback_packet_ready
+#define NETSTACK_CONF_ROUTING_NEIGHBOR_ADDED_CALLBACK orchestra_callback_child_added
+#define NETSTACK_CONF_ROUTING_NEIGHBOR_REMOVED_CALLBACK orchestra_callback_child_removed
+#endif // WITH_ORCHESTRA
 
 /******************************* CONTIKIMAC ***********************************/
 #elif CONTIKIMAC
