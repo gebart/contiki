@@ -7,6 +7,7 @@
 #include "packetbuf.h"
 #include "netstack.h"
 #include "leds.h"
+#include "power-modes.h"
 
 #include <string.h>
 
@@ -295,12 +296,10 @@ at86rf212_cca(void)
   wait_idle();
 
   hal_subregister_write(SR_CCA_REQUEST, 1);
-  // No need to delay_us, this will wait for CCA to finish
-  // TODO(henrik) Break infinite loop after a timeout
-  // TODO(henrik) Add mask macros
-  while((cca & 0x80) == 0)
+
+  while(!hal_get_irq())
   {
-    cca = hal_register_read(RG_TRX_STATUS);
+    power_mode_vlps();
   }
   hal_register_read(RG_IRQ_STATUS); // Clear interrupts
   radio_set_trx_state(RX_AACK_ON);
@@ -685,11 +684,14 @@ wakeup()
    * radio IRQ pin on Mulle. (Platform board errata)
    */
   LLWU_INHIBIT_LLS();
-  hal_disable_trx_interrupt();
+  HAL_ENTER_CRITICAL_REGION();
   hal_set_slptr_low();
-  while(hal_get_irq() == 0) {}
+  while(!hal_get_irq())
+  {
+    power_mode_vlps();
+  }
   hal_register_read(RG_IRQ_STATUS); // Clear interrupts
-  hal_enable_trx_interrupt();
+  HAL_LEAVE_CRITICAL_REGION();
   set_channel(channel);
 }
 /*---------------------------------------------------------------------------*/
@@ -851,10 +853,13 @@ radio_set_trx_state(uint8_t new_state)
      */
     if(original_state == TRX_OFF)
     {
-      hal_disable_trx_interrupt();
-      while(hal_get_irq() == 0) {}
+      HAL_ENTER_CRITICAL_REGION();
+      while(hal_get_irq())
+      {
+        power_mode_vlps();
+      }
       hal_register_read(RG_IRQ_STATUS); // Clear interrupts
-      hal_enable_trx_interrupt();
+      HAL_LEAVE_CRITICAL_REGION();
     }
     else
     {
