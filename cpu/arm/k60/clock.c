@@ -36,7 +36,7 @@ static volatile unsigned long second_countdown = CLOCK_SECOND;
 
 static volatile uint8_t waiting_flag = 0;
 
-//static struct rtimer rt_clock;
+static struct rtimer rt_clock;
 
 /* This is based on the MC1322x clock module rtimer implementation. */
 /* the typical clock things like incrementing current_tick and etimer checks */
@@ -44,8 +44,8 @@ static volatile uint8_t waiting_flag = 0;
 /*static*/ void
 rt_do_clock(struct rtimer *t, void *ptr)
 {
-//  rtimer_set(t, RTIMER_TIME(t) + (RTIMER_SECOND/CLOCK_SECOND), 1,
-//             (rtimer_callback_t)rt_do_clock, ptr);
+  rtimer_set(t, RTIMER_TIME(t) + (RTIMER_SECOND/CLOCK_SECOND), 0,
+             (rtimer_callback_t)rt_do_clock, ptr);
 
   current_tick++;
 
@@ -151,7 +151,7 @@ static void usleep_cb(void* arg, int channel)
 void
 clock_init(void)
 {
-  //rtimer_set(&rt_clock, RTIMER_NOW() + RTIMER_SECOND/CLOCK_SECOND, 1, (rtimer_callback_t)rt_do_clock, NULL);
+  rtimer_set(&rt_clock, RTIMER_SECOND/CLOCK_SECOND, 0, (rtimer_callback_t)rt_do_clock, NULL);
 
 #if PIT_NUMOF
   timer_init(TIMER_PIT_DEV(0), 1000000ul, usleep_cb, (void*)&waiting_flag);

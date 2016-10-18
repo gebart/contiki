@@ -64,6 +64,7 @@ typedef uint32_t clock_time_t;
 typedef uint16_t uip_stats_t;
 
 #define CLOCK_CONF_SECOND 64
+#define DRTIMER_CONF_MULTIPLE_ACCESS  1
 
 typedef uint32_t rtimer_clock_t;
 #define RTIMER_CLOCK_DIFF(a,b)     ((int32_t)((a) - (b)))
