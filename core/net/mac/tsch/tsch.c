@@ -606,6 +606,16 @@ PT_THREAD(tsch_scan(struct pt *pt))
   etimer_set(&scan_timer, CLOCK_SECOND / TSCH_ASSOCIATION_POLL_FREQUENCY);
   current_channel_since = clock_time();
 
+  // TODO(henrik) This is a bug in TSCH, pull request?
+  /* Disable framefiltering and autoack when performing channel scanning. */
+  radio_value_t radio_rx_mode;
+  radio_rx_mode = NETSTACK_RADIO.get_value(RADIO_PARAM_RX_MODE, &radio_rx_mode);
+  /* Disable radio in frame filtering */
+  radio_rx_mode &= ~RADIO_RX_MODE_ADDRESS_FILTER;
+  /* Unset autoack */
+  radio_rx_mode &= ~RADIO_RX_MODE_AUTOACK;
+  NETSTACK_RADIO.set_value(RADIO_PARAM_RX_MODE, radio_rx_mode);
+
   while(!tsch_is_associated && !tsch_is_coordinator) {
     /* Hop to any channel offset */
     static uint8_t current_channel = 0;
