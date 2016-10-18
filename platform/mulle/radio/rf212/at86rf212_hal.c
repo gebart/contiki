@@ -88,6 +88,9 @@ hal_init(void)
   gpio_init(SLPTR_GPIO, GPIO_OUT);
   gpio_init(RST_GPIO, GPIO_OUT);
   gpio_init(PWR_GPIO, GPIO_OUT);
+
+  /* Radio interrupt needs high priority */
+  NVIC_SetPriority(PORTB_IRQn, 1);
   gpio_init_int(IRQ_GPIO, GPIO_IN, GPIO_RISING, hal_isr, NULL);
 
   /* Enable power switch to radio */
