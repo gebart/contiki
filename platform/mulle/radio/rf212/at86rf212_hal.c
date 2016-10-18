@@ -36,6 +36,7 @@ static void hal_isr(void* arg);
 static inline void
 hal_spi_send(uint8_t data, int cont)
 {
+  HAL_ENTER_CRITICAL_REGION();
   /* Send data */
   if(cont)
   {
@@ -51,11 +52,13 @@ hal_spi_send(uint8_t data, int cont)
   /* Dummy read */
   SPI0->SR |= SPI_SR_TCF_MASK;
   data = (0xFF & SPI0->POPR);
+  HAL_LEAVE_CRITICAL_REGION();
 }
 
 static inline uint8_t
 hal_spi_receive(int cont)
 {
+  HAL_ENTER_CRITICAL_REGION();
   /* Dummy write */
   if(cont)
   {
@@ -70,6 +73,7 @@ hal_spi_receive(int cont)
 
   /* Read data */
   SPI0->SR |= SPI_SR_TCF_MASK;
+  HAL_LEAVE_CRITICAL_REGION();
   return 0xFF & SPI0->POPR;
 }
 
@@ -214,7 +218,6 @@ hal_frame_read(hal_rx_frame_t *rx_frame) /* TODO: Make sure this is working */
   uint8_t *rx_data;
   uint8_t frame_length;
 
-  HAL_ENTER_CRITICAL_REGION();
 
   /*Send frame read (long mode) command.*/
   hal_spi_send(HAL_TRX_CMD_FR, true);
@@ -255,7 +258,6 @@ hal_frame_read(hal_rx_frame_t *rx_frame) /* TODO: Make sure this is working */
     rx_frame->rssi = hal_register_read(RG_ED_LEVEL);
   }
 
-  HAL_LEAVE_CRITICAL_REGION();
 }
 /*----------------------------------------------------------------------------*/
 /** \brief  This function will download a frame to the radio transceiver's frame
@@ -267,7 +269,6 @@ hal_frame_read(hal_rx_frame_t *rx_frame) /* TODO: Make sure this is working */
 void
 hal_frame_write(const uint8_t *write_buffer, uint8_t length) /* TODO: Make sure this is working */
 {
-  HAL_ENTER_CRITICAL_REGION();
 
   /* Send frame transmit (long mode) command. */
   hal_spi_send(HAL_TRX_CMD_FW, true);
@@ -288,7 +289,6 @@ hal_frame_write(const uint8_t *write_buffer, uint8_t length) /* TODO: Make sure 
     hal_spi_send(*write_buffer++, !(length == 1));
   } while(--length);
 
-  HAL_LEAVE_CRITICAL_REGION();
 }
 /*----------------------------------------------------------------------------*/
 static void hal_isr(void* arg)
