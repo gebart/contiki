@@ -30,9 +30,11 @@
  *
  */
 
+#include "net/netstack.h"
 #include "lib/sensors.h"
-#include "radio/rf230bb/rf230bb.h"
+#include "radio/rf212/at86rf212.h"
 #include "dev/radio-sensor.h"
+#include "dev/radio.h"
 
 const struct sensors_sensor radio_sensor;
 static int active;
@@ -41,13 +43,27 @@ static int active;
 static int
 value(int type)
 {
+  radio_value_t value;
+  radio_result_t res;
+
   switch(type) {
+
   case RADIO_SENSOR_LAST_PACKET:
-    return rf230_last_correlation;
+    // XXX: Why is there no documentation on the radio sensor in Contiki???
+    // This will return the last received packet recorded LQI value
+    res = NETSTACK_RADIO.get_value(RADIO_PARAM_LAST_LINK_QUALITY, &value);
+    break;
+
   case RADIO_SENSOR_LAST_VALUE:
   default:
-    return rf230_last_rssi;
+    // TODO: Get _current_ RSSI??
+    res = NETSTACK_RADIO.get_value(RADIO_PARAM_LAST_RSSI, &value);
+    break;
   }
+  if (res != RADIO_RESULT_OK) {
+    return -1;
+  }
+  return value;
 }
 /*---------------------------------------------------------------------------*/
 static int
