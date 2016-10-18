@@ -9,10 +9,11 @@
 #include "lib/list.h"
 
 #include <stddef.h>
+#include <string.h>
 
 #define DEBUG 0
 #if DEBUG
-#include "stdio.h"
+#include <stdio.h>
 #define PRINTF(...) printf(__VA_ARGS__)
 #else
 #define PRINTF(...)
@@ -27,12 +28,21 @@ volatile uint32_t llwu_inhibit_lls_sema = 0;
 volatile uint32_t llwu_inhibit_vlps_sema = 0;
 volatile uint32_t llwu_inhibit_stop_sema = 0;
 
+struct llwu_cb_config_t {
+  llwu_cb cb;
+  void *arg;
+};
+static struct llwu_cb_config_t llwu_isr_callbacks[LLWU_WAKEUP_PIN_NUMOF];
+
 /* TODO(henrik) Add callbacks before entering deep sleep. */
 /*---------------------------------------------------------------------------*/
 void
 llwu_init(void)
 {
   list_init(llwu);
+
+  memset(llwu_isr_callbacks, 0, sizeof(llwu_isr_callbacks));
+
   /* Setup Low Leakage Wake-up Unit (LLWU) */
   BITBAND_REG32(SIM->SCGC4, SIM_SCGC4_LLWU_SHIFT) = 1;   /* Enable LLWU clock gate */
 
@@ -149,9 +159,27 @@ llwu_set_wakeup_pin(const llwu_wakeup_pin_t pin, const llwu_wakeup_edge_t edge)
   PRINTF("LLTU 4 0x%02x\n", LLWU->PE4);
 }
 
-void __attribute__((interrupt))
+void
+llwu_set_wakeup_callback(llwu_wakeup_pin_t pin, llwu_cb cb, void *arg)
+{
+  llwu_isr_callbacks[pin].cb = cb;
+  llwu_isr_callbacks[pin].arg = arg;
+}
+
+void
 isr_llwu(void)
 {
+  uint32_t flags = LLWU->F1 | (LLWU->F2 << 8);
+  for (unsigned int i = 0; i < (sizeof(llwu_isr_callbacks) / sizeof(llwu_isr_callbacks[0])); ++i) {
+    if ((flags & 1) != 0) {
+      PRINTF("LLWU %u\n", i);
+      if (llwu_isr_callbacks[i].cb != NULL) {
+        PRINTF("LLWU cb=%p, arg=%p\n", llwu_isr_callbacks[i].cb, llwu_isr_callbacks[i].arg);
+        llwu_isr_callbacks[i].cb(llwu_isr_callbacks[i].arg);
+      }
+    }
+    flags = flags >> 1;
+  }
   /* TODO(henrik) Dont know if this is really the correct way to handle the flags. */
   /* Clear LLWU flags */
   LLWU->F1 = 0xFF;
