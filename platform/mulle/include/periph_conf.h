@@ -72,10 +72,6 @@ extern "C"
             .prescaler_ch = 0,       \
             .count_ch = 1,           \
         },                           \
-        {                            \
-            .prescaler_ch = 2,       \
-            .count_ch = 3,           \
-        },                           \
     }
 #endif
 #define LPTMR_NUMOF             (0U)
@@ -85,7 +81,7 @@ extern "C"
 #define PIT_BASECLOCK           (CLOCK_BUSCLOCK)
 #define PIT_CLOCKGATE           (BITBAND_REG32(SIM->SCGC6, SIM_SCGC6_PIT_SHIFT))
 #define PIT_ISR_0               isr_pit1
-#define PIT_ISR_1               isr_pit3
+//~ #define PIT_ISR_1               isr_pit3
 /** @} */
 
 /**

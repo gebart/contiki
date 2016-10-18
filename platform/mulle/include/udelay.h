@@ -47,7 +47,7 @@ extern "C" {
 #endif
 
 void udelay_init(void);
-void udelay(uint16_t us);
+void udelay(unsigned int us);
 
 #ifdef __cplusplus
 } /* extern "C" */
