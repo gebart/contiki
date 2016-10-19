@@ -175,9 +175,9 @@ typedef uint32_t rtimer_clock_t;
 #elif CONTIKIMAC
 
 /* CONTIKIMAC has only been tested with O-QPSK-100 */
-#undef RF212_CONF_PHY_MODE
+//~ #undef RF212_CONF_PHY_MODE
 /* PHY mode is configured for 100 kbit/s data rate and following the 802.15.4 standard */
-#define RF212_CONF_PHY_MODE         RF212_PHY_MODE_OQPSK_SIN_RC_100
+//~ #define RF212_CONF_PHY_MODE         RF212_PHY_MODE_OQPSK_SIN_RC_100
 
 /**
  * BPSQ: 1 Symbol = 1 Bit => 8 Symbols = 1 Byte
@@ -201,8 +201,8 @@ typedef uint32_t rtimer_clock_t;
  *       10 symbols with a speed of 40 = 400 us. 400 is used here.
  *
  * MODE         Sp      Tl      Ta        Td      Tr      min(Ts)  Ti   Tc    Pbytes
- * BPSQ-20      50      53.2    0.6       2.4     0.4     3.8      3.5  4     6
- * BPSQ-40      25      26.6    0.3       1.2     0.2     1.9      3    3.5   13.5
+ * BPSK-20      50      53.2    0.6       2.4     0.4     3.8      3.5  4     6
+ * BPSK-40      25      26.6    0.3       1.2     0.2     1.9      3    3.5   13.5
  * O-QPSK-100   40      10.64   0.48      0.48    0.32    1.6      1    1.1   15.75
  * O-QPSK-250   16      4.254   0.192     0.192   0.128   0.64     0.5  0.6   21
  * O-QPSK-200   40      5.56    0.48      0.48    0.32    1.6      1    1.1   31.5
@@ -244,7 +244,7 @@ typedef uint32_t rtimer_clock_t;
 #define CONTIKIMAC_Ti 0.5
 #define CONTIKIMAC_Tc 0.6
 #define CONTIKIMAC_Tr 0.128
-#define CONTIKIMAC_Tl (4.254 + 0.5) // Manually increased Tl for better stability
+#define CONTIKIMAC_Tl (4.254 * 1.5) // Manually increased Tl for better stability
 #define CONTIKIMAC_Td 0.192
 #else
 #error "CONTIKIMAC does not support the specified radio speed"
