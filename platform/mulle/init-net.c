@@ -170,7 +170,7 @@ init_net(void)
 
   process_start(&tcpip_process, NULL);
 
-  PRINTF("Radio PHY mode: 0x%02x\n", RF212_CONF_PHY_MODE);
+  PRINTF("Radio PHY mode: 0x%02x\n", RF212_PHY_MODE);
 
   PRINTF("Tentative link-local IPv6 address ");
   do {
