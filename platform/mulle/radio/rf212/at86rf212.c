@@ -269,8 +269,6 @@ static int
 at86rf212_cca(void)
 {
   PRINTF("%s\n",__FUNCTION__);
-  uint8_t cca = 0;
-
   /* Turn radio on if necessary. If radio is currently busy return busy channel */
   /* A manual CCA check should not be done in extended operation mode */
   if (!is_receive_on())
@@ -300,6 +298,10 @@ at86rf212_cca(void)
   while(!hal_get_irq())
   {
     power_mode_vlps();
+  }
+  uint8_t cca = 0;
+  while((cca & 0x80) == 0) {
+    cca = hal_register_read(RG_TRX_STATUS);
   }
   hal_register_read(RG_IRQ_STATUS); // Clear interrupts
   radio_set_trx_state(RX_AACK_ON);
