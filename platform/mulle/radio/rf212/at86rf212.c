@@ -270,6 +270,7 @@ static int
 at86rf212_cca(void)
 {
   PRINTF("%s\n",__FUNCTION__);
+  int was_sleeping = 0;
   /* Turn radio on if necessary. If radio is currently busy return busy channel */
   /* A manual CCA check should not be done in extended operation mode */
   if (!is_receive_on())
@@ -277,6 +278,7 @@ at86rf212_cca(void)
     /* If radio is sleeping turn it on */
     if(is_sleeping())
     {
+      was_sleeping = 1;
       wakeup();
     }
   }
@@ -296,23 +298,23 @@ at86rf212_cca(void)
 
   hal_subregister_write(SR_CCA_REQUEST, 1);
 
-  while(!hal_get_irq())
-  {
+  do {
     power_mode_vlps();
-  }
+  } while (!hal_get_irq());
+
   uint8_t cca = 0;
-  while((cca & 0x80) == 0) {
+  while ((cca & 0x80) == 0) {
     cca = hal_register_read(RG_TRX_STATUS);
   }
   hal_register_read(RG_IRQ_STATUS); // Clear interrupts
-  radio_set_trx_state(RX_AACK_ON);
+  radio_set_trx_state(RX_AACK_ON); // Test without this
   hal_subregister_write(0x15, 0x80, 7, 0); // Enable frame reception
   HAL_LEAVE_CRITICAL_REGION();
 
   exit:
-  if(!is_receive_on())
+  if(was_sleeping)
   {
-    at86rf212_receive_off();
+    off();
   }
   if(cca & 0x40)
   {
