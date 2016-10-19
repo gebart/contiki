@@ -1,3 +1,4 @@
+#include "contiki.h"
 #include "at86rf212.h"
 #include "at86rf212_hal.h"
 #include "at86rf212_registermap.h"
