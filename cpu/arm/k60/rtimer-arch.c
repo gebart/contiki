@@ -42,152 +42,13 @@
 #include "clock.h"
 #include "irq.h"
 
-#define DEBUG 1
+#define DEBUG 0
 #if DEBUG
 #include <stdio.h>
 #define PRINTF(...) printf(__VA_ARGS__)
 #else
 #define PRINTF(...)
 #endif
-
-#define RTIMER_HACK 1
-
-#ifndef RTIMER_HACK
-/* Write some garbage to CNR to latch the current value */
-/* A bug in the MK60D10.h header causes errors since the CNR field is const
- * declared, cast to volatile uint32_t* as a workaround. */
-#define LPTMR0_LATCH_CNR() (*((volatile uint32_t*)(&(LPTMR0->CNR))) = 0)
-
-/* The period length of the rtimer, in rtimer ticks */
-#define RTIMER_PERIOD ((LPTMR_CNR_COUNTER_MASK >> LPTMR_CNR_COUNTER_SHIFT) + 1)
-
-/* Number of ticks into the future for us to not consider the rtimer as immediately expired */
-/* at 32768 Hz (LPTMR maximum), 1 tick == 30.51 us */
-/* at 4096 Hz (msp430 default), 1 tick == 244.1 us */
-#define RTIMER_SCHEDULE_MARGIN (5)
-
-/** Offset between current counter/timer and t=0 (boot instant) */
-static volatile rtimer_clock_t offset;
-static volatile rtimer_clock_t target;
-
-
-#define SYS_TIC_PERIOD (RTIMER_ARCH_SECOND/CLOCK_SECOND)
-
-/* Next time in the future when the system tic is to be scheduled */
-static volatile rtimer_clock_t sys_tic_next = SYS_TIC_PERIOD;
-
-/* Flag that indicates if something is scheduled */
-static volatile int scheduled = 0;
-
-/*
- * Initialize the clock module.
- *
- * Generates interrupt from external 32kHz crystal.
- */
-/* TODO(Henrik) move to platform, init may differ between platforms. */
-void
-rtimer_arch_init(void) {
-  offset = 0;
-  /* Setup Low Power Timer (LPT) */
-
-  /* Enable LPT clock gate */
-  BITBAND_REG32(SIM->SCGC5, SIM_SCGC5_LPTIMER_SHIFT) = 1;
-
-  /* Disable timer to change settings. */
-  /* Logic is reset when the timer is disabled, TCF flag is also cleared on disable. */
-  LPTMR0->CSR = 0x00;
-  /* Prescaler bypass, LPTMR is clocked directly by ERCLK32K. */
-  LPTMR0->PSR = (LPTMR_PSR_PBYP_MASK | LPTMR_PSR_PCS(0b10));
-  LPTMR0->CMR = LPTMR_CMR_COMPARE(32767);
-  /* Enable free running mode. */
-  BITBAND_REG32(LPTMR0->CSR, LPTMR_CSR_TFC_SHIFT) = 1;
-  /* Enable interrupts. */
-  BITBAND_REG32(LPTMR0->CSR, LPTMR_CSR_TIE_SHIFT) = 1;
-  /* Enable timer */
-  BITBAND_REG32(LPTMR0->CSR, LPTMR_CSR_TEN_SHIFT) = 1;
-
-  /* Enable LPT interrupt */
-  NVIC_EnableIRQ(LPTimer_IRQn);
-
-  PRINTF("rtimer_arch_init: Done\n");
-
-  rtimer_arch_schedule(sys_tic_next);
-}
-
-void
-rtimer_arch_schedule(rtimer_clock_t t) {
-  rtimer_clock_t now = rtimer_arch_now();
-  scheduled = 1;
-  target = t; /* Update stored target time, read from ISR */
-
-  if (target > sys_tic_next)
-  {
-    t = sys_tic_next;
-  }
-  if (t < (now + RTIMER_SCHEDULE_MARGIN)) {
-    /* Already happened */
-    t = now + RTIMER_SCHEDULE_MARGIN;
-  }
-  if (t > now + RTIMER_PERIOD) {
-    /* We can not reach this time in one period, wrap around */
-    t = now + RTIMER_PERIOD;
-  }
-  /* The reference manual states that the CMR register should not be written
-   * while the timer is enabled unless the TCF (interrupt flag) is set. */
-  /* It seems like modifying the CMR variable without stopping (against the
-   * reference manual's recommendations) cause sporadic failures of the
-   * interrupt to trigger. It seems to happen at random. */
-  /* The downside is that the CNR register is reset when the LPTMR is disabled,
-   * we need a new offset computation. */
-  offset = rtimer_arch_now();
-  /* Disable timer in order to modify the CMR register. */
-  BITBAND_REG32(LPTMR0->CSR, LPTMR_CSR_TEN_SHIFT) = 0;
-  /* Set timer value */
-  /* t and offset are 32 bit ints, CMR_COMPARE is only 16 bit wide,
-   * the MSBs will be cut off, so to cope with this we add an additional check
-   * for the MSBs in the ISR. */
-  LPTMR0->CMR = LPTMR_CMR_COMPARE(t - offset);
-  BITBAND_REG32(LPTMR0->CSR, LPTMR_CSR_TEN_SHIFT) = 1;
-}
-
-rtimer_clock_t
-rtimer_arch_now(void) {
-  rtimer_clock_t cnr;
-  LPTMR0_LATCH_CNR();
-  cnr = LPTMR0->CNR; /* Read the counter value */
-  return offset + cnr;
-}
-
-// TODO(henrik) Make connection to system tick callback more clean.
-void rt_do_clock(struct rtimer *t, void *ptr);
-/* Interrupt handler for rtimer triggers */
-void
-isr_lptmr0(void)
-{
-  rtimer_clock_t now = rtimer_arch_now();
-
-  if (now > sys_tic_next)
-  {
-    rt_do_clock(0,0);
-    sys_tic_next += SYS_TIC_PERIOD;
-  }
-  /* Clear timer compare flag by writing a 1 to it */
-  BITBAND_REG32(LPTMR0->CSR, LPTMR_CSR_TCF_SHIFT) = 1;
-
-  if (target > now) {
-    /* Overflow, schedule the next period */
-    rtimer_arch_schedule(target);
-  } else {
-    scheduled = 0;
-    rtimer_run_next();
-  }
-  if (!scheduled)
-  {
-    rtimer_arch_schedule(sys_tic_next);
-  }
-}
-#else
-
 
 #define LPTMR_MAX_VALUE (LPTMR_CNR_COUNTER_MASK >> LPTMR_CNR_COUNTER_SHIFT)
 
@@ -202,26 +63,12 @@ isr_lptmr0(void)
 /* Number of ticks into the future for us to not consider the rtimer as immediately expired */
 /* at 32768 Hz (LPTMR maximum), 1 tick == 30.51 us */
 /* at 4096 Hz (msp430 default), 1 tick == 244.1 us */
-#define RTIMER_SCHEDULE_MARGIN (5)
+#define RTIMER_SCHEDULE_MARGIN (2)
 
-/** Offset between current counter/timer and t=0 (boot instant) */
-static volatile rtimer_clock_t offset;
-static volatile rtimer_clock_t target;
-
-
-#define SYS_TIC_PERIOD (RTIMER_ARCH_SECOND/CLOCK_SECOND)
-
-/* Next time in the future when the system tic is to be scheduled */
-static volatile rtimer_clock_t sys_tic_next = SYS_TIC_PERIOD;
-static volatile rtimer_clock_t now = 0;
-
-/* Flag that indicates if something is scheduled */
-static volatile int scheduled = 0;
 
 #ifndef RTC_LOAD_CAP_BITS
 #define RTC_LOAD_CAP_BITS    0
 #endif
-
 
 /*
  * The RTC prescaler will normally count to 32767 every second unless configured
@@ -240,15 +87,13 @@ static volatile int scheduled = 0;
  */
 #define LPTMR_RELOAD_OVERHEAD 2
 
-static volatile rtimer_clock_t reference;
-static volatile uint32_t cmr = 0;
-static volatile uint32_t csr = 0;
-
+/*----------------------------------------------------------------------------*/
 inline static rtimer_clock_t _rtt_get_subtick(void)
 {
   volatile uint32_t tpr;
   volatile uint32_t tsr;
 
+  unsigned int mask = irq_disable();
   for (int i = 0; i < 5; i++) {
     /* Read twice to make sure we get a stable reading */
     tpr = RTC->TPR & RTC_TPR_TPR_MASK;
@@ -267,45 +112,16 @@ inline static rtimer_clock_t _rtt_get_subtick(void)
     tpr = TIMER_RTC_SUBTICK_MAX;
   }
 
+  irq_restore(mask);
   return (tsr << TIMER_RTC_SUBTICK_BITS) | tpr;
 }
-
-inline static void _lptmr_update_reference(void)
-{
-  reference = _rtt_get_subtick() + LPTMR_RELOAD_OVERHEAD;
-}
-
-inline static void _lptmr_set_counter(void)
-{
-  _lptmr_update_reference();
-  LPTMR0->CSR = 0;
-  LPTMR0->CMR = cmr;
-  /* restore saved state */
-  LPTMR0->CSR = csr;
-}
-
-inline static int lptmr_clear(void)
-{
-  /* Disable IRQs to minimize jitter */
-  unsigned int mask = irq_disable();
-  cmr = LPTMR_MAX_VALUE;
-  /* Disable interrupt, enable timer */
-  csr = LPTMR_CSR_TEN_MASK;
-  _lptmr_set_counter();
-  irq_restore(mask);
-  return 0;
-}
-
-/*
- * Initialize the clock module.
- *
- * Generates interrupt from external 32kHz crystal.
- */
-/* TODO(Henrik) move to platform, init may differ between platforms. */
+/*----------------------------------------------------------------------------*/
 void
-rtimer_arch_init(void) {
+rtimer_arch_init(void)
+{
+  PRINTF("RTIMTER_ARCH: Init\n");
 
-  //printf("init\n");
+  /* ------ Setup RTC ------ */
   RTC->CR = RTC_CR_SWR_MASK;
   RTC->CR = 0;
 
@@ -325,10 +141,7 @@ rtimer_arch_init(void) {
   RTC->IER = 0;
   RTC->SR |= RTC_SR_TCE_MASK;
 
-
-
-  /* Setup Low Power Timer (LPT) */
-
+  /* ------ Setup Low Power Timer (LPT) ------*/
   /* Enable LPT clock gate */
   BITBAND_REG32(SIM->SCGC5, SIM_SCGC5_LPTIMER_SHIFT) = 1;
   /* Completely disable the module before messing with the settings */
@@ -341,56 +154,39 @@ rtimer_arch_init(void) {
   /* Refactor the below lines if there are any CPUs where the LPTMR IRQs are not sequential */
   NVIC_ClearPendingIRQ(LPTMR0_IRQn);
   NVIC_EnableIRQ(LPTMR0_IRQn);
-
-  lptmr_clear();
 }
-
+/*----------------------------------------------------------------------------*/
 void
-rtimer_arch_schedule(rtimer_clock_t t) {
-  //printf("Schedule %lu %lu\n", t, rtimer_arch_now());
-
+rtimer_arch_schedule(rtimer_clock_t t)
+{
+  PRINTF("RTIMER_ARCH: Schedule %lu\n", t);
   /* Disable IRQs to minimize jitter */
   unsigned int mask = irq_disable();
+  LPTMR0->CSR = 0;
 
-  if (t <= rtimer_arch_now())
+  rtimer_clock_t now = RTIMER_NOW();
+
+  if (t < now+RTIMER_SCHEDULE_MARGIN)
   {
-    cmr = 2;
+    t = now+RTIMER_SCHEDULE_MARGIN;
   }
-  else
-  {
-    cmr = t - rtimer_arch_now();
-  }
-  scheduled = 1;
-  /* Enable interrupt, enable timer */
-  csr = LPTMR_CSR_TEN_MASK | LPTMR_CSR_TIE_MASK;
-  _lptmr_set_counter();
+  LPTMR0->CMR = t-now+LPTMR_RELOAD_OVERHEAD;
+  LPTMR0->CSR = LPTMR_CSR_TEN_MASK | LPTMR_CSR_TIE_MASK;
   irq_restore(mask);
 }
-
+/*----------------------------------------------------------------------------*/
 rtimer_clock_t
-rtimer_arch_now(void) {
-  LPTMR0->CNR = 0;
-  return reference + LPTMR0->CNR;
+rtimer_arch_now(void)
+{
+  return _rtt_get_subtick();
 }
-
-
-
+/*----------------------------------------------------------------------------*/
 /* Interrupt handler for rtimer triggers */
 void
 isr_lptmr0(void)
 {
-  //printf("Int\n");
-  cmr = LPTMR_MAX_VALUE;
-  _lptmr_set_counter();
-
   /* Clear interrupt flag */
   BITBAND_REG32(LPTMR0->CSR, LPTMR_CSR_TCF_SHIFT) = 1;
-
-  if (scheduled) {
-    //printf("fire\n");
-    scheduled = 0;
-    rtimer_run_next();
-  }
+  rtimer_run_next();
 }
-#endif
 
