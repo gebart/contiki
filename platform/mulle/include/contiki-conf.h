@@ -139,8 +139,9 @@ typedef uint32_t rtimer_clock_t;
 #define NETSTACK_CONF_FRAMER  framer_802154
 
 /* Delay between GO signal and SFD */
-/* Sleep to tx => 540 us (measured time) + 4 bytes preamble  + 1 byte SFD*/
-#define RADIO_DELAY_BEFORE_TX ((unsigned)US_TO_RTIMERTICKS(540+2*16*(4+1)))
+/* Sleep to tx => 540 us (measured time) + 4 bytes preamble  + 1 byte SFD */
+/* +260 comes from trimming with oscilloscope connected to two sensors. */
+#define RADIO_DELAY_BEFORE_TX ((unsigned)US_TO_RTIMERTICKS(540+2*16*(4+1)+260))
 
 /* Delay between GO signal and start listening */
 /* Sleep to rx => 460 (measured time) */
