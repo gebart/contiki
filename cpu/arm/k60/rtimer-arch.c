@@ -35,6 +35,7 @@
  *         K60 specific rtimer library implementation.
  * \author
  *         Joakim Gebart <joakim.gebart@eistec.se>
+ *         Henrik Makitaavola <henrik@makitaavola.se>
  */
 
 #include "rtimer-arch.h"
