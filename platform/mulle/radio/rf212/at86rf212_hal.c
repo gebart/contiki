@@ -58,6 +58,7 @@ hal_spi_send(uint8_t data, int cont)
 static inline uint8_t
 hal_spi_receive(int cont)
 {
+  uint8_t data;
   HAL_ENTER_CRITICAL_REGION();
   /* Dummy write */
   if(cont)
@@ -73,8 +74,9 @@ hal_spi_receive(int cont)
 
   /* Read data */
   SPI0->SR |= SPI_SR_TCF_MASK;
+  data = 0xFF & SPI0->POPR;
   HAL_LEAVE_CRITICAL_REGION();
-  return 0xFF & SPI0->POPR;
+  return data;
 }
 
 
