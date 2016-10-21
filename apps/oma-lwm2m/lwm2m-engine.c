@@ -79,7 +79,7 @@
 #define MAX_OBJECTS 10
 #endif /* LWM2M_ENGINE_CONF_MAX_OBJECTS */
 
-#define REMOTE_PORT        UIP_HTONS(COAP_DEFAULT_PORT)
+#define REMOTE_PORT        UIP_HTONS(10000)
 #define BS_REMOTE_PORT     UIP_HTONS(5685)
 
 static const lwm2m_object_t *objects[MAX_OBJECTS];
