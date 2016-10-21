@@ -172,7 +172,7 @@ typedef uint32_t rtimer_clock_t;
 #define TSCH_CONF_MAC_MAX_FRAME_RETRIES 2
 
 #undef TSCH_LOG_CONF_LEVEL
-#define TSCH_LOG_CONF_LEVEL 2
+#define TSCH_LOG_CONF_LEVEL 0
 
 /* TSCH and RPL callbacks */
 #define RPL_CALLBACK_PARENT_SWITCH tsch_rpl_callback_parent_switch
