@@ -136,17 +136,17 @@ void board_init(void);
 /**
  * Bus clock divider setting, the actual hardware register value, see reference manual for details
  */
-#define CONFIG_CLOCK_K60_BUS_DIV 0x01
+#define CONFIG_CLOCK_K60_BUS_DIV 0x00
 
 /**
  * Flexbus clock divider setting, the actual hardware register value, see reference manual for details
  */
-#define CONFIG_CLOCK_K60_FB_DIV 0x01
+#define CONFIG_CLOCK_K60_FB_DIV 0x00
 
 /**
  * Flash clock divider setting, the actual hardware register value, see reference manual for details
  */
-#define CONFIG_CLOCK_K60_FLASH_DIV 0x03
+#define CONFIG_CLOCK_K60_FLASH_DIV 0x00
 
 /** @} */
 

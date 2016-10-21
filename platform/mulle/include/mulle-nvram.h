@@ -30,6 +30,12 @@ typedef enum mulle_nvram_address {
     MULLE_NVRAM_MAGIC        = 0x0000,
     /** @brief Reboot counter */
     MULLE_NVRAM_BOOT_COUNT   = 0x0004,
+    /** @brief RTC time backup */
+    MULLE_NVRAM_RTC_BACKUP   = 0x0008,
+    /** @brief Sent packet counter */
+    MULLE_NVRAM_SEND_COUNT   = 0x000C,
+    /** @brief Pulse count */
+    MULLE_NVRAM_PULSE_COUNT  = 0x0014,
 } mulle_nvram_address_t;
 
 #define MULLE_NVRAM_MAGIC_EXPECTED (0x4c4c554dul) /* == "MULL" in ASCII */

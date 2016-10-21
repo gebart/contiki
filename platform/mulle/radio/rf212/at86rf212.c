@@ -1,3 +1,4 @@
+#include "contiki.h"
 #include "at86rf212.h"
 #include "at86rf212_hal.h"
 #include "at86rf212_registermap.h"
@@ -7,6 +8,7 @@
 #include "packetbuf.h"
 #include "netstack.h"
 #include "leds.h"
+#include "power-modes.h"
 
 #include <string.h>
 
@@ -268,8 +270,7 @@ static int
 at86rf212_cca(void)
 {
   PRINTF("%s\n",__FUNCTION__);
-  uint8_t cca = 0;
-
+  int was_sleeping = 0;
   /* Turn radio on if necessary. If radio is currently busy return busy channel */
   /* A manual CCA check should not be done in extended operation mode */
   if (!is_receive_on())
@@ -277,6 +278,7 @@ at86rf212_cca(void)
     /* If radio is sleeping turn it on */
     if(is_sleeping())
     {
+      was_sleeping = 1;
       wakeup();
     }
   }
@@ -295,22 +297,24 @@ at86rf212_cca(void)
   wait_idle();
 
   hal_subregister_write(SR_CCA_REQUEST, 1);
-  // No need to delay_us, this will wait for CCA to finish
-  // TODO(henrik) Break infinite loop after a timeout
-  // TODO(henrik) Add mask macros
-  while((cca & 0x80) == 0)
-  {
+
+  do {
+    power_mode_vlps();
+  } while (!hal_get_irq());
+
+  uint8_t cca = 0;
+  while ((cca & 0x80) == 0) {
     cca = hal_register_read(RG_TRX_STATUS);
   }
   hal_register_read(RG_IRQ_STATUS); // Clear interrupts
-  radio_set_trx_state(RX_AACK_ON);
+  radio_set_trx_state(RX_AACK_ON); // Test without this
   hal_subregister_write(0x15, 0x80, 7, 0); // Enable frame reception
   HAL_LEAVE_CRITICAL_REGION();
 
   exit:
-  if(!is_receive_on())
+  if(was_sleeping)
   {
-    at86rf212_receive_off();
+    off();
   }
   if(cca & 0x40)
   {
@@ -685,11 +689,14 @@ wakeup()
    * radio IRQ pin on Mulle. (Platform board errata)
    */
   LLWU_INHIBIT_LLS();
-  hal_disable_trx_interrupt();
+  HAL_ENTER_CRITICAL_REGION();
   hal_set_slptr_low();
-  while(hal_get_irq() == 0) {}
+  while(!hal_get_irq())
+  {
+    power_mode_vlps();
+  }
   hal_register_read(RG_IRQ_STATUS); // Clear interrupts
-  hal_enable_trx_interrupt();
+  HAL_LEAVE_CRITICAL_REGION();
   set_channel(channel);
 }
 /*---------------------------------------------------------------------------*/
@@ -851,10 +858,13 @@ radio_set_trx_state(uint8_t new_state)
      */
     if(original_state == TRX_OFF)
     {
-      hal_disable_trx_interrupt();
-      while(hal_get_irq() == 0) {}
+      HAL_ENTER_CRITICAL_REGION();
+      while(hal_get_irq())
+      {
+        power_mode_vlps();
+      }
       hal_register_read(RG_IRQ_STATUS); // Clear interrupts
-      hal_enable_trx_interrupt();
+      HAL_LEAVE_CRITICAL_REGION();
     }
     else
     {

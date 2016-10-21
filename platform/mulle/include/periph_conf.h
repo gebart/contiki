@@ -51,10 +51,10 @@ extern "C"
 /** Value of the fast internal oscillator clock frequency in Hz  */
 #define CPU_INT_FAST_CLK_HZ             4000000u
 /** Default System clock value */
-#define DEFAULT_SYSTEM_CLOCK            (CPU_XTAL32k_CLK_HZ * 2929u)
+#define DEFAULT_SYSTEM_CLOCK            (CPU_XTAL32k_CLK_HZ * 732u)
 
 /* bus clock for the peripherals */
-#define CLOCK_BUSCLOCK                  (DEFAULT_SYSTEM_CLOCK / 2)
+#define CLOCK_BUSCLOCK                  (DEFAULT_SYSTEM_CLOCK / 1)
 /** @} */
 
 /**
@@ -72,10 +72,6 @@ extern "C"
             .prescaler_ch = 0,       \
             .count_ch = 1,           \
         },                           \
-        {                            \
-            .prescaler_ch = 2,       \
-            .count_ch = 3,           \
-        },                           \
     }
 #endif
 #define LPTMR_NUMOF             (0U)
@@ -85,7 +81,7 @@ extern "C"
 #define PIT_BASECLOCK           (CLOCK_BUSCLOCK)
 #define PIT_CLOCKGATE           (BITBAND_REG32(SIM->SCGC6, SIM_SCGC6_PIT_SHIFT))
 #define PIT_ISR_0               isr_pit1
-#define PIT_ISR_1               isr_pit3
+//~ #define PIT_ISR_1               isr_pit3
 /** @} */
 
 /**
