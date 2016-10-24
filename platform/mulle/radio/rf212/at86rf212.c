@@ -689,6 +689,13 @@ wakeup()
    * radio IRQ pin on Mulle. (Platform board errata)
    */
   LLWU_INHIBIT_LLS();
+#if WITH_SLIP
+  HAL_DISABLE_RADIO_INTERRUPT();
+  hal_set_slptr_low();
+  while(!hal_get_irq());
+  hal_register_read(RG_IRQ_STATUS); // Clear interrupts
+  HAL_ENABLE_RADIO_INTERRUPT();
+#else
   HAL_ENTER_CRITICAL_REGION();
   hal_set_slptr_low();
   while(!hal_get_irq())
@@ -697,6 +704,8 @@ wakeup()
   }
   hal_register_read(RG_IRQ_STATUS); // Clear interrupts
   HAL_LEAVE_CRITICAL_REGION();
+#endif
+
   set_channel(channel);
 }
 /*---------------------------------------------------------------------------*/
@@ -858,6 +867,12 @@ radio_set_trx_state(uint8_t new_state)
      */
     if(original_state == TRX_OFF)
     {
+#if WITH_SLIP
+      HAL_DISABLE_RADIO_INTERRUPT();
+      while(!hal_get_irq());
+      hal_register_read(RG_IRQ_STATUS); // Clear interrupts
+      HAL_ENABLE_RADIO_INTERRUPT();
+#else
       HAL_ENTER_CRITICAL_REGION();
       while(!hal_get_irq())
       {
@@ -865,6 +880,7 @@ radio_set_trx_state(uint8_t new_state)
       }
       hal_register_read(RG_IRQ_STATUS); // Clear interrupts
       HAL_LEAVE_CRITICAL_REGION();
+#endif
     }
     else
     {

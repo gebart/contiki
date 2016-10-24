@@ -22,7 +22,7 @@ slip_arch_init(unsigned long ubr)
    * Set high priority for uart interrupts so the border router works better
    * with TSCH
    * */
-  NVIC_SetPriority(UART1_RX_TX_IRQn, 1);
+  NVIC_SetPriority(UART1_RX_TX_IRQn, 0);
   /* (Re-)initialize the UART module */
   uart_init(BOARD_SLIP_UART_NUM, 0, ubr);
 

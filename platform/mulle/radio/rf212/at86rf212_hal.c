@@ -96,7 +96,7 @@ hal_init(void)
    * If lowered it must at least be higher than the the interrupt the radio
    * code may be running from so that wake up and state transition will work.
    */
-  NVIC_SetPriority(PORTB_IRQn, 0);
+  NVIC_SetPriority(PORTB_IRQn, 1);
   gpio_init_int(IRQ_GPIO, GPIO_IN, GPIO_RISING, hal_isr, NULL);
 
   /* Enable power switch to radio */
