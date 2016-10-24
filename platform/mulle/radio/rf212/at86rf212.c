@@ -859,7 +859,7 @@ radio_set_trx_state(uint8_t new_state)
     if(original_state == TRX_OFF)
     {
       HAL_ENTER_CRITICAL_REGION();
-      while(hal_get_irq())
+      while(!hal_get_irq())
       {
         power_mode_vlps();
       }
