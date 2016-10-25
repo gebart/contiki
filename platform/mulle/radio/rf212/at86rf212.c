@@ -365,14 +365,19 @@ at86rf212_transmit(unsigned short payload_len)
 #ifdef TX_BUF
   // Go into TX state to prevent buffer from being overwritten
   radio_set_trx_state(TX_ARET_ON);
-
-  hal_frame_write(tx_buf, tx_len + AUX_LEN);
 #endif
   set_send_on_cca(send_on_cca);
 
-  /* Toggle the SLP_TR pin to initiate the frame transmission */
+  /* 1. Toggle the SLP_TR pin to initiate the frame transmission */
+  /* 2. Write buffer to radio after transmission is initiated, this always
+   *    gives the same start time of frame transmission, this is needed
+   *    by TSCH for timesyncing.
+   */
+  HAL_ENTER_CRITICAL_REGION();
   hal_set_slptr_high();
   hal_set_slptr_low();
+  hal_frame_write(tx_buf, tx_len + AUX_LEN);
+  HAL_LEAVE_CRITICAL_REGION();
 
   wait_idle();
 
