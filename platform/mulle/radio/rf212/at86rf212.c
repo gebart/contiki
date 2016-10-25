@@ -102,6 +102,7 @@ static void wakeup(void);
 static bool is_idle(void);
 static void wait_idle(void);
 static void flushrx(void);
+static void flushrx_all(void);
 static uint8_t get_trx_state(void);
 static void reset_state_machine(void);
 static radio_status_t radio_set_trx_state(uint8_t new_state);
@@ -646,6 +647,11 @@ on(void)
 
   set_auto_ack(auto_ack);
   set_frame_filtering(frame_filtering);
+  /* If poll mode is activated flush buffers */
+  if (poll_mode)
+  {
+    flushrx_all();
+  }
   radio_set_trx_state(RX_AACK_ON);
   wait_idle();
 }
@@ -764,9 +770,24 @@ flushrx(void)
     rxframe_tail=0;
   }
   /* If another packet has been buffered, schedule another receive poll */
-  if (at86rf212_pending_packet())
+  if (at86rf212_pending_packet() && !poll_mode)
   {
     at86rf212_poll();
+  }
+}
+/*----------------------------------------------------------------------------*/
+static void
+flushrx_all(void)
+{
+  /* Clear the length field */
+  while (rxframe[rxframe_tail].length > 0)
+  {
+    rxframe[rxframe_tail].length=0;
+    rxframe_tail++;
+    if (rxframe_tail >= RF212_RX_BUFFERS)
+    {
+      rxframe_tail=0;
+    }
   }
 }
 /*----------------------------------------------------------------------------*/
