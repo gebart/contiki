@@ -138,10 +138,17 @@ typedef uint32_t rtimer_clock_t;
 #undef NETSTACK_CONF_FRAMER
 #define NETSTACK_CONF_FRAMER  framer_802154
 
+
+// TODO(henrik) Move CPU_SPEED define somewhere else if it should be keept.
+#define CPU_SPEED_96MHZ 0
+#define CPU_SPEED_24MHZ 1
+#define CPU_SPEED CPU_SPEED_24MHZ
+
+#if CPU_SPEED == CPU_SPEED_96MHZ
 /* Delay between GO signal and SFD */
 /* Sleep to tx => 540 us (measured time) + 4 bytes preamble  + 1 byte SFD */
-/* +260 comes from trimming with oscilloscope connected to two sensors. */
-#define RADIO_DELAY_BEFORE_TX ((unsigned)US_TO_RTIMERTICKS(540+2*16*(4+1)+260))
+#error TSCH RADIO_DELAY_BEFORE_TX must be remeasured in 96MHz mode beacuse of radio transmit change.
+#define RADIO_DELAY_BEFORE_TX ((unsigned)US_TO_RTIMERTICKS(540+2*16*(4+1)))
 
 /* Delay between GO signal and start listening */
 /* Sleep to rx => 460 (measured time) */
@@ -151,6 +158,20 @@ typedef uint32_t rtimer_clock_t;
 /* IRQ delay 8 us + PHR byte */
 #define RADIO_DELAY_BEFORE_DETECT ((unsigned)US_TO_RTIMERTICKS((8+2*16*1)))
 
+#else // CPU_SPEED_24MHZ
+/* Delay between GO signal and SFD */
+/* Sleep to tx (measured time) + 4 bytes preamble  + 1 byte SFD */
+#define RADIO_DELAY_BEFORE_TX ((unsigned)US_TO_RTIMERTICKS(530+2*16*(4+1)+16))
+
+/* Delay between GO signal and start listening */
+/* Sleep to rx (measured time) */
+#define RADIO_DELAY_BEFORE_RX ((unsigned)US_TO_RTIMERTICKS(640))
+
+/* Delay between the SFD finishes arriving and it is detected in software */
+/* IRQ delay 8 us + PHR byte */
+//#define RADIO_DELAY_BEFORE_DETECT ((unsigned)US_TO_RTIMERTICKS((8+2*16*1)))
+#define RADIO_DELAY_BEFORE_DETECT ((unsigned)US_TO_RTIMERTICKS((8+2*16*1)))
+#endif // CPU_SPEED
 
 #define RF212_CONF_HARDWARE_ACK     0 /* TSCH sends acks by itself */
 #define RF212_CONF_SEND_ON_CCA 0
@@ -200,6 +221,20 @@ typedef uint32_t rtimer_clock_t;
 #define NETSTACK_CONF_ROUTING_NEIGHBOR_ADDED_CALLBACK orchestra_callback_child_added
 #define NETSTACK_CONF_ROUTING_NEIGHBOR_REMOVED_CALLBACK orchestra_callback_child_removed
 #endif // WITH_ORCHESTRA
+
+
+#if TSCH_DEBUG
+/* Toggle GPIOS PortC 5, 6, 7 on different TSCH events. */
+#include "periph/gpio.h"
+#define TSCH_DEBUG_INIT() gpio_init(GPIO_PIN(PORT_C,  7), GPIO_OUT); \
+                gpio_init(GPIO_PIN(PORT_C,  6), GPIO_OUT); \
+                gpio_init(GPIO_PIN(PORT_C,  5), GPIO_OUT)
+#define TSCH_DEBUG_SLOT_START() if (current_link->slotframe_handle == 0) {gpio_set(GPIO_PIN(PORT_C,  7));}
+#define TSCH_DEBUG_SLOT_END() if (current_link->slotframe_handle == 0) {gpio_clear(GPIO_PIN(PORT_C,  7));}
+#define TSCH_DEBUG_RX_EVENT() {gpio_toggle(GPIO_PIN(PORT_C,  6));}
+#define TSCH_DEBUG_TX_EVENT() {gpio_toggle(GPIO_PIN(PORT_C,  5));}
+#endif
+
 
 /******************************* CONTIKIMAC ***********************************/
 #elif CONTIKIMAC
