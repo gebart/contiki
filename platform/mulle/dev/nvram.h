@@ -55,7 +55,7 @@ typedef struct nvram {
      * @return           Number of bytes read on success
      * @return           <0 on errors
      */
-    int (*read)(const struct nvram *dev, uint8_t *dst, uint32_t src, size_t size);
+    int (*read)(const struct nvram *dev, void *dst, uint32_t src, size_t size);
 
     /**
      * @brief Pointer to device-specific write function
@@ -70,7 +70,7 @@ typedef struct nvram {
      * @return           Number of bytes written on success
      * @return           <0 on errors
      */
-    int (*write)(const struct nvram *dev, uint8_t *src, uint32_t dst, size_t size);
+    int (*write)(const struct nvram *dev, void *src, uint32_t dst, size_t size);
 
     /** @brief Device capacity */
     size_t size;

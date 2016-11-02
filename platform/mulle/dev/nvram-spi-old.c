@@ -56,7 +56,7 @@ typedef enum {
  * @return           Number of bytes written on success
  * @return           <0 on errors
  */
-static int nvram_spi_write_9bit_addr(const nvram_t *dev, uint8_t *src, uint32_t dst, size_t len);
+static int nvram_spi_write_9bit_addr(const nvram_t *dev, void *src, uint32_t dst, size_t len);
 
 /**
  * @brief Copy data from NVRAM to system memory.
@@ -73,7 +73,7 @@ static int nvram_spi_write_9bit_addr(const nvram_t *dev, uint8_t *src, uint32_t 
  * @return           Number of bytes read on success
  * @return           <0 on errors
  */
-static int nvram_spi_read_9bit_addr(const nvram_t *dev, uint8_t *dst, uint32_t src, size_t len);
+static int nvram_spi_read_9bit_addr(const nvram_t *dev, void *dst, uint32_t src, size_t len);
 
 int nvram_spi_init(nvram_t *dev, nvram_spi_params_t *spi_params, size_t size)
 {
@@ -85,7 +85,7 @@ int nvram_spi_init(nvram_t *dev, nvram_spi_params_t *spi_params, size_t size)
     return 0;
 }
 
-static int nvram_spi_write_9bit_addr(const nvram_t *dev, uint8_t *src, uint32_t dst, size_t len)
+static int nvram_spi_write_9bit_addr(const nvram_t *dev, void *src, uint32_t dst, size_t len)
 {
     nvram_spi_params_t *spi_dev = dev->extra;
     int status;
@@ -136,7 +136,7 @@ static int nvram_spi_write_9bit_addr(const nvram_t *dev, uint8_t *src, uint32_t 
     return status;
 }
 
-static int nvram_spi_read_9bit_addr(const nvram_t *dev, uint8_t *dst, uint32_t src, size_t len)
+static int nvram_spi_read_9bit_addr(const nvram_t *dev, void *dst, uint32_t src, size_t len)
 {
     nvram_spi_params_t *spi_dev = dev->extra;
     int status;
