@@ -788,6 +788,14 @@ PT_THREAD(tsch_rx_slot(struct pt *pt, struct rtimer *t))
         frame_valid = header_len > 0 &&
           frame802154_check_dest_panid(&frame) &&
           frame802154_extract_linkaddr(&frame, &source_address, &destination_address);
+        /* Nasty hack to filter out all messages except the onces that origin from border router */
+#ifndef WITH_SLIP
+        static const linkaddr_t gateway_lladdr = { 0x02, 0, 0, 0, 0, 0, 0, 0x01 };
+        if (memcmp(source_address.u8, gateway_lladdr.u8, LINKADDR_SIZE) != 0)
+        {
+          frame_valid = 0;
+        }
+#endif
 
 #if TSCH_RESYNC_WITH_SFD_TIMESTAMPS
         /* At the end of the reception, get an more accurate estimate of SFD arrival time */

@@ -220,6 +220,9 @@ typedef uint32_t rtimer_clock_t;
 #define TSCH_CALLBACK_PACKET_READY orchestra_callback_packet_ready
 #define NETSTACK_CONF_ROUTING_NEIGHBOR_ADDED_CALLBACK orchestra_callback_child_added
 #define NETSTACK_CONF_ROUTING_NEIGHBOR_REMOVED_CALLBACK orchestra_callback_child_removed
+
+#define ORCHESTRA_CONF_UNICAST_SENDER_BASED 1
+#define ORCHESTRA_CONF_COLLISION_FREE_HASH 1
 #endif // WITH_ORCHESTRA
 
 
