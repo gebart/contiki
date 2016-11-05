@@ -208,13 +208,20 @@ int adc_sample(adc_t line, adc_res_t res)
     /* select the channel that is sampled */
     dev(line)->SC1[0] = adc_config[line].chan;
     /* wait until conversion is complete */
-    // TODO(henrik) Add error handling if completion failed! The result may
-    //              still be valid even if the conversion timedout.
     start_time = RTIMER_NOW();
     while (!(dev(line)->SC1[0] & ADC_SC1_COCO_MASK) &&
         (RTIMER_NOW() - start_time) < US_TO_RTIMERTICKS(200) ) {}
-    /* read and return result */
-    sample = (int)dev(line)->R[0];
+
+    if (!(dev(line)->SC1[0] & ADC_SC1_COCO_MASK))
+    {
+      /* COCO flag is not, a timeout must have occurred, return -1 */
+      sample = -1;
+    }
+    else
+    {
+      /* read and return result */
+      sample = (int)dev(line)->R[0];
+    }
 
     /* power off and unlock the device */
     done(line);
