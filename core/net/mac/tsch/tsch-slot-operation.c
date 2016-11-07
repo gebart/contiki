@@ -790,7 +790,7 @@ PT_THREAD(tsch_rx_slot(struct pt *pt, struct rtimer *t))
           frame802154_extract_linkaddr(&frame, &source_address, &destination_address);
         /* Nasty hack to filter out all messages except the onces that origin from border router */
 #ifndef WITH_SLIP
-        static const linkaddr_t gateway_lladdr = { 0x02, 0, 0, 0, 0, 0, 0, 0x01 };
+        static const linkaddr_t gateway_lladdr = { .u8 = { 0x02, 0, 0, 0, 0, 0, 0, 0x01 } };
         if (memcmp(source_address.u8, gateway_lladdr.u8, LINKADDR_SIZE) != 0)
         {
           frame_valid = 0;
