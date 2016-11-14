@@ -56,7 +56,7 @@ static void _update_vref(void)
   /* empiric evidence suggests that the band gap voltage target is not reached
    * for a long time, we busy wait for that time to avoid going to power save
    * modes as well. */
-  static unsigned int delay = 20000000;
+  static unsigned int delay = 2000000;
   for (unsigned int i = 0; i < delay; i++) {
     asm volatile ("nop\n");
   }
