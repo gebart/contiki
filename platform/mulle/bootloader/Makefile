@@ -14,6 +14,6 @@ UIP_CONF_IPV6=1
 CFLAGS+= -DUIP_CONF_IPV6_RPL
 
 PROJECT_SOURCEFILES += coap_reprogram.c bootloader_coap.c 
-APPS += rest-engine er-coap
+APPS += rest-engine er-coap orchestra
 
 include $(CONTIKI)/Makefile.include
