@@ -51,6 +51,9 @@
 #include "lwm2m-engine.h"
 #include "ipso-objects.h"
 #endif
+#if WITH_ORCHESTRA
+#include "orchestra.h"
+#endif
 
 #define DEBUG 1
 #include "net/ip/uip-debug.h"
@@ -215,6 +218,10 @@ init_net(void)
   } while(0);
 #endif /* LWM2M_SERVER_ADDRESS */
 #endif /* WITH_IPSO */
+
+#if WITH_ORCHESTRA
+  orchestra_init();
+#endif
 
 #else /* If no radio stack should be used only turn on radio and set it to sleep for minimal power consumption */
   rf212.init();
