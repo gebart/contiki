@@ -67,7 +67,7 @@ typedef uint16_t uip_stats_t;
 #define RTIMER_CONF_MULTIPLE_ACCESS  1
 #define RTIMER_CONF_GUARD_TIME 2
 
-typedef uint32_t rtimer_clock_t;
+typedef uint64_t rtimer_clock_t;
 #define RTIMER_CLOCK_DIFF(a,b)     ((int32_t)((a) - (b)))
 
 #define CFS_CONF_OFFSET_TYPE  long

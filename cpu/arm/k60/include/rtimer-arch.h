@@ -45,6 +45,8 @@
 #include "config-clocks.h"
 #include "sys/rtimer.h"
 
+#include <stdint.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -58,8 +60,8 @@ extern "C" {
                                ((int32_t)(US) * (RTIMER_ARCH_SECOND) - 500000) / 1000000L)
 
 #define RTIMERTICKS_TO_US(T)   ((T) >= 0 ?                     \
-                               (((int32_t)(T) * 1000000L + ((RTIMER_ARCH_SECOND) / 2)) / (RTIMER_ARCH_SECOND)) : \
-                               ((int32_t)(T) * 1000000L - ((RTIMER_ARCH_SECOND) / 2)) / (RTIMER_ARCH_SECOND))
+                               (((int64_t)(T) * 1000000L + ((RTIMER_ARCH_SECOND) / 2)) / (RTIMER_ARCH_SECOND)) : \
+                               ((int64_t)(T) * 1000000L - ((RTIMER_ARCH_SECOND) / 2)) / (RTIMER_ARCH_SECOND))
 
 void rtimer_arch_set(rtimer_clock_t t);
 

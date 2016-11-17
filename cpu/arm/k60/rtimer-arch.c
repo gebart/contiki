@@ -89,10 +89,11 @@
 #define LPTMR_RELOAD_OVERHEAD 2
 
 /*----------------------------------------------------------------------------*/
-inline static rtimer_clock_t _rtt_get_subtick(void)
+inline static
+rtimer_clock_t _rtt_get_subtick(void)
 {
-  volatile uint32_t tpr;
-  volatile uint32_t tsr;
+  volatile rtimer_clock_t tpr;
+  volatile rtimer_clock_t tsr;
 
   unsigned int mask = irq_disable();
   for (int i = 0; i < 5; i++) {
