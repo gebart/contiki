@@ -66,11 +66,9 @@ extern "C" {
 
 /*
  * NMI watchdog timer pin to toggle if an NMI occurs.
- *
- * This must be done without any function calls since the stack may be corrupt
- * at this point.
  */
 #define NMI_WATCHDOG_PORT PORTB
+#define NMI_WATCHDOG_PORT_NUM ((NMI_WATCHDOG_PORT - PORTA) / (PORTB - PORTA))
 #define NMI_WATCHDOG_GPIO PTB
 #define NMI_WATCHDOG_PIN  11
 

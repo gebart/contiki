@@ -424,7 +424,7 @@ isr_nmi(void)
   /* We need to reinitialize the GPIO pin to a known state to avoid situations
    * where the pin is not toggled and we get stuck in a reboot loop */
   /* enable module clock */
-  BITBAND_REG32(SIM->SCGC5, SIM_SCGC5_PORTA_SHIFT + (NMI_WATCHDOG_PORT - PORTA)) = 1;
+  BITBAND_REG32(SIM->SCGC5, SIM_SCGC5_PORTA_SHIFT + (NMI_WATCHDOG_PORT_NUM)) = 1;
   /* Enable GPIO */
   NMI_WATCHDOG_PORT->PCR[NMI_WATCHDOG_PIN] = PORT_PCR_MUX(1);
   /* Set GPIO to OUT */
@@ -436,6 +436,7 @@ isr_nmi(void)
   for (unsigned int i = 0; i < 10000; ++i) {
     asm volatile ("nop\n");
   }
+  NMI_WATCHDOG_GPIO->PTOR = (1 << NMI_WATCHDOG_PIN);
   /* We can't be sure that any function calls will work in this situation, so we
    * need to do the WDT poking before we can output any debug information */
   printf("NMI: poked WDT\n");
