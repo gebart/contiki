@@ -184,7 +184,6 @@ typedef uint64_t rtimer_clock_t;
 
 #define TSCH_QUEUE_CONF_NUM_PER_NEIGHBOR 4
 
-#define RF_CHANNEL                  1
 #define TSCH_CONF_DEFAULT_HOPPING_SEQUENCE (uint8_t[]){ RF_CHANNEL }
 #define TSCH_CONF_RADIO_ON_DURING_TIMESLOT 0
 #define TSCH_CONF_RESYNC_WITH_SFD_TIMESTAMPS 1
