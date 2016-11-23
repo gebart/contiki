@@ -43,12 +43,26 @@ static const spi_config_t spi0_conf[NUM_CTAR] = {
   };
 
 /* SPI1 is only used by expansion boards. */
-/*
 static const spi_config_t spi1_conf[NUM_CTAR] = {
-  { .sck_freq = 1000000, .frame_size = 8, .cpol = 0, .cpha = 0},
-  { .sck_freq = 10000000, .frame_size = 8, .cpol = 1, .cpha = 1}
+  {
+    .sck_freq = 5000000,
+    .frame_size = 8,
+    .cpol = 0,
+    .cpha = 0,
+    .tcsc_freq = 0, /* Use same as BR divider */ /* TODO: Review data sheets for safe timings */
+    .tasc_freq = 0, /* Use same as BR divider */ /* TODO: Review data sheets for safe timings */
+    .tdt_freq  = 0, /* Use same as BR divider */ /* TODO: Review data sheets for safe timings */
+  },
+  {
+    .sck_freq = 5000000,
+    .frame_size = 8,
+    .cpol = 1,
+    .cpha = 1,
+    .tcsc_freq = 0, /* Use same as BR divider */ /* TODO: Review data sheets for safe timings */
+    .tasc_freq = 0, /* Use same as BR divider */ /* TODO: Review data sheets for safe timings */
+    .tdt_freq  = 0, /* Use same as BR divider */ /* TODO: Review data sheets for safe timings */
+  }
   };
-*/
 
 /* Set port mux for SPI0 bus */
 static void port_init_spi0(void) {
@@ -65,6 +79,20 @@ static void port_init_spi0(void) {
   PORTD->PCR[6] = PORT_PCR_MUX(2); /* SPI0_PCS3 */
 }
 
+static void port_init_spi1(void) {
+  /* Turn on port */
+  BITBAND_REG32(SIM->SCGC5, SIM_SCGC5_PORTE_SHIFT) = 1;
+  /* Set up mux */
+  /** \todo Update SPI pin mapping to more dynamic format. (remove magic numbers) */
+  PORTE->PCR[0] = PORT_PCR_MUX(2); /* SPI1_PCS1 */
+  PORTE->PCR[1] = PORT_PCR_MUX(2); /* SPI1_MOSI */
+  PORTE->PCR[2] = PORT_PCR_MUX(2); /* SPI1_SCLK */
+  PORTE->PCR[3] = PORT_PCR_MUX(2); /* SPI1_MISO */
+  PORTE->PCR[4] = PORT_PCR_MUX(2); /* SPI1_PCS0 */
+  PORTE->PCR[5] = PORT_PCR_MUX(2); /* SPI1_PCS2 */
+  PORTE->PCR[6] = PORT_PCR_MUX(2); /* SPI1_PCS3 */
+}
+
 /* Board or project specific SPI initialization procedure. */
 void
 board_spi_init(void)
@@ -78,5 +106,14 @@ board_spi_init(void)
     spi_set_params(SPI_0, i, &spi0_conf[i]);
   }
   spi_stop(SPI_0);
+
+  port_init_spi1();
+  /* SPI1 is used in the expansion port */
+  spi_hw_init_master(SPI_1);
+  spi_start(SPI_1);
+  for (i = 0; i < NUM_CTAR; ++i) {
+    spi_set_params(SPI_1, i, &spi1_conf[i]);
+  }
+  spi_stop(SPI_1);
 }
 
