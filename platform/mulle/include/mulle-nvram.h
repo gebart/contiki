@@ -26,16 +26,18 @@ extern "C" {
  */
 
 typedef enum mulle_nvram_address {
-    /** @brief NVRAM magic number, used to identify an initialized FRAM device. */
-    MULLE_NVRAM_MAGIC        = 0x0000,
-    /** @brief Reboot counter */
-    MULLE_NVRAM_BOOT_COUNT   = 0x0004,
-    /** @brief RTC time backup */
-    MULLE_NVRAM_RTC_BACKUP   = 0x0008,
-    /** @brief Sent packet counter */
-    MULLE_NVRAM_SEND_COUNT   = 0x000C,
-    /** @brief Pulse count */
-    MULLE_NVRAM_PULSE_COUNT  = 0x0014,
+    /** @brief NVRAM magic number, used to identify an initialized FRAM device. Size 4 */
+    MULLE_NVRAM_MAGIC             = 0x0000,
+    /** @brief Reboot counter, size 4 */
+    MULLE_NVRAM_BOOT_COUNT        = 0x0004,
+    /** @brief RTC time backup, size 4 */
+    MULLE_NVRAM_RTC_BACKUP        = 0x0008,
+    /** @brief Sent packet counter, size 4 */
+    MULLE_NVRAM_SEND_COUNT        = 0x000C,
+    /** @brief Pulse count, size 4 */
+    MULLE_NVRAM_PULSE_COUNT       = 0x0014,
+    /** @brief Boot loader flag, size 2 */
+    MULLE_NVRAM_BOOT_LOADER_FLAG  = 0x0018,
 } mulle_nvram_address_t;
 
 #define MULLE_NVRAM_MAGIC_EXPECTED (0x4c4c554dul) /* == "MULL" in ASCII */
