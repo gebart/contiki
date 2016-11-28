@@ -57,7 +57,7 @@ void bl_arch_run_app(void)
   unsigned *p;
   int i;
 
-  for (i=0;i<0x200;i++,pdst++,psrc++)
+  for (i=0; i < 0x100; i++, pdst++, psrc++)
   {
     *pdst=*psrc;
   }
