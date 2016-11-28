@@ -204,9 +204,6 @@ main(void)
 
 
   init_cfs();
-#ifdef MAKE_BOOTLOADER
-  bootloader_startup();
-#endif
 
   /* Initialize NVRAM */
   int status = mulle_nvram_init();
@@ -214,6 +211,10 @@ main(void)
     /* Increment boot counter */
     increase_boot_count();
   }
+
+#ifdef MAKE_BOOTLOADER
+  bootloader_startup();
+#endif
 
   /*
    * Initialize Contiki and our processes.
