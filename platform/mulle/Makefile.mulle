@@ -197,7 +197,7 @@ DEBUGGER_FLAGS += \
 
 export DEBUGGER_FLAGS
 
-export TERMFLAGS += -b115200 "$(PORT)"
+export TERMFLAGS ?= -b115200 "$(PORT)"
 
 OPENOCD ?= openocd
 export FLASHER ?= $(OPENOCD)
