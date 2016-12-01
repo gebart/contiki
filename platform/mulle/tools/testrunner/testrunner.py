@@ -11,15 +11,16 @@ import os, signal, sys, subprocess
 from pexpect import spawnu, TIMEOUT, EOF
 from traceback import print_tb
 
-def run(testfunc, timeout=10, echo=True, traceback=False):
+def run(testfunc, timeout=10, echo=True, traceback=False, workdir=None):
     env = os.environ.copy()
-    testdir = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "tests"))
-    child = spawnu("make", ["-C", testdir , "term"], env=env, timeout=timeout)
+    if workdir is None:
+        workdir = os.path.abspath(os.path.dirname(os.path.abspath(__file__)))
+    child = spawnu("make", ["-C", workdir , "term"], env=env, timeout=timeout)
     if echo:
         child.logfile = sys.stdout
 
     try:
-        subprocess.check_output(("make", "-C", testdir, "reset"), env=env,
+        subprocess.check_output(("make", "-C", workdir, "reset"), env=env,
                                 stderr=subprocess.PIPE)
     except subprocess.CalledProcessError:
         # make reset yields error on some boards even if successful
@@ -37,3 +38,7 @@ def run(testfunc, timeout=10, echo=True, traceback=False):
         child.close()
 
     return 0
+
+if __name__ == "__main__":
+    print("Run the test scripts in platform/mulle/tests/xxx instead!")
+    sys.exit(1)
