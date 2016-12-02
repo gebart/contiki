@@ -15,5 +15,5 @@
 #define BL_MEM_FLASH_START 0x40000ul
 #define USER_APP_FLASH_START (BL_MEM_FLASH_START + 0x100) // Start address of user application in flash
 
-#define REBOOT() SCB->AIRCR =  (0x5FA0000 | SCB_AIRCR_SYSRESETREQ_Msk)
+#define REBOOT NVIC_SystemReset
 #endif /* BOOTLOADER_ARCH_H_ */
