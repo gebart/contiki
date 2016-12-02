@@ -239,14 +239,17 @@ reset:
 # Start address of application to be run from bootloader
 CPU_BOOTLOADER_IMAGE_START_ADDRESS = 0x40100
 
+# Generate boot loader image for the project, only works for simple projects with a single target.
+image: $(addsuffix .i,$(CONTIKI_PROJECT))
+
+.PRECIOUS: $(addsuffix .i,$(CONTIKI_PROJECT))
+
 # This rule creates a image that can be uploaded through CoAP.
 # Usage with hello-world example: $ make TARGET=mulle hello-world.i
 %.i: %.co $(PROJECT_OBJECTFILES) $(PROJECT_LIBRARIES) RIOT-$(TARGET).a contiki-$(TARGET).a $(CPU_STARTOBJ)
 	$(subst $(LINKERSCRIPT),$(LINKERSCRIPT_IMAGE_UPLOAD),$(Q)$(LD) $(TARGET_STARTFILES) $(LD_START_GROUP) ${filter-out %.a,$^} ${filter %.a,$^} $(TARGET_LIBFILES) $(LD_END_GROUP) $(LDFLAGS) -o $@.mulle.elf)
 	$(OBJCOPY) -O ihex $@.mulle.elf $@.mulle.ihex
 	python $(PLATFORM_DIR)/bootloader/make_image.py $@.mulle.ihex $@.$(TARGET) $(CPU_BOOTLOADER_IMAGE_START_ADDRESS)
-	rm $@.mulle.ihex
-	rm $@.mulle.elf
 
 # This rule injects an application through a programmer to the bootloader application flash area and sets all flags to be able to boot the image.
 # First flash the bootloader as a standard application, then flash the application:
