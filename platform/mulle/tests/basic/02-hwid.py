@@ -2,6 +2,7 @@
 
 import os
 import sys
+from pexpect import TIMEOUT
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "tools", "testrunner")))
 import testrunner
@@ -16,21 +17,28 @@ def testfunc(child):
     try:
         while searching:
             try:
-                child.expect(u"CPUID:\s*(?:0x)?([0-9A-Fa-f]+)\r\n")
-                cpuid, = child.match.groups()
-                child.expect(u"UID:\s*(?:0x)?([0-9A-Fa-f\s]+)\r\n")
-                uuid, = child.match.groups()
-                child.expect(u"EUI64[^:]*:\s*(?:0x)?([-0-9A-Fa-f\s]+)\r\n")
-                eui64, = child.match.groups()
-                child.expect(u"link-local IPv6 address[:]?\s*([0-9A-Fa-f:]+)\r\n")
-                ipv6ll, = child.match.groups()
+                if cpuid is None:
+                    child.expect(u"CPUID:\s*(?:0x)?([0-9A-Fa-f]+)\r\n")
+                    cpuid, = child.match.groups()
+                if uuid is None:
+                    child.expect(u"UID:\s*(?:0x)?([0-9A-Fa-f\s]+)\r\n")
+                    uuid, = child.match.groups()
+                if eui64 is None:
+                    child.expect(u"EUI64[^:]*:\s*(?:0x)?([-0-9A-Fa-f\s]+)\r\n")
+                    eui64, = child.match.groups()
+                if ipv6ll is None:
+                    child.expect(u"link-local IPv6 address[:]?\s*([0-9A-Fa-f:]+)\r\n")
+                    ipv6ll, = child.match.groups()
                 searching = False
             except UnicodeDecodeError:
                 # Sometimes there's garbage on the UART after a reset from low power
                 # mode which causes UnicodeDecodeError in the pexpect library.
                 print("Ignoring UART noise")
                 # Flush the input buffer and try again
-                child.expect(r'.+')
+                try:
+                    child.read_nonblocking(timeout=0)
+                except TIMEOUT:
+                    pass
                 continue
     finally:
         print("MCU CPUID: {}".format(cpuid))
@@ -43,4 +51,4 @@ if __name__ == "__main__":
         print("PROGRAMMER_SERIAL={}".format(os.environ['PROGRAMMER_SERIAL']))
     except KeyError:
         print("PROGRAMMER_SERIAL is not set!")
-    sys.exit(testrunner.run(testfunc, echo=False, timeout=3))
+    sys.exit(testrunner.run(testfunc, echo=False, timeout=5))
