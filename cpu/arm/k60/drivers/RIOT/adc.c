@@ -112,7 +112,7 @@ int kinetis_adc_calibrate(ADC_Type *dev)
 
     if (dev->SC3 & ADC_SC3_CALF_MASK) {
         /* calibration failed for some reason, possibly SC2[ADTRG] is 1 ? */
-        return -1;
+        return -2;
     }
 
     /* From the reference manual */
