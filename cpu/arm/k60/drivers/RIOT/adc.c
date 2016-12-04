@@ -104,14 +104,25 @@ int kinetis_adc_calibrate(ADC_Type *dev)
 {
     uint16_t cal;
 
-    dev->SC3 |= ADC_SC3_CAL_MASK;
+    unsigned int i = 0;
+    do {
+        // Seems like the calibration of ADC1 fails spuriously on the conveyor board.
+        // We retry until it succeeds or we give up after 50 attempts
+        ++i;
+        if (i > 50) {
+            break;
+        }
+        dev->SC3 |= ADC_SC3_CAL_MASK;
 
-    while (dev->SC3 & ADC_SC3_CAL_MASK) {} /* wait for calibration to finish */
+//         while (dev->SC3 & ADC_SC3_CAL_MASK) {} /* wait for calibration to finish */
 
-    while (!(dev->SC1[0] & ADC_SC1_COCO_MASK)) {}
+        while (!(dev->SC1[0] & ADC_SC1_COCO_MASK)) {}
+
+    } while (dev->SC3 & ADC_SC3_CALF_MASK);
 
     if (dev->SC3 & ADC_SC3_CALF_MASK) {
         /* calibration failed for some reason, possibly SC2[ADTRG] is 1 ? */
+//         asm volatile ("bkpt #123");
         return -2;
     }
 
