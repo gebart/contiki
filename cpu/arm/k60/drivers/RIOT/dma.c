@@ -20,7 +20,7 @@
  */
 
 #include <stdint.h>
-
+#define DEVELHELP 1
 #if DEVELHELP
 #include <stdio.h>
 #include <inttypes.h>
