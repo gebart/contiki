@@ -67,20 +67,31 @@ int dma_init(const uint8_t channel, const dma_source_t source)
 }
 
 #if DEVELHELP
-/** @brief Provide verbose error reporting when DEVELHELP is set */
-void dma_error_verbose(void)
+void dma_print_tcd(unsigned int channel)
+{
+    printf("TCD%u:\n", channel);
+    printf("     SADDR: 0x%08" PRIx32 "\n",     DMA_DEV->TCD[channel].SADDR);
+    printf("      SOFF:     0x%04" PRIx16 "\n", DMA_DEV->TCD[channel].SOFF);
+    printf("      ATTR:     0x%04" PRIx16 "\n", DMA_DEV->TCD[channel].ATTR);
+    printf("    NBYTES: 0x%08" PRIx32 "\n",     DMA_DEV->TCD[channel].NBYTES_MLNO);
+    printf("     SLAST: 0x%08" PRIx32 "\n",     DMA_DEV->TCD[channel].SLAST);
+    printf("     DADDR: 0x%08" PRIx32 "\n",     DMA_DEV->TCD[channel].DADDR);
+    printf("      DOFF:     0x%04" PRIx16 "\n", DMA_DEV->TCD[channel].DOFF);
+    printf("     CITER:     0x%04" PRIx16 "\n", DMA_DEV->TCD[channel].CITER_ELINKNO);
+    printf(" DLAST_SGA: 0x%08" PRIx32 "\n",     DMA_DEV->TCD[channel].DLAST_SGA);
+    printf("       CSR:     0x%04" PRIx16 "\n", DMA_DEV->TCD[channel].CSR);
+    printf("     BITER:     0x%04" PRIx16 "\n", DMA_DEV->TCD[channel].BITER_ELINKNO);
+}
+
+void dma_print_regs(void)
 {
     uint32_t reg_cr  = DMA_DEV->CR;  /* Cached copy of control register */
     uint32_t reg_es  = DMA_DEV->ES;  /* Cached copy of error status register */
-    uint16_t reg_err = DMA_DEV->ERR; /* Cached copy of error request register */
-    uint16_t reg_int = DMA_DEV->INT; /* Cached copy of interrupt request register */
-    uint16_t reg_hrs = DMA_DEV->HRS; /* Cached copy of hardware request register */
-    uint8_t channel = (reg_es & DMA_ES_ERRCHN_MASK) >> DMA_ES_ERRCHN_SHIFT;
-
-    /* Stop the channel from further activation */
-    dma_channel_disable(channel);
-
-    printf("DMA error on channel %" PRIu8 "!\n", channel);
+    uint32_t reg_err = DMA_DEV->ERR; /* Cached copy of error request register */
+    uint32_t reg_int = DMA_DEV->INT; /* Cached copy of interrupt request register */
+    uint32_t reg_hrs = DMA_DEV->HRS; /* Cached copy of hardware request register */
+    uint32_t reg_erq = DMA_DEV->ERQ; /* Cached copy of hardware request register */
+    uint32_t reg_eei = DMA_DEV->EEI; /* Cached copy of hardware request register */
     printf("DMA_CR:     0x%08" PRIx32 "\n", reg_cr);
     printf("DMA_ES:     0x%08" PRIx32 "\n", reg_es);
     printf("     flags: ");
@@ -118,21 +129,25 @@ void dma_error_verbose(void)
         printf("DBE ");
     }
     puts("");
-    printf("DMA_ERR:        0x%04" PRIx16 "\n", reg_err);
-    printf("DMA_INT:        0x%04" PRIx16 "\n", reg_int);
-    printf("DMA_HRS:        0x%04" PRIx16 "\n", reg_hrs);
-    printf("TCD%" PRIu8 ":\n", channel);
-    printf("     SADDR: 0x%08" PRIx32 "\n",     DMA_DEV->TCD[channel].SADDR);
-    printf("      SOFF:     0x%04" PRIx16 "\n", DMA_DEV->TCD[channel].SOFF);
-    printf("      ATTR:     0x%04" PRIx16 "\n", DMA_DEV->TCD[channel].ATTR);
-    printf("    NBYTES: 0x%08" PRIx32 "\n",     DMA_DEV->TCD[channel].NBYTES_MLNO);
-    printf("     SLAST: 0x%08" PRIx32 "\n",     DMA_DEV->TCD[channel].SLAST);
-    printf("     DADDR: 0x%08" PRIx32 "\n",     DMA_DEV->TCD[channel].DADDR);
-    printf("      DOFF:     0x%04" PRIx16 "\n", DMA_DEV->TCD[channel].DOFF);
-    printf("     CITER:     0x%04" PRIx16 "\n", DMA_DEV->TCD[channel].CITER_ELINKNO);
-    printf(" DLAST_SGA: 0x%08" PRIx32 "\n",     DMA_DEV->TCD[channel].DLAST_SGA);
-    printf("       CSR:     0x%04" PRIx16 "\n", DMA_DEV->TCD[channel].CSR);
-    printf("     BITER:     0x%04" PRIx16 "\n", DMA_DEV->TCD[channel].BITER_ELINKNO);
+    printf("DMA_ERQ:        0x%08" PRIx32 "\n", reg_erq);
+    printf("DMA_EEI:        0x%08" PRIx32 "\n", reg_eei);
+    printf("DMA_ERR:        0x%08" PRIx32 "\n", reg_err);
+    printf("DMA_INT:        0x%08" PRIx32 "\n", reg_int);
+    printf("DMA_HRS:        0x%08" PRIx32 "\n", reg_hrs);
+}
+/** @brief Provide verbose error reporting when DEVELHELP is set */
+void dma_error_verbose(void)
+{
+    uint32_t reg_es  = DMA_DEV->ES;  /* Cached copy of error status register */
+    uint8_t channel = (reg_es & DMA_ES_ERRCHN_MASK) >> DMA_ES_ERRCHN_SHIFT;
+
+    /* Stop the channel from further activation */
+    dma_channel_disable(channel);
+
+    printf("DMA error on channel %u!\n", (unsigned int)channel);
+
+    dma_print_regs();
+    dma_print_tcd(channel);
 }
 
 void isr_dma_error(void)
