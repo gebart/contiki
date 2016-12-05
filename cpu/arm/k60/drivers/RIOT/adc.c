@@ -221,7 +221,7 @@ int adc_sample(adc_t line, adc_res_t res)
     /* wait until conversion is complete */
     start_time = RTIMER_NOW();
     while (!(dev(line)->SC1[0] & ADC_SC1_COCO_MASK) &&
-        (RTIMER_NOW() - start_time) < US_TO_RTIMERTICKS(200) ) {}
+        (RTIMER_NOW() - start_time) < US_TO_RTIMERTICKS(1000) ) {}
 
     if (!(dev(line)->SC1[0] & ADC_SC1_COCO_MASK))
     {
